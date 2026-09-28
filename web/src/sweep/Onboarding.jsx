@@ -41,7 +41,13 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const fullName = `${st.first} ${st.last}`.trim();
   const emailOk = EMAIL_RE.test(st.email.trim());
   const stepNo = { account: 1, district: 2, proof: 3 }[scr] || 0;
-  const back = { account: 'welcome', district: m ? null : 'account', proof: 'district' }[scr];
+  const back = { account: 'welcome', district: m ? 'exit' : 'account', proof: 'district' }[scr];
+  // Konto existiert schon: abmelden und zur Startseite – später über „Ich habe schon ein Konto“ fortsetzen
+  const goBack = async () => {
+    if (back !== 'exit') return back && go(back);
+    await api('/api/sweep/logout', { body: {} }).catch(() => {});
+    set({ screen: 'welcome', check: null, land: '', kreis: '', bez: '', codeSent: false, code: '' });
+  };
   const sendCode = (email, purpose, after) => act.run(async () => { await api('/api/auth/code', { body: { email: email.trim(), role: 'sweep', purpose } }); set(after); });
   const register = () => act.run(async () => {
     await api('/api/sweep/register', { body: { first: st.first.trim(), last: st.last.trim(), bstreet: st.bstreet.trim(), bplz: st.bplz, bort: st.bort.trim(), phone: st.phone.trim(), email: st.email.trim(), code: st.code } });
@@ -88,7 +94,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
       reviewed ? 'Geprüft und bestätigt' : rejected ? m.rejectReason : query ? 'Rückfrage bei der Behörde läuft' : 'Prüfung durch den Betreiber · 1–2 Werktage'),
     T(reviewed ? (status === 'active' ? 'done' : 'now') : 'todo', 'Freischaltlink per E-Mail', 'An die E-Mail-Adresse aus dem Bezirksverzeichnis – so bestätigen wir, dass Sie es wirklich sind')
   ];
-  const top = stepNo > 0 && <StepsBar onBack={() => back && go(back)} stepNo={stepNo} total={3} />;
+  const top = stepNo > 0 && <StepsBar onBack={goBack} stepNo={stepNo} total={3} />;
   const bottom = cta && <Cta {...cta} busy={act.busy} alt={alt} error={act.error} />;
   const kreisShort = (check?.info?.kreis || st.kreis).split(' ')[0];
 
