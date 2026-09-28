@@ -1,4 +1,4 @@
-import { config } from './config.js';
+import { config, emailAllowed } from './config.js';
 import { get, run } from './db.js';
 import { sendMail } from './mail.js';
 import { HttpError, bad, hmac, randomCode, randomToken, isoIn, nowIso, normEmail, EMAIL_RE, safeEqual } from './util.js';
@@ -14,6 +14,7 @@ export async function requestCode(emailRaw, role, purpose) {
   if (!COOKIE[role]) throw bad('Unbekannte Rolle.');
   if (!['login', 'register'].includes(purpose)) throw bad('Unbekannter Zweck.');
   if (role === 'admin' && purpose !== 'login') throw bad('Admins werden nicht registriert.');
+  if (!emailAllowed(email)) throw new HttpError(403, 'Diese App ist derzeit nur für eingeladene Testpersonen freigegeben.', 'not_allowed');
 
   const recent = get(`SELECT COUNT(*) n FROM codes WHERE email = ? AND created_at > datetime('now','-1 hour')`, email).n;
   if (recent >= config.codesPerHour) throw new HttpError(429, 'Zu viele Codes angefordert. Bitte in einer Stunde erneut versuchen.');

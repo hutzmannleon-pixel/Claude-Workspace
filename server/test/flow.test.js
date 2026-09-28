@@ -378,3 +378,14 @@ test('Nach dem Umzug: neue Adresse verifizieren', async () => {
   const st = await ok('k1', 'GET', '/api/customer/state');
   assert.deepEqual([st.resident.status, st.resident.street, st.resident.nr], ['verified', 'Ahornweg', '1']);
 });
+
+test('Freigabeliste im Testbetrieb', async () => {
+  const { config } = await import('../config.js');
+  config.allowedEmails = ['erlaubt@test.de', '@team.de'];
+  try {
+    await fails(403, 'fl', 'POST', '/api/auth/code', { email: 'fremd@test.de', role: 'customer', purpose: 'register' });
+    await ok('fl', 'POST', '/api/auth/code', { email: 'erlaubt@test.de', role: 'customer', purpose: 'register' });
+    await ok('fl', 'POST', '/api/auth/code', { email: 'jemand@team.de', role: 'customer', purpose: 'register' });
+    await ok('fl', 'POST', '/api/auth/code', { email: 'admin@test.de', role: 'admin', purpose: 'login' });
+  } finally { config.allowedEmails = []; }
+});

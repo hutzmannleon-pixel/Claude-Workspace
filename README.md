@@ -79,6 +79,7 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `BASE_URL` | Öffentliche Adresse, wird in E-Mail-Links verwendet |
 | `APP_SECRET` | Geheimnis für Code- und Session-Hashes (**Pflicht in Produktion**) |
 | `ADMIN_EMAILS` | Kommagetrennte E-Mail-Adressen, die sich als Betreiber anmelden dürfen |
+| `ALLOWED_EMAILS` | Testbetrieb: Nur diese Adressen (oder `@domain.de`) dürfen Codes anfordern und bekommen E-Mails. Leer = alle |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | E-Mail-Versand. Ohne SMTP werden Mails nur ins Server-Log geschrieben |
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
 | `TEST_MODE=1` | Testseite `/test` und Test-Postfach; Route auch vor dem Termintag startbar. **Nie in Produktion** |

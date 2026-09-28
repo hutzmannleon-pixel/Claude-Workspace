@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { config } from './config.js';
+import { config, emailAllowed } from './config.js';
 import { run } from './db.js';
 import { live } from './live.js';
 
@@ -23,6 +23,7 @@ function html({ subject, text, link, linkLabel }) {
  * Im Testmodus landet sie zusätzlich im Test-Postfach (nie in Produktion – dort stünden Codes im Klartext).
  */
 export async function sendMail({ to, subject, text, link, linkLabel }) {
+  if (!emailAllowed(to)) { console.log(`E-Mail an ${to} nicht gesendet (nicht auf der Freigabeliste): ${subject}`); return; }
   const body = link ? `${text}\n\n${linkLabel || 'Link'}: ${link}` : text;
   if (config.testMode) {
     run('INSERT INTO outbox (to_addr, subject, text, link, link_label) VALUES (?,?,?,?,?)', to, subject, text, link, linkLabel);

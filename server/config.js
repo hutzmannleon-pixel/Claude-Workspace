@@ -20,6 +20,8 @@ export const config = {
   // Testmodus: Testseite /test mit Postfach, Route auch an künftigen Tagen startbar. Nie in Produktion aktivieren.
   testMode: env.TEST_MODE === '1' || env.TEST_MODE === 'true',
   adminEmails: list(env.ADMIN_EMAILS),
+  // Testbetrieb: nur diese Adressen (oder „@domain.de“) dürfen Codes anfordern und E-Mails bekommen. Leer = alle.
+  allowedEmails: list(env.ALLOWED_EMAILS),
   smtp: env.SMTP_HOST ? {
     host: env.SMTP_HOST,
     port: Number(env.SMTP_PORT || 587),
@@ -35,6 +37,13 @@ export const config = {
   docMaxDays: 14,
   uploadMaxBytes: 10 * 1024 * 1024
 };
+
+/** Darf an diese Adresse gesendet werden? (Freigabeliste im Testbetrieb) */
+export function emailAllowed(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!config.allowedEmails.length || config.adminEmails.includes(e)) return true;
+  return config.allowedEmails.some(a => a.startsWith('@') ? e.endsWith(a) : a === e);
+}
 
 if (config.production && config.secret.startsWith('dev-')) {
   console.warn('WARNUNG: APP_SECRET ist nicht gesetzt. Bitte in der Umgebung konfigurieren.');
