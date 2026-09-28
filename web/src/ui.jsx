@@ -181,16 +181,17 @@ export const Avatar = ({ ini, size = 40, fs = 14, accent }) => (
 );
 
 /** Vorschau einer E-Mail im App-Stil */
-export function MailPreview({ meta, subject, text, action }) {
+/** Vorschau einer E-Mail – nur zur Ansicht, nicht klickbar (deutlich als „Vorschau“ markiert) */
+export function MailPreview({ meta, subject, text, action, onClick }) {
   return (
-    <div style={sx('margin:20px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);overflow:hidden')}>
+    <div onClick={onClick} aria-label="Vorschau der E-Mail" style={sx(`margin:20px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);overflow:hidden;opacity:.85${onClick ? ';cursor:pointer' : ''}`)}>
       <div style={sx(`padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:${DIV_BOTTOM}`)}>
-        <div style={sx('display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-envelope-simple" /><span style={sx('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis')}>{meta}</span></div>
+        <div style={sx('display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-envelope-simple" /><span style={sx('flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis')}>{meta}</span><span className="tag tag-neutral" style={sx('font-size:10px;letter-spacing:0.06em;text-transform:uppercase')}>Vorschau</span></div>
         <div style={sx('font-size:14px;font-weight:500')}>{subject}</div>
       </div>
       <div style={sx('padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--color-neutral-300)')}>
         <span style={sx('text-wrap:pretty')}>{text}</span>
-        {action && <span style={sx('align-self:flex-start;padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--color-accent);color:var(--color-accent-200);font-size:13px')}>{action}</span>}
+        {action && <span aria-hidden="true" style={sx('align-self:flex-start;padding:7px 13px;border-radius:var(--radius-md);border:1px dashed var(--color-neutral-600);color:var(--color-neutral-400);font-size:13px')}>{action}</span>}
       </div>
     </div>
   );

@@ -194,12 +194,18 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
 
       {scr === 'scan' && <>
         <Title title="Einladung öffnen" sub="Ihr Kaminfeger schickt die Einladung an die E-Mail-Adresse aus seinem Kehrbuch. Der Link darin bestätigt Ihre Adresse." />
-        <MailPreview meta="E-Mail · von Ihrem Kaminfeger" subject="Einladung: Termin für die Feuerstättenschau wählen"
+        <div style={sx('margin:20px 16px 0;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:10px;font-size:14px')}>
+          <span className="card-kicker">So geht's</span>
+          <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>1</b><span style={sx('text-wrap:pretty')}>Öffnen Sie die E-Mail Ihres Kaminfegers in Ihrem Postfach.</span></div>
+          <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>2</b><span style={sx('text-wrap:pretty')}>Tippen Sie dort auf <b style={sx('font-weight:500')}>„Einladung annehmen“</b> – die App öffnet sich mit Ihrer Adresse.</span></div>
+          <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>3</b><span style={sx('text-wrap:pretty')}>Klappt das nicht, kopieren Sie den Link aus der E-Mail und fügen ihn unten ein.</span></div>
+        </div>
+        <MailPreview meta="E-Mail · von Ihrem Kaminfeger" subject="Einladung: Termin für die Feuerstättenschau wählen" onClick={() => document.getElementById('invite-link')?.focus()}
           text="Guten Tag, ich komme zur Feuerstättenschau in Ihre Straße. Bitte wählen Sie Ihre Zeit in der App." action="Einladung annehmen" />
         <div style={sx('padding:16px 16px 0')}>
-          <Field label="Oder Link aus der E-Mail hier einfügen"><Input value={st.paste} onChange={e => set({ paste: e.target.value })} placeholder="https://…/kunde?einladung=…" autoComplete="off" /></Field>
+          <Field label="Link aus der E-Mail einfügen"><Input id="invite-link" value={st.paste} onChange={e => set({ paste: e.target.value })} placeholder="https://kaminfeger-verwaltung.com/kunde?einladung=…" autoComplete="off" /></Field>
         </div>
-        <div style={sx('padding:14px 22px 20px;font-size:12px;color:var(--color-neutral-500);display:flex;gap:8px')}><Icon n="ph-info" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Tippen Sie am besten direkt in der E-Mail auf „Einladung annehmen“. Keine Einladung bekommen? Dann normal registrieren – die Bestätigung läuft ebenfalls per E-Mail.</span></div>
+        <div style={sx('padding:14px 22px 20px;font-size:12px;color:var(--color-neutral-500);display:flex;gap:8px')}><Icon n="ph-info" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Keine Einladung bekommen? Dann gehen Sie zurück und registrieren sich normal – die Bestätigung läuft ebenfalls per E-Mail.</span></div>
       </>}
 
       {scr === 'scanned' && inv && <>
