@@ -80,6 +80,8 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `APP_SECRET` | Geheimnis für Code- und Session-Hashes (**Pflicht in Produktion**) |
 | `ADMIN_EMAILS` | Kommagetrennte E-Mail-Adressen, die sich als Betreiber anmelden dürfen |
 | `ALLOWED_EMAILS` | Testbetrieb: Nur diese Adressen (oder `@domain.de`) dürfen Codes anfordern und bekommen E-Mails. Leer = alle |
+| `ALLOW_EARLY_ROUTE=1` | Route auch vor dem Termintag startbar (zum Testen der Live-Anzeige) |
+| `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `OPERATOR_EMAIL` | Angaben für Impressum und Datenschutzerklärung (`/impressum`, `/datenschutz`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | E-Mail-Versand. Ohne SMTP werden Mails nur ins Server-Log geschrieben |
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
 | `TEST_MODE=1` | Testseite `/test` und Test-Postfach; Route auch vor dem Termintag startbar. **Nie in Produktion** |
@@ -114,5 +116,5 @@ Ein erneuter Import aktualisiert vorhandene Einträge.
 - **Push-Mitteilungen** aufs Handy. Erinnerungen und Nachrichten kommen per E-Mail und live in der App.
 - **Passkey / Face ID** für den Betreiber. Aktuell entsperrt ein E-Mail-Code.
 - **Adresssuche:** Straßenvorschläge kommen vom öffentlichen OpenStreetMap-Dienst Photon (komoot). Für den Echtbetrieb eigenen Dienst oder Vertrag nutzen.
-- **Rechtliches:** Datenschutzerklärung, Impressum und Verträge zur Auftragsverarbeitung mit den Kaminfegern (Kehrbuch-Daten) müssen Sie ergänzen.
+- **Rechtliches:** `/impressum` und `/datenschutz` sind als Vorlage enthalten – Betreiberangaben über `OPERATOR_*` setzen und vor einem echten Betrieb rechtlich prüfen lassen. Verträge zur Auftragsverarbeitung mit den Kaminfegern (Kehrbuch-Daten) fehlen noch.
 - Screenshots von Dokumenten lassen sich im Browser technisch nicht verhindern. Die App zeigt nur einen Hinweis und ein Wasserzeichen.
