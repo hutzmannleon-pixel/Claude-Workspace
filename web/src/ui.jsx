@@ -19,7 +19,8 @@ export const useIsWide = () => useContext(WideCtx);
  */
 export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey }) {
   const ref = useRef(null), asideRef = useRef(null);
-  const wide = useWide() && !!nav;
+  const isWide = useWide();
+  const wide = isWide && !!nav;
   useEffect(() => { if (ref.current) ref.current.scrollTop = 0; }, [scrollKey]);
   useEffect(() => { if (asideRef.current) asideRef.current.scrollTop = 0; }, [asideKey]);
   if (wide) return (
@@ -50,9 +51,12 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
       </div>
     </WideCtx.Provider>
   );
+  // Schmale Ansichten (Anmeldung, Bewohner) stehen am Desktop als Karte mittig auf der Seite
+  const card = isWide && !nav;
   return (
-    <div style={sx('width:100%;max-width:520px;margin:0 auto;height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45')}>
-      <div style={sx('position:relative;width:100%;height:100%;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column')}>
+    <div style={sx(card ? 'min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--color-accent) 8%, transparent), transparent 70%), var(--color-bg);font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45'
+      : 'width:100%;max-width:520px;margin:0 auto;height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45')}>
+      <div style={sx(`position:relative;width:100%;${card ? 'max-width:460px;height:min(880px, calc(100dvh - 48px));border-radius:28px;box-shadow:0 0 0 1px var(--color-divider), var(--shadow-lg)' : 'height:100%'};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column`)}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
         {!EMBED && <div style={sx('height:max(10px, env(safe-area-inset-top));flex:none')} />}
         {top}
