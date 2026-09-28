@@ -1,7 +1,7 @@
 // Betreiber-App – nach „BetreiberApp“ (Claude Design), angebunden an /api/admin/*.
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { sx, api, upload, useData, useAction, since, fmtAt, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, TabBar, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, DIV_BOTTOM } from '../ui.jsx';
+import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
@@ -64,6 +64,7 @@ function AdminApp({ me, onLock }) {
   const [ui, setUi] = useState({ screen: 'queue', kind: 'sweep', sel: null, overlay: null, checks: {}, reason: null, queryText: '', toast: null, result: null, docId: null, dir: null });
   const set = p => setUi(u => ({ ...u, ...p }));
   const act = useAction();
+  const wide = useWide();
   const scr = ui.screen;
   const q = useData('/api/admin/queue');
   const detailPath = ui.sel ? `/api/admin/${ui.sel.kind === 'sweep' ? 'sweeps' : 'residents'}/${ui.sel.id}` : null;
@@ -135,7 +136,6 @@ function AdminApp({ me, onLock }) {
 
   const bottom = <>
     {scr === 'result' && <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2')}><button className="btn btn-secondary" onClick={toQueue} style={sx('width:100%;min-height:50px;font-size:15px')}>Zur Prüfliste</button></div>}
-    {['queue', 'log', 'dir'].includes(scr) && <TabBar tabs={tabs} padX="24px" />}
   </>;
   const overlay = <>
     {ui.overlay === 'doc' && doc && <div style={sx('position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 92%, transparent);display:flex;flex-direction:column;padding:24px 16px 24px;gap:14px')}>
@@ -171,9 +171,7 @@ function AdminApp({ me, onLock }) {
     </Sheet>}
   </>;
 
-  return (
-    <Shell glow={GLOW.admin} scrollKey={scr + (ui.sel?.id || '')} bottom={bottom} overlay={overlay}>
-      {scr === 'queue' && <>
+  const queueView = <>
         <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Betreiber · {me.email}</div><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>Prüfungen</div></div>
           <button className="btn btn-secondary btn-icon" onClick={lock} style={sx('width:44px;height:44px')} aria-label="Sperren"><Icon n="ph-lock-simple" style={sx('font-size:18px')} /></button>
@@ -183,7 +181,7 @@ function AdminApp({ me, onLock }) {
         <div style={sx('display:flex;flex-direction:column;gap:8px;padding:12px 16px 0')}>
           {!queue.length && <div style={sx('font-size:14px;color:var(--color-neutral-500);padding:10px 6px')}>Keine Einträge.</div>}
           {queue.map(it => { const f = flagOf(it), op = isOpen(it.status), tg = TAG[it.status] || TAG.pending; return (
-            <button key={it.kind + it.id} onClick={() => { act.setError(null); set({ screen: 'detail', sel: { kind: it.kind, id: it.id }, overlay: null, toast: null }); }} style={sx(`text-align:left;padding:12px 14px;border-radius:var(--radius-lg);background:${op ? 'var(--color-surface)' : 'transparent'};border:0;box-shadow:${op ? 'none' : 'var(--shadow-sm)'};color:inherit;font:inherit;cursor:pointer;display:flex;gap:12px;align-items:center`)}>
+            <button key={it.kind + it.id} onClick={() => { act.setError(null); set({ screen: 'detail', sel: { kind: it.kind, id: it.id }, overlay: null, toast: null }); }} aria-current={wide && ui.sel?.kind === it.kind && ui.sel?.id === it.id ? 'true' : undefined} style={sx(`text-align:left;padding:12px 14px;border-radius:var(--radius-lg);background:${op ? 'var(--color-surface)' : 'transparent'};border:0;box-shadow:${wide && ui.sel?.kind === it.kind && ui.sel?.id === it.id ? '0 0 0 1px var(--color-accent)' : op ? 'none' : 'var(--shadow-sm)'};color:inherit;font:inherit;cursor:pointer;display:flex;gap:12px;align-items:center`)}>
               <Avatar ini={it.ini} />
               <div style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}>
                 <div style={sx('display:flex;gap:8px;align-items:center')}><span style={sx(`font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${op ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>{it.name}</span><span className={`tag ${tg[1]}`}>{tg[0]}</span></div>
@@ -194,7 +192,14 @@ function AdminApp({ me, onLock }) {
           ); })}
         </div>
         <div style={sx('margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-trash-simple" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Urkunden und Ausweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
-      </>}
+  </>;
+  const inQueue = ['queue', 'detail', 'result'].includes(scr);
+  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir'].includes(scr),
+    footer: <button className="btn btn-secondary" onClick={lock} style={sx('min-height:44px')}><Icon n="ph-lock-simple" />Sperren</button> };
+
+  return (
+    <Shell glow={GLOW.admin} scrollKey={scr + (ui.sel?.id || '')} bottom={bottom} overlay={overlay} nav={nav} aside={wide && inQueue ? queueView : null} asideKey={ui.kind}>
+      {scr === 'queue' && (wide ? <EmptyPane icon="ph-seal-check" text="Wählen Sie links einen Eintrag zum Prüfen." /> : queueView)}
 
       {scr === 'detail' && (!x ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
         <BackHeader onBack={toQueue} title={x.kind === 'sweep' ? 'Kaminfeger prüfen' : 'Bewohner prüfen'} sub={`eingereicht ${since(x.since)}`} right={<span className={`tag ${(TAG[x.status] || TAG.pending)[1]}`} style={sx('margin-right:10px')}>{(TAG[x.status] || TAG.pending)[0]}</span>} />

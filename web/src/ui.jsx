@@ -1,6 +1,6 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
-import { useEffect, useId, useRef, useState } from 'react';
-import { sx, EMBED } from './lib/core.js';
+import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
+import { sx, EMBED, useWide } from './lib/core.js';
 
 export const GLOW = {
   sweep: 'radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-section-glow) 45%, transparent), transparent 70%)',
@@ -10,20 +10,68 @@ export const GLOW = {
 export const DIV_BOTTOM = 'linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px';
 export const DIV_TOP_48 = 'linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px';
 
-/** Bildschirm-Hülle einer App (Vollbild auf dem Handy, schmale Spalte am Desktop). */
-export function Shell({ glow, top, bottom, overlay, children, scrollKey }) {
-  const ref = useRef(null);
+const WideCtx = createContext(false);
+export const useIsWide = () => useContext(WideCtx);
+
+/**
+ * Bildschirm-Hülle einer App. Auf dem Handy Vollbild mit Leiste unten (nav.tabs),
+ * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
+ */
+export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey }) {
+  const ref = useRef(null), asideRef = useRef(null);
+  const wide = useWide() && !!nav;
   useEffect(() => { if (ref.current) ref.current.scrollTop = 0; }, [scrollKey]);
+  useEffect(() => { if (asideRef.current) asideRef.current.scrollTop = 0; }, [asideKey]);
+  if (wide) return (
+    <WideCtx.Provider value={true}>
+      <div style={sx('height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45;background:var(--color-bg);position:relative;overflow:hidden;display:flex')}>
+        <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
+        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider)')}>
+          <div style={sx('display:flex;gap:10px;align-items:center;padding:0 10px 20px')}>
+            <div style={sx('width:34px;height:34px;border-radius:10px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;flex:none')}><Icon w="ph-fill" n="ph-flame" style={sx('font-size:19px')} /></div>
+            <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
+          </div>
+          {nav.tabs.map(t => (
+            <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:var(--radius-md);border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:${t.on ? 'var(--color-surface)' : 'none'};color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
+              <Icon n={t.icon} style={sx(`font-size:20px;color:${t.on ? 'var(--color-accent)' : 'inherit'}`)} /><span style={sx('flex:1')}>{t.label}</span>
+              {!!t.badge && <span style={sx('min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:600;display:grid;place-items:center')}>{t.badge}</span>}
+            </button>
+          ))}
+          <div style={sx('flex:1')} />
+          {nav.footer}
+        </nav>
+        {aside && <div ref={asideRef} style={sx('flex:none;width:400px;overflow-y:auto;position:relative;z-index:1;padding:14px 0 10px;box-shadow:inset -1px 0 0 var(--color-divider)')}>{aside}</div>}
+        <div style={sx('flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:1')}>
+          {top}
+          <div ref={ref} style={sx('flex:1;overflow-y:auto;padding-top:14px')}><div style={sx('max-width:760px;margin:0 auto')}>{children}</div></div>
+          {bottom && <div style={sx('width:100%;max-width:760px;margin:0 auto;padding-bottom:12px')}>{bottom}</div>}
+        </div>
+        {overlay}
+      </div>
+    </WideCtx.Provider>
+  );
   return (
     <div style={sx('width:100%;max-width:520px;margin:0 auto;height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45')}>
       <div style={sx('position:relative;width:100%;height:100%;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column')}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
         {!EMBED && <div style={sx('height:max(10px, env(safe-area-inset-top));flex:none')} />}
         {top}
-        <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{children}</div>
+        <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{aside}{children}</div>
         {bottom}
+        {nav && nav.bar !== false && <TabBar tabs={nav.tabs} />}
         {!EMBED && <div style={sx('height:max(8px, env(safe-area-inset-bottom));flex:none')} />}
         {overlay}
+      </div>
+    </div>
+  );
+}
+
+/** Platzhalter rechts am Desktop, solange links nichts ausgewählt ist. */
+export function EmptyPane({ icon, text }) {
+  return (
+    <div style={sx('min-height:60vh;display:grid;place-items:center;padding:40px')}>
+      <div style={sx('display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--color-neutral-500);font-size:14px;text-align:center')}>
+        <Icon n={icon} style={sx('font-size:36px;color:var(--color-neutral-600)')} />{text}
       </div>
     </div>
   );
@@ -139,9 +187,10 @@ export function CheckRow({ on, label, onClick, disabled, strike, minH = '50px' }
 
 /** Bottom-Sheet über dem Bildschirm */
 export function Sheet({ children, scroll }) {
+  const wide = useIsWide();
   return (
-    <div style={sx('position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end')}>
-      <div role="dialog" aria-modal="true" style={sx(`margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
+    <div style={sx(`position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
+      <div role="dialog" aria-modal="true" style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
     </div>
   );
 }

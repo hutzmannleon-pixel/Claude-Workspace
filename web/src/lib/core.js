@@ -122,3 +122,16 @@ export const fileSize = n => n >= 1048576 ? (n / 1048576).toFixed(1).replace('.'
 
 /** Im Test-Rahmen (iframe) keine Safe-Area-Abstände – der Rahmen hat eigene Statusleiste. */
 export const EMBED = typeof location !== 'undefined' && new URLSearchParams(location.search).has('embed');
+
+/** Desktop-Layout ab 1024 px Breite (nicht in der eingebetteten Testseite). */
+const WIDE_Q = '(min-width: 1024px)';
+export function useWide() {
+  const [wide, setWide] = useState(() => !EMBED && typeof matchMedia !== 'undefined' && matchMedia(WIDE_Q).matches);
+  useEffect(() => {
+    if (EMBED) return;
+    const m = matchMedia(WIDE_Q), on = () => setWide(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return wide;
+}

@@ -11,6 +11,8 @@ Die App besteht aus drei Teilen, die über einen gemeinsamen Server live verbund
 | `/betreiber` | Sie als Betreiber | Kaminfeger und Bewohner prüfen, Dokumente ansehen (danach gelöscht), Protokoll, Bezirksverzeichnis importieren |
 | `/test` | nur im Testmodus | Alle drei Apps nebeneinander, Schritt-Anleitung, Test-Postfach für Codes und Links |
 
+**Am Desktop** (ab 1024 px Fensterbreite) zeigen Betreiber und Kaminfeger eine Seitenleiste, links die Liste (Prüfungen bzw. Straßen) und rechts die Details. In Chrome/Edge lässt sich die Seite über ⋮ → „App installieren“ als eigenes Fenster einrichten. Die Bewohner-App bleibt als Handy-Ansicht.
+
 Das Design stammt 1:1 aus dem Claude-Design-Prototyp (Nocturne), siehe `project/` und `chats/`.
 
 ## Aufbau
@@ -46,7 +48,7 @@ Dann **http://localhost:3000/test** öffnen. Es gibt **keine Beispieldaten**, Si
 „Alles löschen“ auf der Testseite setzt die Datenbank zurück.
 
 **Entwicklung mit Hot-Reload:** `npm run dev` (Web unter http://localhost:5173, API auf Port 3000).
-**Tests:** `npm test` spielt 20 Szenarien gegen eine temporäre Datenbank durch.
+**Tests:** `npm test` spielt 23 Szenarien gegen eine temporäre Datenbank durch.
 
 ## Online bringen (eigener Server)
 

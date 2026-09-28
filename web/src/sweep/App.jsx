@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useState } from 'react';
-import { sx, api, upload, useData, useAction, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, TabBar, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, DIV_BOTTOM } from '../ui.jsx';
+import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -12,6 +12,7 @@ export default function SweepApp({ onLogout }) {
     sheet: null, routeDate: null, rcpt: 'all', msgCampaign: null, text: '', kb: null });
   const set = p => setUi(u => ({ ...u, ...p }));
   const act = useAction();
+  const wide = useWide();
   const ov = useData('/api/sweep/overview');
   const scr = ui.screen;
   const camp = useData(ui.campaignId ? `/api/sweep/campaigns/${ui.campaignId}` : null, { enabled: !!ui.campaignId && (scr === 'street' || scr === 'setup') });
@@ -113,7 +114,6 @@ export default function SweepApp({ onLogout }) {
       {act.error && <div style={sx('padding:0 4px 8px')}><ErrorLine text={act.error} /></div>}
       <button className="btn btn-primary" onClick={saveSetup} disabled={act.busy} style={sx('width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)')}><Icon n="ph-paper-plane-tilt" />{act.busy ? 'Wird gesendet …' : `Speichern & an ${plural(nHouses, 'Haushalt', 'Haushalte')} senden`}</button>
     </div>}
-    {scr !== 'setup' && <TabBar tabs={tabs} />}
   </>;
 
   const overlay = <>
@@ -180,9 +180,7 @@ export default function SweepApp({ onLogout }) {
     </Sheet>}
   </>;
 
-  return (
-    <Shell glow={GLOW.sweep} scrollKey={scr + (ui.campaignId || '')} bottom={bottom} overlay={overlay}>
-      {scr === 'streets' && <>
+  const streetsView = <>
         <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div>
             <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Kehrbezirk {o.bez} · {o.kreis}</div>
@@ -222,13 +220,13 @@ export default function SweepApp({ onLogout }) {
               </div>
             );
             if (k.done) return (
-              <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx('text-align:left;padding:14px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px')}>
+              <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx(`text-align:left;padding:14px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
                 <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:16px;font-weight:500;flex:1;color:var(--color-neutral-400)')}>{s.street}</span><span style={sx('font-size:12px;color:var(--color-neutral-500);display:flex;gap:4px;align-items:center')}><Icon n="ph-check" />abgeschlossen</span></div>
                 <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{k.visited} von {k.total} besucht · {k.missed} × vor verschlossener Tür</div>
               </button>
             );
             return (
-              <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx('text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px')}>
+              <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx(`text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
                 <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:16px;font-weight:500;flex:1')}>{s.street}</span><span className="tag tag-accent">läuft</span><Icon n="ph-caret-right" style={sx('color:var(--color-neutral-500)')} /></div>
                 {bar(k.booked, k.open, k.cancelled, k.total)}
                 <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{k.booked} bestätigt · {k.open} offen · {k.cancelled} abgesagt · {k.windows.join(' · ')}</div>
@@ -237,7 +235,13 @@ export default function SweepApp({ onLogout }) {
           })}
           {o.streets.length > 0 && <button className="btn btn-ghost" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:44px;color:var(--color-neutral-400);align-self:flex-start;padding-inline:6px')}><Icon n="ph-upload-simple" />Kehrbuch aktualisieren</button>}
         </div>
-      </>}
+  </>;
+  const nav = { title: o.name, sub: `Kehrbezirk ${o.bez} · ${o.kreis}`, tabs, bar: scr !== 'setup',
+    footer: <button className="btn btn-secondary" onClick={() => set({ sheet: 'account' })} style={sx('min-height:44px')}><Icon n="ph-user-circle" />Konto</button> };
+
+  return (
+    <Shell glow={GLOW.sweep} scrollKey={scr + (ui.campaignId || '')} bottom={bottom} overlay={overlay} nav={nav} aside={wide && ['streets', 'street', 'setup'].includes(scr) ? streetsView : null}>
+      {scr === 'streets' && (wide ? <EmptyPane icon="ph-map-trifold" text="Wählen Sie links eine Straße." /> : streetsView)}
 
       {scr === 'street' && (!c ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
         <BackHeader onBack={go('streets')} title={c.street} sub={`${plural(c.houses.length, 'Haushalt', 'Haushalte')} · Frist ${c.deadlineLabel}`} />
