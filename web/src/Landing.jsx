@@ -1,18 +1,23 @@
-import { sx } from './lib/core.js';
+import { useEffect, useState } from 'react';
+import { sx, api } from './lib/core.js';
 import { Shell, GLOW, Icon } from './ui.jsx';
 
 export default function Landing() {
   const go = p => () => { location.href = p; };
+  const [cfg, setCfg] = useState(null);
+  useEffect(() => { api('/api/config').then(setCfg).catch(() => {}); }, []);
   return (
     <Shell glow={GLOW.customer} bottom={
       <div style={sx('flex:none;padding:10px 16px 2px;position:relative;z-index:2;display:flex;flex-direction:column;gap:8px')}>
         <button className="btn btn-primary" onClick={go('/kunde')} style={sx('width:100%;min-height:50px;font-size:15px')}><Icon n="ph-house-line" />Ich bin Bewohner</button>
         <button className="btn btn-secondary" onClick={go('/kaminfeger')} style={sx('width:100%;min-height:50px;font-size:15px')}><Icon n="ph-path" />Ich bin Kaminfeger</button>
         <button className="btn btn-ghost" onClick={go('/betreiber')} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Betreiber-Zugang</button>
+        <div style={sx('display:flex;justify-content:center;gap:18px;font-size:12px;padding-bottom:4px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></div>
       </div>
     }>
       <div style={sx('padding:64px 26px 0;display:flex;flex-direction:column;gap:14px')}>
         <span className="card-kicker">Kaminfeger-Termine</span>
+        {cfg?.restricted && <span className="tag tag-outline" style={sx('align-self:flex-start')}>Testbetrieb · nur für eingeladene Personen</span>}
         <div style={sx('font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;text-wrap:pretty')}>Der Kaminfeger kommt, wenn Sie zu Hause sind.</div>
         <div style={sx('font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Ihr Kaminfeger gibt Zeitfenster für Ihre Straße frei – Sie wählen die halbe Stunde, die passt. Weniger verschlossene Türen, weniger Nachtermine.</div>
       </div>

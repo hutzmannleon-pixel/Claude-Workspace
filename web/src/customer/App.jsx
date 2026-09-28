@@ -1,7 +1,7 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, DIV_BOTTOM } from '../ui.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
 const cardS = 'margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg)';
@@ -98,6 +98,9 @@ export default function CustomerApp({ onLogout, onReaddress }) {
       <button className="btn btn-primary" onClick={async () => { await api('/api/customer/logout', { body: {} }).catch(() => {}); onLogout(); }} style={sx('min-height:48px;margin-top:6px')}><Icon n="ph-sign-out" />Abmelden</button>
       <button className="btn btn-ghost" onClick={() => set({ overlay: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
     </Sheet>}
+    {ui.overlay === 'delete' && <DeleteSheet busy={act.busy} error={act.error} onClose={() => { act.setError(null); set({ overlay: null }); }}
+      text="Ihr Konto und Ihre Angaben werden gelöscht. Wohnt sonst niemand aus Ihrem Haushalt in der App, wird Ihr Termin storniert. Das lässt sich nicht rückgängig machen."
+      onDelete={c => act.run(async () => { await api('/api/customer/delete', { body: { confirm: c } }); onLogout(); })} />}
     {ui.overlay === 'move' && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Umzug melden?</div>
       <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Ihr Zugang zu {addr} endet. Offene Termine werden storniert und {sweepName} informiert. Die neuen Bewohner können sich dann selbst verifizieren.</div>
@@ -359,6 +362,8 @@ function Profile({ s, ui, set, call, act }) {
     <div style={sx('display:flex;flex-direction:column;margin:16px 16px 20px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:2px 16px')}>
       {!r.isMember && <button onClick={() => set({ overlay: 'move' })} disabled={moved || !r.street} style={sx(`display:flex;align-items:center;gap:12px;min-height:52px;background:${DIV_BOTTOM};border:0;color:inherit;font:inherit;font-size:14px;cursor:pointer;text-align:left`)}><Icon n="ph-truck" style={sx('font-size:18px;color:var(--color-neutral-400)')} /><span style={sx('flex:1')}>Umzug melden</span><Icon n="ph-caret-right" style={sx('color:var(--color-neutral-500)')} /></button>}
       <button onClick={() => set({ overlay: 'logout' })} style={sx('display:flex;align-items:center;gap:12px;min-height:52px;background:none;border:0;color:var(--color-neutral-400);font:inherit;font-size:14px;cursor:pointer;text-align:left')}><Icon n="ph-sign-out" style={sx('font-size:18px')} /><span style={sx('flex:1')}>Abmelden</span></button>
+      <button onClick={() => set({ overlay: 'delete' })} style={sx(`display:flex;align-items:center;gap:12px;min-height:52px;background:none;border:0;border-top:1px solid var(--color-divider);color:var(--color-neutral-500);font:inherit;font-size:14px;cursor:pointer;text-align:left`)}><Icon n="ph-trash" style={sx('font-size:18px')} /><span style={sx('flex:1')}>Konto löschen</span></button>
     </div>
+    <LegalLinks />
   </>;
 }

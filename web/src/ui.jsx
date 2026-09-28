@@ -1,5 +1,5 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { sx, EMBED } from './lib/core.js';
 
 export const GLOW = {
@@ -222,3 +222,22 @@ export function FilePick({ accept, onFile, children, style, className, disabled 
     </>
   );
 }
+
+/** Bestätigung „Konto löschen“ – der Nutzer tippt LÖSCHEN ein */
+export function DeleteSheet({ text, onDelete, onClose, busy, error }) {
+  const [v, setV] = useState('');
+  return (
+    <Sheet>
+      <div style={sx('font-size:20px;font-weight:500')}>Konto löschen?</div>
+      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>{text}</div>
+      <Field label="Zur Bestätigung LÖSCHEN eingeben"><Input value={v} onChange={e => setV(e.target.value)} placeholder="LÖSCHEN" autoComplete="off" style="text-transform:uppercase" /></Field>
+      {error && <ErrorLine text={error} />}
+      <button className="btn btn-primary" disabled={v.trim().toUpperCase() !== 'LÖSCHEN' || busy} onClick={() => onDelete(v.trim().toUpperCase())} style={sx('min-height:48px;margin-top:4px')}><Icon n="ph-trash" />Endgültig löschen</button>
+      <button className="btn btn-ghost" onClick={onClose} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
+    </Sheet>
+  );
+}
+
+export const LegalLinks = () => (
+  <div style={sx('display:flex;gap:18px;padding:0 22px 20px;font-size:12px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></div>
+);

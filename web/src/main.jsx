@@ -17,6 +17,7 @@ const Sweep = lazy(() => import('./sweep/Sweep.jsx'));
 const Admin = lazy(() => import('./admin/Admin.jsx'));
 const Owner = lazy(() => import('./Owner.jsx'));
 const TestPage = lazy(() => import('./TestPage.jsx'));
+const Legal = lazy(() => import('./Legal.jsx'));
 
 function route() {
   const p = location.pathname.replace(/\/+$/, '') || '/';
@@ -25,6 +26,7 @@ function route() {
   if (p === '/betreiber') return <Admin />;
   if (p.startsWith('/eigentuemer/')) return <Owner token={p.split('/')[2]} />;
   if (p === '/test') return <TestPage />;
+  if (p === '/impressum' || p === '/datenschutz') return <Legal page={p.slice(1)} />;
   return <Landing />;
 }
 

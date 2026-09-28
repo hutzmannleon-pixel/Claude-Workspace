@@ -140,6 +140,22 @@ export default async function sweepRoutes(app) {
 
   app.post('/api/sweep/logout', async (req, reply) => { endSession(req, reply, 'sweep'); return { ok: true }; });
 
+  // Konto löschen (DSGVO / Play Store). Kehrbuch und Zeitfenster bleiben beim Bezirk, bis ein Nachfolger sie übernimmt.
+  app.post('/api/sweep/delete', async (req, reply) => {
+    const s = mySweep(req);
+    if (req.body?.confirm !== 'LÖSCHEN') throw bad('Bitte zur Bestätigung LÖSCHEN eingeben.');
+    tx(() => {
+      deleteDocuments(s.id);
+      run('DELETE FROM messages WHERE sweep_id = ?', s.id);
+      run('DELETE FROM sweeps WHERE id = ?', s.id);
+      run('DELETE FROM users WHERE id = ?', s.user_id);
+      adminLog('System', `Kaminfeger-Konto gelöscht${s.bez ? ' · Bezirk ' + s.bez : ''}`, 'Auf Wunsch des Nutzers, inkl. Dokumente');
+    });
+    endSession(req, reply, 'sweep');
+    live.bump();
+    return { ok: true };
+  });
+
   // ---------- Kehrbuch importieren ----------
   app.post('/api/sweep/kehrbuch', async req => {
     const s = activeSweep(req);
@@ -304,13 +320,13 @@ export default async function sweepRoutes(app) {
     const date = DATE_RE.test(req.query.date || '') ? req.query.date : defaultRouteDate(s.district_id);
     const stops = routeFor(s.district_id, date);
     return { date, label: dayLabel(date), isToday: date === today(), started: routeStarted(s.district_id, date),
-      dates: routeDates(s.district_id).map(d => ({ date: d, label: dayLabel(d) })), stops, streets: [...new Set(stops.map(x => x.street))], canStartFuture: config.testMode };
+      dates: routeDates(s.district_id).map(d => ({ date: d, label: dayLabel(d) })), stops, streets: [...new Set(stops.map(x => x.street))], canStartFuture: config.testMode || config.allowEarlyRoute };
   });
 
   app.post('/api/sweep/route/start', async req => {
     const s = activeSweep(req), date = String(req.body?.date || '');
     if (!DATE_RE.test(date)) throw bad('Ungültiges Datum.');
-    if (date > today() && !config.testMode) throw bad('Die Route kann erst am Termintag gestartet werden.');
+    if (date > today() && !config.testMode && !config.allowEarlyRoute) throw bad('Die Route kann erst am Termintag gestartet werden.');
     run('INSERT OR IGNORE INTO route_days (district_id, date, started_at) VALUES (?,?,?)', s.district_id, date, nowIso());
     live.bump();
     return { ok: true };

@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useState } from 'react';
 import { sx, api, upload, useData, useAction, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, TabBar, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, TabBar, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -157,8 +157,13 @@ export default function SweepApp({ onLogout }) {
       <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch</div>
       <button className="btn btn-secondary" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:46px;margin-top:4px')}><Icon n="ph-upload-simple" />Kehrbuch importieren</button>
       <button className="btn btn-secondary" onClick={async () => { await api('/api/sweep/logout', { body: {} }).catch(() => {}); onLogout(); }} style={sx('min-height:46px')}><Icon n="ph-sign-out" />Abmelden</button>
+      <button className="btn btn-ghost" onClick={() => { act.setError(null); set({ sheet: 'delete' }); }} style={sx('min-height:40px;color:var(--color-neutral-500)')}><Icon n="ph-trash" />Konto löschen</button>
+      <div style={sx('display:flex;justify-content:center;gap:18px;font-size:12px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></div>
       <button className="btn btn-ghost" onClick={() => set({ sheet: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Schließen</button>
     </Sheet>}
+    {ui.sheet === 'delete' && <DeleteSheet busy={act.busy} error={act.error} onClose={() => set({ sheet: 'account' })}
+      text="Ihr Kaminfeger-Konto wird gelöscht, samt gesendeten Nachrichten. Kehrbuch, Zeitfenster und Termine bleiben beim Bezirk, damit Ihre Kunden ihre Termine behalten. Das lässt sich nicht rückgängig machen."
+      onDelete={c => act.run(async () => { await api('/api/sweep/delete', { body: { confirm: c } }); onLogout(); })} />}
     {ui.sheet === 'kehrbuch' && <Sheet scroll>
       <span className="card-kicker">Kehrbuch</span>
       <div style={sx('font-size:20px;font-weight:500;line-height:1.2')}>Kehrbuch importieren</div>

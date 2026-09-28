@@ -389,3 +389,24 @@ test('Freigabeliste im Testbetrieb', async () => {
     await ok('fl', 'POST', '/api/auth/code', { email: 'admin@test.de', role: 'admin', purpose: 'login' });
   } finally { config.allowedEmails = []; }
 });
+
+test('Konto löschen: Bewohner und Kaminfeger', async () => {
+  const reg = await registerCustomer('kd', 'loeschen@test.de', { street: 'Lindenstraße', nr: '4', plz: '79102', ort: 'Freiburg', name: 'Weg' });
+  assert.equal(reg.next, 'verify');
+  await fails(400, 'kd', 'POST', '/api/customer/delete', { confirm: 'ja' });
+  await ok('kd', 'POST', '/api/customer/delete', { confirm: 'LÖSCHEN' });
+  await fails(401, 'kd', 'GET', '/api/customer/state');
+  assert.equal(get(`SELECT COUNT(*) n FROM users WHERE email = 'loeschen@test.de'`).n, 0);
+  // Kaminfeger (abgelehnter Zweit-Account aus einem früheren Test ist wieder pending) löscht sich samt Dokumenten
+  const before = fs.readdirSync(path.join(dir, 'uploads')).length;
+  await ok('s2', 'POST', '/api/sweep/delete', { confirm: 'LÖSCHEN' });
+  await fails(401, 's2', 'GET', '/api/sweep/me');
+  assert.ok(fs.readdirSync(path.join(dir, 'uploads')).length < before, 'Dokumente gelöscht');
+  assert.equal(get(`SELECT COUNT(*) n FROM users WHERE email = 'em@test.de'`).n, 0);
+});
+
+test('Konfiguration für die App: Testbetrieb und Betreiberangaben', async () => {
+  const c = await ok('x', 'GET', '/api/config');
+  assert.equal(typeof c.restricted, 'boolean');
+  assert.equal(c.operator.email, 'admin@test.de');
+});

@@ -10,7 +10,7 @@ import { HttpError, bad, notFound, nowIso, normEmail } from '../util.js';
 
 export default async function publicRoutes(app) {
   app.get('/api/health', async () => ({ ok: true }));
-  app.get('/api/config', async () => ({ testMode: config.testMode }));
+  app.get('/api/config', async () => ({ testMode: config.testMode, restricted: config.allowedEmails.length > 0, operator: config.operator }));
 
   // Android-App (Trusted Web Activity): Verknüpfung App ↔ Domain. Datei liegt in DATA_DIR/assetlinks.json
   app.get('/.well-known/assetlinks.json', async (req, reply) => {

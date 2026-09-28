@@ -158,7 +158,7 @@ export default async function customerRoutes(app) {
         .map(m => ({ id: m.id, text: m.text, at: m.created_at, read: !!m.rd }));
     }
     const members = h ? all(`SELECT r.*, u.email FROM residents r JOIN users u ON u.id = r.user_id WHERE r.household_id = ? AND r.status = 'verified'`, h.id)
-      .map(m => ({ ini: initials(m.person_name || m.family_name || m.email), name: (m.person_name || m.email) + (m.id === r.id ? ' (Sie)' : ''),
+      .map(m => ({ ini: initials(m.person_name || m.family_name || m.email), name: (m.person_name || (m.is_member ? m.email : 'Familie ' + m.family_name)) + (m.id === r.id ? ' (Sie)' : ''),
         sub: m.is_member ? 'Erhält Erinnerungen' : 'Verifiziert · ' + ({ number: 'Kundennummer', invite: 'Einladung', sweep: 'Kaminfeger', owner: 'Eigentümer', admin: 'Betreiber' }[m.method] || '') })) : [];
     const pending = all(`SELECT data FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h ? h.id : -1, nowIso())
       .map(t => JSON.parse(t.data).email).map(e => ({ ini: e.slice(0, 2).toUpperCase(), name: e, sub: 'Einladung gesendet' }));
@@ -278,6 +278,23 @@ export default async function customerRoutes(app) {
     failed.delete(r.id);
     live.bump();
     return { next: h ? 'verify' : 'done', status: h ? 'needs_verify' : 'unverified', inDistrict: !!m };
+  });
+
+  // Konto löschen (DSGVO / Play Store). Termine des Haushalts werden storniert, wenn niemand sonst dort wohnt.
+  app.post('/api/customer/delete', async (req, reply) => {
+    const u = requireUser(req, 'customer'), r = residentOf(u);
+    if (req.body?.confirm !== 'LÖSCHEN') throw bad('Bitte zur Bestätigung LÖSCHEN eingeben.');
+    tx(() => {
+      if (r.household_id) {
+        const others = get(`SELECT COUNT(*) n FROM residents WHERE household_id = ? AND status = 'verified' AND id != ?`, r.household_id, r.id).n;
+        if (!others) run(`UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE household_id = ? AND status = 'booked'`, nowIso(), r.household_id);
+      }
+      run('DELETE FROM message_reads WHERE user_id = ?', u.id);
+      run('DELETE FROM users WHERE id = ?', u.id);
+    });
+    endSession(req, reply, 'customer');
+    live.bump();
+    return { ok: true };
   });
 
   app.post('/api/customer/logout', async (req, reply) => { endSession(req, reply, 'customer'); return { ok: true }; });

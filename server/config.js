@@ -22,6 +22,10 @@ export const config = {
   adminEmails: list(env.ADMIN_EMAILS),
   // Testbetrieb: nur diese Adressen (oder „@domain.de“) dürfen Codes anfordern und E-Mails bekommen. Leer = alle.
   allowedEmails: list(env.ALLOWED_EMAILS),
+  // Route auch vor dem Termintag startbar (zum Ausprobieren der Live-Anzeige)
+  allowEarlyRoute: env.ALLOW_EARLY_ROUTE === '1' || env.ALLOW_EARLY_ROUTE === 'true',
+  // Angaben für Impressum und Datenschutzerklärung
+  operator: { name: env.OPERATOR_NAME || '', address: env.OPERATOR_ADDRESS || '', email: env.OPERATOR_EMAIL || (list(env.ADMIN_EMAILS)[0] || '') },
   smtp: env.SMTP_HOST ? {
     host: env.SMTP_HOST,
     port: Number(env.SMTP_PORT || 587),
