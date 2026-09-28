@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161826">
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<script src="kf-store.js"></script>
+<script>(function(){var h=document.head;if(!h.querySelector('link[rel=manifest]')){var m=document.createElement('link');m.rel='manifest';m.href='manifest.webmanifest';h.appendChild(m);var i=document.createElement('link');i.rel='apple-touch-icon';i.href='icon-192.png';h.appendChild(i);}if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(function(e){console.warn('SW',e)});}})();</script>
+<style>html,body{margin:0;height:100%;background:var(--color-bg);overscroll-behavior:none}a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}</style>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#161826"></rect><circle cx="50" cy="50" r="20" fill="none" stroke="#9184d9" stroke-width="4"></circle><circle cx="50" cy="50" r="7" fill="#9184d9"></circle></svg></template>
+</helmet>
+<div style="min-height:100dvh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);display:flex;flex-direction:column">
+  <sc-if value="{{ noRole }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;padding:max(40px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));gap:14px;max-width:520px;width:100%;box-sizing:border-box;background:radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 70%)">
+      <span class="card-kicker" style="padding:0 6px">Kaminfeger-Termine · Demo</span>
+      <div style="font-size:30px;font-weight:500;letter-spacing:-0.02em;line-height:1.15;padding:0 6px">Wer nutzt die App?</div>
+      <div style="font-size:14px;color:var(--color-neutral-400);padding:0 6px;text-wrap:pretty">Alle drei Rollen laufen auf diesem Gerät und teilen dieselben Daten – wechsle oben rechts, um das Zusammenspiel zu sehen.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+          <button onClick="{{ r.pick }}" style="text-align:left;display:flex;gap:14px;align-items:center;min-height:76px;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid transparent;color:inherit;font:inherit;cursor:pointer">
+            <div style="width:44px;height:44px;border-radius:var(--radius-md);background:var(--color-accent-900);display:grid;place-items:center;flex:none"><i class="ph {{ r.icon }}" style="font-size:22px;color:var(--color-accent)"></i></div>
+            <div style="flex:1"><div style="font-size:16px;font-weight:500">{{ r.label }}</div><div style="font-size:13px;color:var(--color-neutral-400);text-wrap:pretty">{{ r.sub }}</div></div>
+            <i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i>
+          </button>
+        </sc-for>
+      </div>
+      <div class="field" style="margin-top:10px;padding:0 6px"><label>Start</label>
+        <div class="seg" style="display:flex">
+          <sc-for list="{{ starts }}" as="s" hint-placeholder-count="2">
+            <label class="seg-opt" style="flex:1;justify-content:center;min-height:44px"><input type="radio" name="kf-start" checked="{{ s.on }}" onChange="{{ s.pick }}"><span>{{ s.label }}</span></label>
+          </sc-for>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onClick="{{ resetData }}" style="align-self:flex-start;min-height:44px;color:var(--color-neutral-400)"><i class="ph ph-arrow-counter-clockwise"></i>{{ resetLabel }}</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasRole }}" hint-placeholder-val="{{ false }}">
+    <div style="height:40px;padding-top:env(safe-area-inset-top);flex:none;display:flex;align-items:center;justify-content:space-between;padding-left:16px;padding-right:6px;font-size:12px;color:var(--color-neutral-500);background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat bottom / 100% 1px">
+      <span style="display:flex;gap:6px;align-items:center"><i class="ph {{ roleIcon }}"></i><span>{{ roleLabel }}</span></span>
+      <button class="btn btn-ghost" onClick="{{ switchRole }}" style="min-height:40px;font-size:12px;padding-inline:10px"><i class="ph ph-swap"></i>Rolle wechseln</button>
+    </div>
+    <sc-if value="{{ vKundeOb }}" hint-placeholder-val="{{ false }}"><dc-import name="KundenAnmeldung" bare="{{ true }}" bare-h="{{ appH }}" on-done="{{ doneReg }}" on-logout="{{ logoutReg }}" hint-size="100%,100%"></dc-import></sc-if>
+    <sc-if value="{{ vKunde }}" hint-placeholder-val="{{ false }}"><dc-import name="KundenApp" bare="{{ true }}" bare-h="{{ appH }}" on-logout="{{ logoutReg }}" hint-size="100%,100%"></dc-import></sc-if>
+    <sc-if value="{{ vSweepOb }}" hint-placeholder-val="{{ false }}"><dc-import name="KaminfegerAnmeldung" bare="{{ true }}" bare-h="{{ appH }}" linked="{{ true }}" on-done="{{ doneReg }}" hint-size="100%,100%"></dc-import></sc-if>
+    <sc-if value="{{ vSweep }}" hint-placeholder-val="{{ false }}"><dc-import name="KaminfegerApp" bare="{{ true }}" bare-h="{{ appH }}" hint-size="100%,100%"></dc-import></sc-if>
+    <sc-if value="{{ vAdmin }}" hint-placeholder-val="{{ false }}"><dc-import name="BetreiberApp" bare="{{ true }}" bare-h="{{ appH }}" hint-size="100%,100%"></dc-import></sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('kf-device') || '{}'); } catch (e) {}
+    this.state = { role: saved.role || null, reg: saved.reg || {}, start: saved.start || 'register', resetDone: false };
+  }
+  save(patch) {
+    this.setState(patch, () => { try { localStorage.setItem('kf-device', JSON.stringify({ role: this.state.role, reg: this.state.reg, start: this.state.start })); } catch (e) {} });
+  }
+  renderVals() {
+    const st = this.state, r = st.role;
+    const needsReg = k => st.start === 'register' && !st.reg[k];
+    const ROLES = [
+      ['kunde', 'Kunde', 'Zeit wählen, verschieben, live sehen', 'ph-house-line'],
+      ['sweep', 'Kaminfeger', 'Zeitfenster anlegen, Route, Rückmeldungen', 'ph-path'],
+      ['admin', 'Betreiber', 'Registrierungen prüfen und freigeben', 'ph-seal-check']
+    ];
+    const cur = ROLES.find(x => x[0] === r);
+    return {
+      noRole: !r, hasRole: !!r,
+      roles: ROLES.map(x => ({ label: x[1], sub: x[2], icon: x[3], pick: () => this.save({ role: x[0] }) })),
+      starts: [['register', 'Mit Registrierung'], ['direct', 'Direkt in die App']].map(x => ({ label: x[1], on: st.start === x[0], pick: () => this.save({ start: x[0] }) })),
+      roleLabel: cur ? cur[1] : '', roleIcon: cur ? cur[3] : '',
+      switchRole: () => this.save({ role: null }),
+      logoutReg: () => { const r = Object.assign({}, this.state.reg); delete r[this.state.role]; this.save({ reg: r }); },
+      doneReg: () => this.save({ reg: Object.assign({}, this.state.reg, { [this.state.role]: true }) }),
+      appH: 'calc(100dvh - 40px - env(safe-area-inset-top))',
+      vKundeOb: r === 'kunde' && needsReg('kunde'), vKunde: r === 'kunde' && !needsReg('kunde'),
+      vSweepOb: r === 'sweep' && needsReg('sweep'), vSweep: r === 'sweep' && !needsReg('sweep'),
+      vAdmin: r === 'admin',
+      resetLabel: st.resetDone ? 'Demo-Daten zurückgesetzt' : 'Demo-Daten zurücksetzen',
+      resetData: () => { window.KF && window.KF.shared.reset(); this.save({ reg: {}, resetDone: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

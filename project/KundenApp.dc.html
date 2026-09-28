@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>@keyframes kfpulse{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.6);opacity:0}}</style>
+</helmet>
+<div style="width:{{ fw }};height:{{ fh }};padding:{{ fp }};border-radius:{{ fr }};background:var(--color-neutral-900);box-shadow:{{ fsh }};flex:none;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45">
+<div style="position:relative;width:100%;height:100%;border-radius:{{ ir }};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 70%)"></div>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}">
+  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:2">
+    <span>9:41</span>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black)"></div>
+    <div style="display:flex;gap:5px;align-items:center;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-bold ph-wifi-high"></i><i class="ph-fill ph-battery-full" style="font-size:22px"></i></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(10px, env(safe-area-inset-top));flex:none"></div></sc-if>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none">
+  <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:12px;color:var(--color-neutral-500)">Lindenstraße 7 · Freiburg</div>
+          <div style="font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Guten Tag, Familie Keller</div>
+        </div>
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--color-accent-900);color:var(--color-accent-300);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none;box-shadow:0 0 0 1px var(--color-accent-800)">FK</div>
+      </div>
+
+      <sc-if value="{{ banner }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openMsgs }}" style="margin:16px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-800);color:inherit;font:inherit;cursor:pointer">
+          <i class="ph ph-chat-circle-text" style="font-size:20px;color:var(--color-accent);margin-top:1px"></i>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--color-accent-300)">Neue Nachricht · Markus Brandt</div>
+            <div style="font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ banner.text }}</div>
+          </div>
+        </button>
+      </sc-if>
+
+      <sc-if value="{{ hLive }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 40px color-mix(in srgb, var(--color-accent) 20%, transparent)">
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)">
+            <span style="position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-accent)">{{ pulse }}</span>
+            <span>Live · heute</span>
+          </div>
+          <div style="font-size:24px;font-weight:500;letter-spacing:-0.02em;line-height:1.15;margin-top:10px;text-wrap:pretty">{{ liveTitle }}</div>
+          <div style="font-size:13px;color:var(--color-neutral-400);margin-top:4px">{{ liveSub }}</div>
+          <div style="position:relative;margin-top:20px;display:flex">
+            <div style="position:absolute;left:0;right:0;top:9px;height:1px;background:linear-gradient(to right, transparent, var(--color-neutral-700) 32px, var(--color-neutral-700) calc(100% - 32px), transparent)"></div>
+            <sc-for list="{{ stops }}" as="st" hint-placeholder-count="6">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative">
+                <div style="height:19px;display:grid;place-items:center"><div style="width:{{ st.sz }};height:{{ st.sz }};border-radius:50%;background:{{ st.bg }};box-shadow:{{ st.sh }}"></div></div>
+                <div style="font-size:11px;color:{{ st.fg }};white-space:nowrap">{{ st.lbl }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ liveMissed }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-primary" onClick="{{ toPick }}" style="width:100%;min-height:46px;margin-top:16px">Neue Zeit wählen<i class="ph ph-arrow-right"></i></button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hMoved }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px">
+          <span class="card-kicker">Umzug gemeldet</span>
+          <div style="font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Zugang zu Lindenstraße 7 beendet</div>
+          <div style="font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">Der Kaminfeger ist informiert. Verifizieren Sie Ihre neue Adresse, um dort Termine zu buchen.</div>
+          <button class="btn btn-primary" style="min-height:48px;font-size:15px"><i class="ph ph-map-pin-plus"></i>Neue Adresse verifizieren</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="card-kicker">Feuerstättenschau 2026</span><span class="tag tag-accent">Zeit wählen</span></div>
+          <div style="font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2;text-wrap:pretty">{{ openTitle }}</div>
+          <div style="font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">Markus Brandt hat {{ winCount }} Zeitfenster freigegeben. Wählen Sie eine halbe Stunde, in der jemand zu Hause ist – dann steht er nicht vor verschlossener Tür.</div>
+          <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px">
+            <sc-for list="{{ winInfo }}" as="w" hint-placeholder-count="3">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+                <span>{{ w.label }} <span style="color:var(--color-neutral-500)">· {{ w.range }}</span></span>
+                <span style="font-size:12px;color:var(--color-accent-300)">{{ w.free }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-neutral-400)"><i class="ph ph-clock-countdown" style="font-size:15px"></i><span>Bitte bis {{ deadline }} wählen</span></div>
+          <button class="btn btn-primary" onClick="{{ toPick }}" style="min-height:48px;font-size:15px;margin-top:2px">Zeit wählen<i class="ph ph-arrow-right"></i></button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hBooked }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="card-kicker">Ihr Termin</span><span class="tag tag-neutral" style="gap:5px"><i class="ph-bold ph-check"></i>bestätigt</span></div>
+          <div style="font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;margin-top:8px">{{ myTime }}</div>
+          <div style="font-size:16px;color:var(--color-neutral-300)">{{ myDate }}</div>
+          <div class="hr" style="margin:10px 0 6px"></div>
+          <div style="display:flex;flex-direction:column;gap:9px;font-size:14px">
+            <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-map-pin" style="font-size:18px;color:var(--color-neutral-500)"></i>Lindenstraße 7</div>
+            <sc-if value="{{ myKey }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:10px;align-items:center"><i class="ph ph-key" style="font-size:18px;color:var(--color-accent)"></i><span>Schlüssel bei {{ myKey }}</span></div></sc-if>
+            <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-timer" style="font-size:18px;color:var(--color-neutral-500)"></i><span>Dauer ca. {{ slotLen }} Minuten</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+            <button class="btn btn-secondary" onClick="{{ toResched }}" style="min-height:44px"><i class="ph ph-calendar-dots"></i>Verschieben</button>
+            <button class="btn btn-secondary" onClick="{{ askCancel }}" style="min-height:44px;color:var(--color-neutral-400)">Absagen</button>
+          </div>
+        </div>
+        <sc-if value="{{ showPrep }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:22px 22px 6px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Vorbereitung</span><span style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ prepCount }}</span></div>
+          <div style="margin:0 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:2px 14px">
+            <sc-for list="{{ prep }}" as="pp" hint-placeholder-count="3">
+              <button onClick="{{ pp.toggle }}" style="width:100%;display:flex;gap:12px;align-items:center;min-height:52px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer">
+                <span style="width:20px;height:20px;border-radius:6px;border:1.5px solid {{ pp.bd }};background:{{ pp.bg }};display:grid;place-items:center;color:{{ pp.ic }};font-size:12px;flex:none"><i class="ph-bold ph-check"></i></span>
+                <span style="flex:1;font-size:14px;color:{{ pp.fg }};text-decoration:{{ pp.deco }};text-wrap:pretty">{{ pp.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="padding:22px 22px 6px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Erinnerungen</div>
+        <div style="margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px">
+          <sc-for list="{{ rems }}" as="r" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+              <div style="flex:1"><div style="font-size:14px">{{ r.label }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ r.sub }}</div></div>
+              <button role="switch" onClick="{{ r.toggle }}" style="width:46px;height:28px;border-radius:14px;border:1px solid {{ r.bd }};background:{{ r.bg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:4px;left:{{ r.x }};width:18px;height:18px;border-radius:50%;background:{{ r.knob }};transition:left .15s"></span></button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hCancelled }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span class="card-kicker">Feuerstättenschau 2026</span><span class="tag tag-neutral">abgesagt</span></div>
+          <div style="font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Termin abgesagt</div>
+          <div style="font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">Die Feuerstättenschau ist Pflicht. Bitte wählen Sie eine neue Zeit – sonst meldet sich Markus Brandt telefonisch.</div>
+          <button class="btn btn-primary" onClick="{{ toPick }}" style="min-height:48px;font-size:15px">Neue Zeit wählen<i class="ph ph-arrow-right"></i></button>
+        </div>
+      </sc-if>
+
+      <div style="margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none">MB</div>
+        <div style="flex:1"><div style="font-size:14px">Markus Brandt</div><div style="font-size:12px;color:var(--color-neutral-500)">Ihr Kaminfeger · Kehrbezirk 14</div></div>
+        <button class="btn btn-secondary btn-icon" style="width:44px;height:44px"><i class="ph ph-phone" style="font-size:18px"></i></button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPick }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0">
+        <button class="btn btn-icon" onClick="{{ goHome }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+        <div><div style="font-size:17px;font-weight:500">{{ pickTitle }}</div><div style="font-size:12px;color:var(--color-neutral-500)">Schritt 1 von 2</div></div>
+      </div>
+      <div style="padding:14px 22px 0;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">An diesen Tagen ist Markus Brandt in der Lindenstraße. Ein Besuch dauert etwa {{ slotLen }} Minuten.</div>
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:16px 16px 0">
+        <sc-for list="{{ winCards }}" as="w" hint-placeholder-count="3">
+          <button onClick="{{ w.pick }}" style="text-align:left;padding:12px 10px 10px;border-radius:var(--radius-md);background:{{ w.bg }};border:1px solid {{ w.bd }};color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px;box-shadow:{{ w.sh }}">
+            <span style="font-size:12px;color:{{ w.kfg }}">{{ w.day }}</span>
+            <span style="font-size:17px;font-weight:500;letter-spacing:-0.01em">{{ w.date }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-400)">{{ w.range }}</span>
+            <span style="font-size:11px;color:var(--color-accent-300);margin-top:6px">{{ w.free }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="padding:22px 22px 10px;display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Zeiten · {{ selLabel }}</span>
+        <span style="font-size:12px;color:var(--color-neutral-500)">{{ freeLabel }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:0 16px 20px">
+        <sc-for list="{{ slots }}" as="sl" hint-placeholder-count="8">
+          <button onClick="{{ sl.pick }}" disabled="{{ sl.taken }}" style="min-height:48px;border-radius:var(--radius-md);background:{{ sl.bg }};border:1px solid {{ sl.bd }};color:{{ sl.fg }};font:inherit;font-size:15px;font-weight:500;cursor:{{ sl.cur }};text-decoration:{{ sl.deco }};font-variant-numeric:tabular-nums">{{ sl.t }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:16px;padding:0 22px 20px;font-size:12px;color:var(--color-neutral-500)">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;border:1px solid var(--color-neutral-600)"></span>frei</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:var(--color-neutral-900)"></span>schon vergeben</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;border:1px solid var(--color-accent);background:var(--color-accent-900)"></span>Ihre Wahl</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isConfirm }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0">
+        <button class="btn btn-icon" onClick="{{ backToPick }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+        <div><div style="font-size:17px;font-weight:500">Termin prüfen</div><div style="font-size:12px;color:var(--color-neutral-500)">Schritt 2 von 2</div></div>
+      </div>
+      <div style="margin:16px 16px 0;padding:18px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800)">
+        <div class="card-kicker">Feuerstättenschau</div>
+        <div style="font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;margin-top:10px">{{ selTime }}</div>
+        <div style="font-size:16px;color:var(--color-neutral-300)">{{ selDate }}</div>
+        <div class="hr" style="margin:14px 0 10px"></div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:14px">
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-map-pin" style="font-size:18px;color:var(--color-neutral-500)"></i>Lindenstraße 7, Familie Keller</div>
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-user" style="font-size:18px;color:var(--color-neutral-500)"></i>Markus Brandt, Kaminfeger</div>
+        </div>
+      </div>
+      <div style="margin:12px 16px 0;padding:14px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <i class="ph ph-key" style="font-size:20px;color:var(--color-neutral-400)"></i>
+          <div style="flex:1"><div style="font-size:14px">Schlüssel beim Nachbarn</div><div style="font-size:12px;color:var(--color-neutral-500)">Falls doch niemand zu Hause ist</div></div>
+          <button role="switch" onClick="{{ keyT.toggle }}" style="width:46px;height:28px;border-radius:14px;border:1px solid {{ keyT.bd }};background:{{ keyT.bg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:4px;left:{{ keyT.x }};width:18px;height:18px;border-radius:50%;background:{{ keyT.knob }};transition:left .15s"></span></button>
+        </div>
+        <sc-if value="{{ keyOn }}" hint-placeholder-val="{{ false }}">
+          <div class="field"><label>Bei wem liegt der Schlüssel?</label><input class="input" value="{{ keyWho }}" onChange="{{ setKeyWho }}" placeholder="z. B. Fam. Schulz, Nr. 5" style="min-height:44px;font-size:15px"></div>
+        </sc-if>
+      </div>
+      <div style="padding:14px 22px 20px;font-size:12px;color:var(--color-neutral-500);display:flex;gap:8px"><i class="ph ph-info" style="font-size:15px;margin-top:1px"></i><span style="text-wrap:pretty">Verschieben oder absagen können Sie bis zum Vortag in der App.</span></div>
+    </sc-if>
+
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:56px 24px 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--color-accent);color:var(--color-accent);box-shadow:0 0 40px color-mix(in srgb, var(--color-accent) 30%, transparent);margin-bottom:18px"><i class="ph-bold ph-check" style="font-size:28px"></i></div>
+        <div style="font-size:28px;font-weight:500;letter-spacing:-0.02em">Termin bestätigt</div>
+        <div style="font-size:16px;color:var(--color-neutral-300)">{{ myDate }} · {{ myTime }}</div>
+        <div style="font-size:14px;color:var(--color-neutral-400);margin-top:6px;text-wrap:pretty">Markus Brandt sieht Ihre Zeit sofort in seiner Tagesroute. Am Termintag zeigen wir Ihnen live, wie weit er noch entfernt ist.</div>
+        <button class="btn btn-secondary" onClick="{{ addCal }}" style="min-height:44px;margin-top:14px;color:{{ calFg }}"><i class="ph {{ calIcon }}"></i>{{ calLabel }}</button>
+      </div>
+      <div style="padding:28px 22px 6px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Erinnern Sie mich</div>
+      <div style="margin:0 16px 20px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px">
+        <sc-for list="{{ rems }}" as="r" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+            <div style="flex:1"><div style="font-size:14px">{{ r.label }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ r.sub }}</div></div>
+            <button role="switch" onClick="{{ r.toggle }}" style="width:46px;height:28px;border-radius:14px;border:1px solid {{ r.bd }};background:{{ r.bg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:4px;left:{{ r.x }};width:18px;height:18px;border-radius:50%;background:{{ r.knob }};transition:left .15s"></span></button>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMsgs }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 4px"><div style="font-size:23px;font-weight:500;letter-spacing:-0.015em">Nachrichten</div><div style="font-size:12px;color:var(--color-neutral-500)">von Ihrem Kaminfeger</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px 20px">
+        <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="2">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:12px;font-weight:500;flex:none">MB</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+              <div style="padding:10px 12px;border-radius:4px var(--radius-lg) var(--radius-lg) var(--radius-lg);background:var(--color-surface);font-size:14px;text-wrap:pretty;box-shadow:{{ m.sh }}">{{ m.text }}</div>
+              <div style="font-size:11px;color:var(--color-neutral-500);padding-left:4px">{{ m.time }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 4px"><div style="font-size:23px;font-weight:500;letter-spacing:-0.015em">Profil</div></div>
+      <div style="margin:12px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:17px;font-weight:500;flex:1">Familie Keller</span><span class="tag {{ verCls }}" style="gap:5px"><i class="ph-bold {{ verIcon }}"></i>{{ verLabel }}</span></div>
+        <div style="font-size:14px;color:var(--color-neutral-300)">Lindenstraße 7, 79102 Freiburg</div>
+        <div style="font-size:12px;color:var(--color-neutral-500)">Kehrbezirk 14 · Markus Brandt</div>
+      </div>
+      <div style="padding:22px 22px 6px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Haushalt</div>
+      <div style="margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px">
+        <sc-for list="{{ members }}" as="mb" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:12px;min-height:56px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:12px;font-weight:500;flex:none">{{ mb.ini }}</div>
+            <div style="flex:1;min-width:0"><div style="font-size:14px;overflow:hidden;text-overflow:ellipsis">{{ mb.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ mb.sub }}</div></div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ inviting }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:6px;padding:12px 0">
+            <input class="input" type="email" value="{{ inviteEmail }}" onChange="{{ setInvite }}" placeholder="E-Mail der Mitbewohnerin" style="min-height:44px;font-size:15px;flex:1">
+            <button class="btn btn-primary" onClick="{{ sendInvite }}" disabled="{{ inviteOff }}" style="min-height:44px">Einladen</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notInviting }}" hint-placeholder-val="{{ true }}">
+          <button class="btn btn-ghost" onClick="{{ startInvite }}" style="min-height:48px;padding-inline:0"><i class="ph ph-user-plus"></i>Mitbewohner einladen</button>
+        </sc-if>
+      </div>
+      <div style="padding:6px 22px 0;font-size:12px;color:var(--color-neutral-500);text-wrap:pretty">Eingeladene sehen den Termin und bekommen Erinnerungen – ohne eigene Adressprüfung.</div>
+      <div style="padding:22px 22px 6px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Benachrichtigungen</div>
+      <div style="margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px">
+        <sc-for list="{{ channels }}" as="r" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:12px;min-height:56px">
+            <div style="flex:1"><div style="font-size:14px">{{ r.label }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ r.sub }}</div></div>
+            <button role="switch" onClick="{{ r.toggle }}" style="width:46px;height:28px;border-radius:14px;border:1px solid {{ r.bd }};background:{{ r.bg }};position:relative;cursor:pointer;flex:none;padding:0"><span style="position:absolute;top:4px;left:{{ r.x }};width:18px;height:18px;border-radius:50%;background:{{ r.knob }};transition:left .15s"></span></button>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;margin:16px 16px 20px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:2px 16px">
+        <button onClick="{{ askMove }}" disabled="{{ moved }}" style="display:flex;align-items:center;gap:12px;min-height:52px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px;border:0;color:inherit;font:inherit;font-size:14px;cursor:pointer;text-align:left"><i class="ph ph-truck" style="font-size:18px;color:var(--color-neutral-400)"></i><span style="flex:1">Umzug melden</span><i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i></button>
+        <button onClick="{{ askLogout }}" style="display:flex;align-items:center;gap:12px;min-height:52px;background:none;border:0;color:var(--color-neutral-400);font:inherit;font-size:14px;cursor:pointer;text-align:left"><i class="ph ph-sign-out" style="font-size:18px"></i><span style="flex:1">Abmelden</span></button>
+      </div>
+    </sc-if>
+
+  </sc-if>
+  </div>
+
+  <sc-if value="{{ isPick }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2;background:linear-gradient(to top, var(--color-bg) 70%, transparent)">
+      <button class="btn btn-primary" onClick="{{ toConfirm }}" disabled="{{ noSel }}" style="width:100%;min-height:50px;font-size:15px">{{ pickCta }}</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isConfirm }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2">
+      <button class="btn btn-primary" onClick="{{ doConfirm }}" style="width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)"><i class="ph ph-check-circle" style="font-size:18px"></i>Termin verbindlich bestätigen</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2">
+      <button class="btn btn-secondary" onClick="{{ goHome }}" style="width:100%;min-height:50px;font-size:15px">Fertig</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:grid;grid-template-columns:repeat(3, 1fr);padding:8px 24px 0;position:relative;z-index:2;background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px">
+      <button onClick="{{ goHome }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tabHomeFg }}"><i class="ph ph-calendar-check" style="font-size:24px"></i>Termin</button>
+      <button onClick="{{ openMsgs }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tabMsgFg }};position:relative">
+        <i class="ph ph-chat-circle-text" style="font-size:24px"></i>Nachrichten
+        <sc-if value="{{ unread }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--color-accent);color:var(--color-bg);font-size:10px;font-weight:600;display:grid;place-items:center">{{ unread }}</span></sc-if>
+      </button>
+      <button onClick="{{ openProfile }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tabProfFg }}"><i class="ph ph-house-line" style="font-size:24px"></i>Profil</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}"><div style="height:30px;flex:none;display:grid;place-items:center;position:relative;z-index:2"><div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300)"></div></div></sc-if><sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(8px, env(safe-area-inset-bottom));flex:none"></div></sc-if>
+
+  <sc-if value="{{ isCancel }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:20px;font-weight:500">Termin absagen?</div>
+        <div style="font-size:14px;color:var(--color-neutral-300);text-wrap:pretty">Ihr Slot {{ myDate }} · {{ myTime }} wird für Nachbarn frei. Die Feuerstättenschau bleibt Pflicht – meist ist <strong style="font-weight:500;color:var(--color-text)">Verschieben</strong> die bessere Wahl.</div>
+        <button class="btn btn-primary" onClick="{{ toResched }}" style="min-height:48px;margin-top:6px">Lieber verschieben</button>
+        <button class="btn btn-secondary" onClick="{{ doCancel }}" style="min-height:48px">Trotzdem absagen</button>
+        <button class="btn btn-ghost" onClick="{{ closeOverlay }}" style="min-height:44px;color:var(--color-neutral-400)">Zurück</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isLogout }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:20px;font-weight:500">Abmelden?</div>
+        <div style="font-size:14px;color:var(--color-neutral-300);text-wrap:pretty">Ihr Termin bleibt bestehen. Erinnerungen per E-Mail bekommen Sie weiter, Push-Mitteilungen auf diesem Gerät nicht mehr.</div>
+        <button class="btn btn-primary" onClick="{{ doLogout }}" style="min-height:48px;margin-top:6px"><i class="ph ph-sign-out"></i>Abmelden</button>
+        <button class="btn btn-ghost" onClick="{{ closeOverlay }}" style="min-height:44px;color:var(--color-neutral-400)">Abbrechen</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:6;background:var(--color-bg);display:flex;flex-direction:column;padding:120px 26px 40px;gap:12px">
+      <div style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--color-neutral-600);color:var(--color-neutral-300);margin-bottom:14px"><i class="ph ph-sign-out" style="font-size:24px"></i></div>
+      <div style="font-size:28px;font-weight:500;letter-spacing:-0.02em">Abgemeldet</div>
+      <div style="font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Melden Sie sich mit Ihrer E-Mail-Adresse wieder an – wir schicken Ihnen einen Code.</div>
+      <div class="field" style="margin-top:18px"><label>E-Mail-Adresse</label><input class="input" type="email" value="{{ loginEmail }}" onChange="{{ setLoginEmail }}" placeholder="name@beispiel.de" style="min-height:46px;font-size:15px"></div>
+      <div style="flex:1"></div>
+      <button class="btn btn-primary" onClick="{{ doLogin }}" disabled="{{ loginOff }}" style="min-height:50px;font-size:15px">Code senden &amp; anmelden</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isMove }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:20px;font-weight:500">Umzug melden?</div>
+        <div style="font-size:14px;color:var(--color-neutral-300);text-wrap:pretty">Ihr Zugang zu Lindenstraße 7 endet. Offene Termine werden storniert und Markus Brandt informiert. Die neuen Bewohner können sich dann selbst verifizieren.</div>
+        <button class="btn btn-primary" onClick="{{ doMove }}" style="min-height:48px;margin-top:6px">Umzug melden</button>
+        <button class="btn btn-ghost" onClick="{{ closeOverlay }}" style="min-height:44px;color:var(--color-neutral-400)">Abbrechen</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;preset&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;booked&quot;,&quot;key&quot;,&quot;live&quot;,&quot;cancelled&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;pick&quot;,&quot;confirm&quot;,&quot;done&quot;,&quot;msgs&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;overlay&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;selT&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  frame() { const b = !!this.props.bare; return { bare: b, framed: !b, fw: b ? '100%' : '390px', fh: b ? (this.props.bareH || '100dvh') : '844px', fp: b ? '0' : '10px', fr: b ? '0' : '56px', ir: b ? '0' : '46px', fsh: b ? 'none' : 'var(--shadow-md)', appPreset: b ? '' : 'fresh', bareH: this.props.bareH || '100dvh' }; }
+  state = { ready: false, screen: this.props.screen || 'home', overlay: this.props.overlay || null, selW: null, selT: null, keyOn: false, keyWho: '', resched: false, cal: false, loggedOut: false, loginEmail: 'keller.familie@web.de', inviting: false, inviteEmail: '', invited: [], ch: { push: true, mail: true } };
+  componentDidMount() {
+    const go = () => {
+      const K = window.KF;
+      this.store = this.props.preset ? K.create(K.preset(this.props.preset)) : K.shared;
+      this.unsub = this.store.sub(() => this.forceUpdate());
+      const s = this.store.get(), me = K.h.me(s);
+      this.setState({ ready: true, selW: me.w || s.windows[0].id, selT: this.props.selT || null, keyOn: !!me.key, keyWho: me.key || '' });
+    };
+    window.KF ? go() : import(new URL('kf-store.js', document.baseURI).href).then(go);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); }
+  tog(on) {
+    return { bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-800)' : 'transparent', x: on ? '23px' : '4px', knob: on ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' };
+  }
+  renderVals() {
+    if (!this.store) return Object.assign({ ready: false }, this.frame());
+    const K = window.KF, H = K.h, s = this.store.get(), st = this.state, me = H.me(s), len = s.slotLen;
+    const set = p => this.setState(p);
+    const mine = s.messages.filter(m => m.to.includes(s.me));
+    const unreadList = mine.filter(m => !s.read.includes(m.id));
+    const markRead = () => this.store.set(x => ({ read: x.messages.map(m => m.id) }));
+    const scr = st.screen;
+    const booked = me.status === 'booked';
+    const route = H.route(s), cur = H.current(s);
+    const myIdx = route.findIndex(x => x.nr === me.nr);
+    const curIdx = cur ? route.indexOf(cur) : route.length;
+    const hLive = scr === 'home' && booked && s.routeStarted && me.w === s.windows[0].id;
+    let liveTitle = '', liveSub = '';
+    if (hLive) {
+      const d = myIdx - curIdx;
+      if (me.visit === 'done') { liveTitle = 'Erledigt – vielen Dank!'; liveSub = 'Die Feuerstättenschau ist abgeschlossen.'; }
+      else if (me.visit === 'missed') { liveTitle = 'Sie wurden nicht angetroffen'; liveSub = 'Bitte wählen Sie eine neue Zeit – die Feuerstättenschau bleibt Pflicht.'; }
+      else if (d <= 0) { liveTitle = 'Ihr Kaminfeger ist jetzt bei Ihnen'; liveSub = 'Bitte öffnen Sie die Tür.'; }
+      else if (d === 1) { liveTitle = 'Sie sind als Nächstes dran'; liveSub = 'Gerade bei Nr. ' + cur.nr + ' · Ihr Slot ' + me.t + '–' + H.end(me.t, len); }
+      else { liveTitle = 'Ihr Kaminfeger ist ' + d + ' Häuser entfernt'; liveSub = 'Gerade bei Nr. ' + cur.nr + ' · Ihr Slot ' + me.t + '–' + H.end(me.t, len); }
+    }
+    const stops = route.map((x, i) => {
+      const isMe = x.nr === me.nr, isCur = cur && x.nr === cur.nr;
+      return {
+        lbl: isMe ? 'Sie' : 'Nr. ' + x.nr,
+        sz: isCur ? '14px' : isMe ? '12px' : '8px',
+        bg: isCur ? 'var(--color-accent)' : isMe ? 'var(--color-bg)' : x.visit ? 'var(--color-neutral-600)' : 'var(--color-neutral-800)',
+        sh: isCur ? '0 0 0 4px var(--color-accent-900), 0 0 16px var(--color-accent)' : isMe ? '0 0 0 2px var(--color-accent-300)' : 'none',
+        fg: isMe ? 'var(--color-accent-300)' : isCur ? 'var(--color-text)' : 'var(--color-neutral-500)'
+      };
+    });
+    const selW = st.selW || s.windows[0].id;
+    const w = H.win(s, selW) || s.windows[0];
+    const winCards = s.windows.map(x => {
+      const on = x.id === w.id, n = H.free(s, x.id, me.nr), p = H.short(x.label);
+      return { day: p.day, date: p.date, range: x.start + '–' + x.end, free: n ? n + ' frei' : 'ausgebucht',
+        bg: on ? 'var(--color-accent-900)' : 'var(--color-surface)', bd: on ? 'var(--color-accent)' : 'transparent',
+        sh: on ? '0 0 24px color-mix(in srgb, var(--color-accent) 18%, transparent)' : 'none', kfg: on ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+        pick: () => set({ selW: x.id, selT: null }) };
+    });
+    const slotTimes = H.slots(w, len);
+    const slots = slotTimes.map(t => {
+      const taken = !!H.taken(s, w.id, t, me.nr), on = st.selT === t && st.selW === w.id;
+      return { t, taken,
+        bg: taken ? 'var(--color-neutral-900)' : on ? 'var(--color-accent-900)' : 'transparent',
+        bd: taken ? 'transparent' : on ? 'var(--color-accent)' : 'var(--color-neutral-700)',
+        fg: taken ? 'var(--color-neutral-600)' : on ? 'var(--color-accent-200)' : 'var(--color-text)',
+        deco: taken ? 'line-through' : 'none', cur: taken ? 'default' : 'pointer',
+        pick: () => set({ selT: t, selW: w.id }) };
+    });
+    const freeN = slots.filter(x => !x.taken).length;
+    const hasSel = !!st.selT;
+    const rem = s.reminders;
+    const remT = k => () => this.store.set(x => ({ reminders: Object.assign({}, x.reminders, { [k]: !x.reminders[k] }) }));
+    const rems = [
+      Object.assign({ label: 'Am Vorabend', sub: 'Push um 18:00 Uhr', toggle: remT('eve') }, this.tog(rem.eve)),
+      Object.assign({ label: 'Eine Stunde vorher', sub: 'Mit Live-Status des Kaminfegers', toggle: remT('hour') }, this.tog(rem.hour))
+    ];
+    const myW = booked ? H.win(s, me.w) : null;
+    const goHome = () => set({ screen: 'home', overlay: null });
+    const prepDone = s.prep || [];
+    const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
+    const prep = PREP.map(p => { const on = prepDone.includes(p[0]); return { label: p[1],
+      bd: on ? 'var(--color-accent)' : 'var(--color-neutral-600)', bg: on ? 'var(--color-accent)' : 'transparent', ic: on ? 'var(--color-bg)' : 'transparent',
+      fg: on ? 'var(--color-neutral-500)' : 'var(--color-text)', deco: on ? 'line-through' : 'none',
+      toggle: () => this.store.set(x => { const a = x.prep || []; return { prep: a.includes(p[0]) ? a.filter(k => k !== p[0]) : a.concat([p[0]]) }; }) }; });
+    const chT = k => () => set({ ch: Object.assign({}, st.ch, { [k]: !st.ch[k] }) });
+    const members = [{ ini: 'AK', name: 'Anna Keller (Sie)', sub: 'Verifiziert · Kundennummer' }, { ini: 'TK', name: 'Tom Keller', sub: 'Erhält Erinnerungen' }]
+      .concat(st.invited.map(e => ({ ini: e.slice(0, 2).toUpperCase(), name: e, sub: 'Einladung gesendet' })));
+    return {
+      ...this.frame(),
+      ready: true,
+      isHome: scr === 'home', isPick: scr === 'pick', isConfirm: scr === 'confirm', isDone: scr === 'done', isMsgs: scr === 'msgs',
+      isCancel: st.overlay === 'cancel',
+      showTabs: scr === 'home' || scr === 'msgs' || scr === 'profile',
+      tabHomeFg: scr === 'home' ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      tabMsgFg: scr === 'msgs' ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      unread: unreadList.length || 0,
+      banner: scr === 'home' && unreadList.length ? unreadList[unreadList.length - 1] : null,
+      hOpen: me.status === 'open' && !me.moved, hMoved: !!me.moved, hBooked: booked,
+      liveMissed: hLive && me.visit === 'missed',
+      showPrep: !me.visit, prep, prepCount: prep.filter(p => p.deco !== 'none').length + ' von ' + prep.length,
+      addCal: () => set({ cal: true }), calLabel: st.cal ? 'Im Kalender gespeichert' : 'Zum Kalender hinzufügen', calIcon: st.cal ? 'ph-check' : 'ph-calendar-plus', calFg: st.cal ? 'var(--color-accent)' : 'var(--color-text)',
+      isProfile: scr === 'profile', openProfile: () => set({ screen: 'profile' }),
+      tabProfFg: scr === 'profile' ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      verCls: me.moved ? 'tag-neutral' : 'tag-accent', verIcon: me.moved ? 'ph-x' : 'ph-shield-check', verLabel: me.moved ? 'beendet' : 'verifiziert',
+      members, inviting: st.inviting, notInviting: !st.inviting, inviteEmail: st.inviteEmail,
+      setInvite: e => set({ inviteEmail: e.target.value }), startInvite: () => set({ inviting: true }),
+      inviteOff: !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.inviteEmail),
+      sendInvite: () => set({ invited: st.invited.concat([st.inviteEmail.trim()]), inviteEmail: '', inviting: false }),
+      channels: [
+        Object.assign({ label: 'Push-Mitteilungen', sub: 'Erinnerungen und Live-Status', toggle: chT('push') }, this.tog(st.ch.push)),
+        Object.assign({ label: 'E-Mail', sub: 'Bestätigung und Änderungen', toggle: chT('mail') }, this.tog(st.ch.mail))
+      ],
+      isLogout: st.overlay === 'logout', askLogout: () => set({ overlay: 'logout' }),
+      doLogout: () => { set({ overlay: null, loggedOut: true }); this.props.onLogout && this.props.onLogout(); },
+      loggedOut: st.loggedOut && !this.props.onLogout, loginEmail: st.loginEmail, setLoginEmail: e => set({ loginEmail: e.target.value }),
+      loginOff: !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.loginEmail), doLogin: () => set({ loggedOut: false, screen: 'home' }),
+      moved: !!me.moved, isMove: st.overlay === 'move', askMove: () => set({ overlay: 'move' }),
+      doMove: () => { this.store.house(me.nr, { status: 'open', w: null, t: null, visit: null, key: null, moved: true }); set({ overlay: null, screen: 'home' }); }, hCancelled: me.status === 'cancelled', hLive,
+      liveTitle, liveSub, stops, pulse: React.createElement('span', { style: { position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--color-accent)', animation: 'kfpulse 1.8s ease-out infinite' } }),
+      openTitle: 'Ihr Kaminfeger kommt in die ' + s.street,
+      winCount: s.windows.length, deadline: s.deadline, slotLen: len,
+      winInfo: s.windows.map(x => { const n = H.free(s, x.id, me.nr); return { label: x.label, range: x.start + '–' + x.end, free: n ? n + ' frei' : 'ausgebucht' }; }),
+      myTime: booked ? me.t + '–' + H.end(me.t, len) : '', myDate: myW ? H.longDay(myW.label) + ', ' + H.short(myW.label).date : '', myKey: booked ? me.key || null : null,
+      rems,
+      pickTitle: st.resched ? 'Termin verschieben' : 'Zeit wählen',
+      winCards, slots, selLabel: w.label, freeLabel: freeN + ' von ' + slots.length + ' frei',
+      noSel: !hasSel, pickCta: hasSel ? 'Weiter · ' + H.short(w.label).day + ' ' + st.selT + '–' + H.end(st.selT, len) : 'Bitte eine Zeit wählen',
+      selTime: hasSel ? st.selT + '–' + H.end(st.selT, len) : '', selDate: H.longDay(w.label) + ', ' + H.short(w.label).date,
+      keyOn: st.keyOn, keyWho: st.keyWho,
+      keyT: Object.assign({ toggle: () => set({ keyOn: !st.keyOn }) }, this.tog(st.keyOn)),
+      setKeyWho: e => set({ keyWho: e.target.value }),
+      msgs: mine.slice().reverse().map(m => ({ text: m.text, time: m.time, sh: s.read.includes(m.id) ? 'none' : '0 0 0 1px var(--color-accent-700)' })),
+      goHome,
+      openMsgs: () => { set({ screen: 'msgs' }); setTimeout(markRead, 1200); },
+      toPick: () => set({ screen: 'pick', resched: false, selW: s.windows[0].id, selT: null, overlay: null }),
+      toResched: () => set({ screen: 'pick', resched: true, selW: me.w || s.windows[0].id, selT: null, overlay: null }),
+      backToPick: () => set({ screen: 'pick' }),
+      toConfirm: () => { if (hasSel) set({ screen: 'confirm' }); },
+      doConfirm: () => {
+        this.store.house(me.nr, { status: 'booked', w: w.id, t: st.selT, key: st.keyOn && st.keyWho.trim() ? st.keyWho.trim() : null, visit: null });
+        set({ screen: 'done' });
+      },
+      askCancel: () => set({ overlay: 'cancel' }),
+      closeOverlay: () => set({ overlay: null }),
+      doCancel: () => { this.store.house(me.nr, { status: 'cancelled', w: null, t: null, visit: null }); set({ overlay: null, screen: 'home' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

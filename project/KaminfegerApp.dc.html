@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<div style="width:{{ fw }};height:{{ fh }};padding:{{ fp }};border-radius:{{ fr }};background:var(--color-neutral-900);box-shadow:{{ fsh }};flex:none;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45">
+<div style="position:relative;width:100%;height:100%;border-radius:{{ ir }};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-section-glow) 45%, transparent), transparent 70%)"></div>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}">
+  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:2">
+    <span>7:48</span>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black)"></div>
+    <div style="display:flex;gap:5px;align-items:center;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-bold ph-wifi-high"></i><i class="ph-fill ph-battery-full" style="font-size:22px"></i></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(10px, env(safe-area-inset-top));flex:none"></div></sc-if>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none">
+  <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+    <sc-if value="{{ isStreets }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:12px;color:var(--color-neutral-500)">Kehrbezirk 14 · Freiburg-Wiehre</div>
+          <div style="font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Guten Morgen, Markus</div>
+        </div>
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none">MB</div>
+      </div>
+      <div style="margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:4px">
+        <span class="card-kicker">Heute · {{ todayLabel }}</span>
+        <div style="font-size:20px;font-weight:500;letter-spacing:-0.015em">Route Lindenstraße</div>
+        <div style="font-size:13px;color:var(--color-neutral-400)">{{ routeSummary }}</div>
+        <button class="btn btn-primary" onClick="{{ goRoute }}" style="min-height:44px;margin-top:10px"><i class="ph ph-path"></i>Route öffnen</button>
+      </div>
+      <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:12px 16px 0;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-700);display:flex;gap:10px;align-items:center;font-size:13px"><i class="ph ph-paper-plane-tilt" style="font-size:18px;color:var(--color-accent)"></i><span style="flex:1;text-wrap:pretty">{{ toast }}</span></div>
+      </sc-if>
+      <sc-if value="{{ tenantAsked }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openTenant }}" style="margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-700);color:inherit;font:inherit;cursor:pointer">
+          <i class="ph ph-user-check" style="font-size:22px;color:var(--color-accent)"></i>
+          <div style="flex:1"><div style="font-size:12px;color:var(--color-accent-300)">Bewohner-Anfrage vom Betreiber</div><div style="font-size:14px">Wohnt S. Özdemir in der Lindenstraße 9?</div></div>
+          <i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i>
+        </button>
+      </sc-if>
+      <div style="padding:22px 22px 8px;display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Straßen im Oktober</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px 20px">
+        <button onClick="{{ goStreet }}" style="text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:500;flex:1">Lindenstraße</span><span class="tag tag-accent">läuft</span><i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i></div>
+          <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px">
+            <div style="width:{{ pBooked }};background:var(--color-accent)"></div>
+            <div style="width:{{ pOpen }};background:var(--color-neutral-700)"></div>
+            <div style="width:{{ pCanc }};background:var(--color-neutral-800)"></div>
+          </div>
+          <div style="font-size:12px;color:var(--color-neutral-400)">{{ countsLine }}</div>
+        </button>
+        <sc-if value="{{ ahornNew }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:14px 16px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:500;flex:1">Ahornweg</span><span class="tag tag-neutral">Entwurf</span></div>
+            <div style="font-size:12px;color:var(--color-neutral-500)">9 Haushalte · noch keine Zeitfenster</div>
+            <button class="btn btn-primary" onClick="{{ setupAhorn }}" style="min-height:44px;margin-top:6px"><i class="ph ph-calendar-plus"></i>Zeitfenster anlegen</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ ahornSent }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ setupAhorn }}" style="text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:500;flex:1">Ahornweg</span><span class="tag tag-accent">gesendet</span><i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i></div>
+            <div style="font-size:12px;color:var(--color-neutral-400)">0 von 9 bestätigt · {{ ahornWins }}</div>
+          </button>
+        </sc-if>
+        <div style="padding:14px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:500;flex:1;color:var(--color-neutral-400)">Kirchplatz</span><span style="font-size:12px;color:var(--color-neutral-500);display:flex;gap:4px;align-items:center"><i class="ph ph-check"></i>abgeschlossen</span></div>
+          <div style="font-size:12px;color:var(--color-neutral-500)">6 von 6 besucht · 0 × vor verschlossener Tür</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isStreet }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0">
+        <button class="btn btn-icon" onClick="{{ goStreets }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+        <div style="flex:1"><div style="font-size:17px;font-weight:500">Lindenstraße</div><div style="font-size:12px;color:var(--color-neutral-500)">12 Haushalte · Frist {{ deadline }}</div></div>
+      </div>
+      <div style="padding:14px 22px 0;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Zeitfenster</span>
+        <button class="btn btn-ghost" onClick="{{ editLinden }}" style="min-height:36px;padding-inline:8px"><i class="ph ph-pencil-simple"></i>Bearbeiten</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:4px 16px 0">
+        <sc-for list="{{ winStats }}" as="w" hint-placeholder-count="3">
+          <div style="padding:10px;border-radius:var(--radius-md);background:var(--color-surface);display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:12px;color:var(--color-neutral-500)">{{ w.label }}</span>
+            <span style="font-size:13px">{{ w.range }}</span>
+            <span style="font-size:11px;color:var(--color-accent-300);margin-top:4px">{{ w.stat }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px">
+          <div style="width:{{ pBooked }};background:var(--color-accent)"></div>
+          <div style="width:{{ pOpen }};background:var(--color-neutral-700)"></div>
+          <div style="width:{{ pCanc }};background:var(--color-neutral-800)"></div>
+        </div>
+        <div style="font-size:12px;color:var(--color-neutral-400)">{{ countsLine }}</div>
+      </div>
+      <div style="padding:14px 16px 0">
+        <div class="seg" style="display:flex">
+          <sc-for list="{{ filters }}" as="f" hint-placeholder-count="3">
+            <label class="seg-opt" style="flex:1;justify-content:center;min-height:40px"><input type="radio" name="{{ f.name }}" checked="{{ f.on }}" onChange="{{ f.pick }}"><span>{{ f.label }}</span></label>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;padding:6px 16px 0">
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:12px;min-height:60px;padding:6px 0;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+            <div style="width:38px;height:38px;border-radius:var(--radius-md);background:var(--color-surface);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none;font-variant-numeric:tabular-nums">{{ r.nr }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px">{{ r.name }}</div>
+              <div style="font-size:12px;color:{{ r.lineFg }};display:flex;gap:5px;align-items:center">{{ r.line }}<sc-if value="{{ r.key }}" hint-placeholder-val="{{ false }}"><i class="ph ph-key" style="color:var(--color-accent)"></i></sc-if></div>
+            </div>
+            <sc-if value="{{ r.showCall }}" hint-placeholder-val="{{ false }}">
+              <button class="btn btn-secondary" onClick="{{ r.call }}" style="min-height:40px"><i class="ph ph-phone"></i>Anrufen</button>
+            </sc-if>
+            <sc-if value="{{ r.tag }}" hint-placeholder-val="{{ true }}">
+              <span class="tag {{ r.tagCls }}">{{ r.tag }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:16px 16px 20px">
+        <button class="btn btn-primary" onClick="{{ remindOpen }}" style="width:100%;min-height:46px"><i class="ph ph-bell-ringing"></i>Offene erinnern</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0">
+        <button class="btn btn-icon" onClick="{{ backSetup }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+        <div><div style="font-size:17px;font-weight:500">{{ setupTitle }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ setupSub }}</div></div>
+      </div>
+      <div style="padding:12px 22px 0;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">Schlagen Sie 2–3 Fenster vor. Die Kunden buchen darin feste Slots – jeder Slot nur einmal.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px 0">
+        <sc-for list="{{ draftWins }}" as="w" hint-placeholder-count="2">
+          <div style="padding:12px 12px 14px 14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;display:flex;flex-direction:column">
+                <span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)">Fenster {{ w.n }}</span>
+                <span style="font-size:17px;font-weight:500;letter-spacing:-0.01em">{{ w.label }} · {{ w.start }}–{{ w.end }}</span>
+              </div>
+              <button class="btn btn-icon" onClick="{{ w.remove }}" disabled="{{ w.noRemove }}" style="width:40px;height:40px;color:var(--color-neutral-400)"><i class="ph ph-trash" style="font-size:18px"></i></button>
+            </div>
+            <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -12px 0 -14px;padding:0 12px 0 14px">
+              <sc-for list="{{ w.days }}" as="dy" hint-placeholder-count="7">
+                <button onClick="{{ dy.pick }}" style="flex:none;width:44px;min-height:52px;padding:6px 0;border-radius:var(--radius-md);border:1px solid {{ dy.bd }};background:{{ dy.bg }};color:{{ dy.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;cursor:pointer;line-height:1.15">
+                  <span style="font-size:11px;opacity:.75">{{ dy.wd }}</span><span style="font-size:16px;font-weight:500;font-variant-numeric:tabular-nums">{{ dy.d }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ w.presets }}" as="pr" hint-placeholder-count="3">
+                <button onClick="{{ pr.pick }}" style="min-height:34px;padding:0 12px;border-radius:17px;border:1px solid {{ pr.bd }};background:{{ pr.bg }};color:{{ pr.fg }};font:inherit;font-size:13px;cursor:pointer">{{ pr.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:8px">
+              <div class="field"><label>von</label><input class="input" type="time" step="1800" value="{{ w.start }}" onChange="{{ w.setStart }}" style="min-height:44px;color-scheme:dark;font-size:15px"></div>
+              <div class="field"><label>bis</label><input class="input" type="time" step="1800" value="{{ w.end }}" onChange="{{ w.setEnd }}" style="min-height:44px;color-scheme:dark;font-size:15px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;color:var(--color-neutral-500)">{{ w.slots }} für Kunden</span>
+              <div style="display:flex;flex-wrap:wrap;gap:4px">
+                <sc-for list="{{ w.preview }}" as="pv" hint-placeholder-count="8">
+                  <span style="font-size:11px;font-variant-numeric:tabular-nums;padding:2px 6px;border-radius:var(--radius-sm);background:{{ pv.bg }};color:{{ pv.fg }}">{{ pv.t }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ canAdd }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-secondary" onClick="{{ addWin }}" style="min-height:46px;border-style:dashed"><i class="ph ph-plus"></i>Fenster hinzufügen</button>
+        </sc-if>
+      </div>
+      <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:14px">
+        <div class="field"><label>Dauer pro Haushalt</label>
+          <div class="seg" style="display:flex">
+            <sc-for list="{{ lens }}" as="l" hint-placeholder-count="3">
+              <label class="seg-opt" style="flex:1;justify-content:center;min-height:40px"><input type="radio" name="{{ l.name }}" checked="{{ l.on }}" onChange="{{ l.pick }}"><span>{{ l.label }}</span></label>
+            </sc-for>
+          </div>
+        </div>
+        <div class="field"><label>Antwortfrist für Kunden</label><input class="input" value="{{ draftDeadline }}" onChange="{{ setDeadline }}" style="min-height:42px"></div>
+      </div>
+      <div style="margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);display:flex;gap:10px;align-items:center;font-size:13px">
+        <i class="ph {{ capIcon }}" style="font-size:20px;color:{{ capFg }}"></i><span style="text-wrap:pretty">{{ capText }}</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRoute }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 0;display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-size:12px;color:var(--color-neutral-500)">{{ todayLabel }} · Lindenstraße</div>
+          <div style="font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Tagesroute</div>
+        </div>
+        <sc-if value="{{ started }}" hint-placeholder-val="{{ false }}"><span class="tag tag-outline" style="gap:6px;margin-bottom:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent)"></span>Kunden sehen live</span></sc-if>
+      </div>
+      <sc-if value="{{ notStarted }}" hint-placeholder-val="{{ true }}">
+        <div style="margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:16px;font-weight:500">{{ routeSummary }}</div>
+          <div style="font-size:13px;color:var(--color-neutral-400);text-wrap:pretty">Mit dem Start sehen Ihre Kunden, wie viele Häuser Sie noch entfernt sind.</div>
+          <button class="btn btn-primary" onClick="{{ startRoute }}" style="min-height:46px;margin-top:8px"><i class="ph ph-play"></i>Route starten</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ routeDone }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700);display:flex;flex-direction:column;gap:4px">
+          <span class="card-kicker">Route abgeschlossen</span>
+          <div style="font-size:20px;font-weight:500">{{ doneSummary }}</div>
+        </div>
+      </sc-if>
+      <div style="display:flex;flex-direction:column;padding:18px 16px 20px">
+        <sc-for list="{{ stops }}" as="p" hint-placeholder-count="6">
+          <div style="display:grid;grid-template-columns:48px 22px minmax(0, 1fr);column-gap:10px">
+            <div style="font-size:13px;font-variant-numeric:tabular-nums;color:{{ p.timeFg }};padding-top:13px;text-align:right">{{ p.t }}</div>
+            <div style="position:relative;display:flex;justify-content:center">
+              <div style="position:absolute;top:0;bottom:0;width:1px;background:var(--color-neutral-800)"></div>
+              <div style="position:relative;margin-top:16px;width:{{ p.sz }};height:{{ p.sz }};border-radius:50%;background:{{ p.bg }};box-shadow:{{ p.sh }};display:grid;place-items:center;font-size:9px;color:var(--color-bg)"><i class="ph-bold {{ p.icon }}"></i></div>
+            </div>
+            <div style="padding:6px 0">
+              <div style="padding:{{ p.pad }};border-radius:var(--radius-lg);background:{{ p.cardBg }};box-shadow:{{ p.cardSh }};display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:15px;flex:1;color:{{ p.fg }}">Nr. {{ p.nr }} · {{ p.name }}</span>
+                  <sc-if value="{{ p.status }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--color-neutral-500)">{{ p.status }}</span></sc-if>
+                </div>
+                <sc-if value="{{ p.key }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-accent-300);display:flex;gap:5px;align-items:center"><i class="ph ph-key"></i><span>Schlüssel bei {{ p.key }}</span></div></sc-if>
+                <sc-if value="{{ p.isCur }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+                    <button class="btn btn-primary" onClick="{{ p.done }}" style="min-height:44px"><i class="ph ph-check"></i>Erledigt</button>
+                    <button class="btn btn-secondary" onClick="{{ p.missed }}" style="min-height:44px">Niemand da</button>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isNotify }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 0"><div style="font-size:23px;font-weight:500;letter-spacing:-0.015em">Nachricht senden</div><div style="font-size:12px;color:var(--color-neutral-500)">Push an Kunden der Lindenstraße</div></div>
+      <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:14px">
+        <div class="field"><label>An</label>
+          <div class="seg" style="display:flex">
+            <sc-for list="{{ rcpts }}" as="o" hint-placeholder-count="3">
+              <label class="seg-opt" style="flex:1;justify-content:center;min-height:44px;flex-direction:column;gap:0;padding:6px 4px;line-height:1.2"><input type="radio" name="{{ o.name }}" checked="{{ o.on }}" onChange="{{ o.pick }}"><span>{{ o.label }}</span><span style="font-size:11px;opacity:.7">{{ o.n }}</span></label>
+            </sc-for>
+          </div>
+        </div>
+        <div class="field"><label>Vorlagen</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ templates }}" as="tp" hint-placeholder-count="4">
+              <button class="btn btn-secondary" onClick="{{ tp.use }}" style="min-height:36px;font-size:13px;border-radius:18px;padding-inline:12px">{{ tp.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div class="field"><label>Nachricht</label><textarea class="input" value="{{ text }}" onChange="{{ setText }}" placeholder="Kurz und freundlich …" style="min-height:96px;font-size:15px"></textarea></div>
+        <button class="btn btn-primary" onClick="{{ send }}" disabled="{{ noText }}" style="min-height:48px"><i class="ph ph-paper-plane-tilt"></i>{{ sendLabel }}</button>
+      </div>
+      <div style="padding:24px 22px 8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Gesendet</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px 20px">
+        <sc-for list="{{ sent }}" as="m" hint-placeholder-count="1">
+          <div style="padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:14px;text-wrap:pretty">{{ m.text }}</div>
+            <div style="font-size:11px;color:var(--color-neutral-500)">{{ m.time }} · an {{ m.n }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+  </sc-if>
+  </div>
+
+  <sc-if value="{{ isSetup }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2">
+      <button class="btn btn-primary" onClick="{{ saveSetup }}" style="width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)"><i class="ph ph-paper-plane-tilt"></i>{{ saveLabel }}</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:grid;grid-template-columns:repeat(3, 1fr);padding:8px 24px 0;position:relative;z-index:2;background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px">
+      <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+        <button onClick="{{ tb.go }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tb.fg }}"><i class="ph {{ tb.icon }}" style="font-size:24px"></i>{{ tb.label }}</button>
+      </sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}"><div style="height:30px;flex:none;display:grid;place-items:center;position:relative;z-index:2"><div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300)"></div></div></sc-if><sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(8px, env(safe-area-inset-bottom));flex:none"></div></sc-if>
+
+  <sc-if value="{{ isTenant }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <span class="card-kicker">Bewohner bestätigen</span>
+        <div style="font-size:20px;font-weight:500;line-height:1.2">Wohnt S. Özdemir in der Lindenstraße 9?</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--color-neutral-300);margin-top:4px">
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-buildings" style="font-size:17px;color:var(--color-neutral-500)"></i><span>Eigentümer laut Kehrbuch: Fam. Lang</span></div>
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-envelope-simple" style="font-size:17px;color:var(--color-neutral-500)"></i><span>E-Mail bestätigt · Mieterin laut eigener Angabe</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--color-neutral-500);text-wrap:pretty">Nur bestätigen, wenn Sie es wissen – z. B. vom Klingelschild oder vom letzten Besuch. Sonst fragen wir den Eigentümer per E-Mail.</div>
+        <button class="btn btn-primary" onClick="{{ tenantYes }}" style="min-height:48px;margin-top:4px"><i class="ph ph-check"></i>Ja, wohnt dort</button>
+        <button class="btn btn-secondary" onClick="{{ tenantNo }}" style="min-height:46px">Weiß ich nicht – Eigentümer fragen</button>
+        <button class="btn btn-ghost" onClick="{{ closeTenant }}" style="min-height:44px;color:var(--color-neutral-400)">Später</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ callH }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:20px 16px 14px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px;max-height:78%;overflow-y:auto;scrollbar-width:none">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:var(--radius-md);background:var(--color-bg);display:grid;place-items:center;font-size:16px;font-weight:500">{{ callH.nr }}</div>
+          <div style="flex:1"><div style="font-size:18px;font-weight:500">Familie {{ callH.name }}</div><div style="font-size:13px;color:var(--color-neutral-400);font-variant-numeric:tabular-nums">{{ callH.phone }} · {{ callWhy }}</div></div>
+        </div>
+        <button class="btn {{ callBtnCls }}" onClick="{{ dial }}" style="min-height:48px"><i class="ph {{ callIcon }}"></i>{{ callBtn }}</button>
+        <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);margin-top:6px">Telefonisch vereinbart? Zeit eintragen</div>
+        <sc-for list="{{ callWins }}" as="cw" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:12px;color:var(--color-neutral-400)">{{ cw.label }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ cw.slots }}" as="cs" hint-placeholder-count="4">
+                <button class="btn btn-secondary" onClick="{{ cs.pick }}" style="min-height:38px;min-width:62px;font-variant-numeric:tabular-nums">{{ cs.t }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        <button class="btn btn-ghost" onClick="{{ closeCall }}" style="min-height:44px;color:var(--color-neutral-400);margin-top:4px">Schließen</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;preset&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;booked&quot;,&quot;live&quot;,&quot;route&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;streets&quot;,&quot;street&quot;,&quot;setup&quot;,&quot;route&quot;,&quot;notify&quot;],&quot;default&quot;:&quot;streets&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;callNr&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;filter&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;rcpt&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;text&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  frame() { const b = !!this.props.bare; return { bare: b, framed: !b, fw: b ? '100%' : '390px', fh: b ? (this.props.bareH || '100dvh') : '844px', fp: b ? '0' : '10px', fr: b ? '0' : '56px', ir: b ? '0' : '46px', fsh: b ? 'none' : 'var(--shadow-md)', appPreset: b ? '' : 'fresh', bareH: this.props.bareH || '100dvh' }; }
+  uid = 'kf' + Math.random().toString(36).slice(2, 8);
+  state = { ready: false, tenant: !!this.props.tenant, screen: this.props.screen || 'streets', target: this.props.target || 'linden', toast: null, callNr: this.props.callNr || null, called: false, filter: this.props.filter || 'all', rcpt: this.props.rcpt || 'all', text: this.props.text || '', draft: null };
+  componentDidMount() {
+    const go = () => {
+      const K = window.KF;
+      this.store = this.props.preset ? K.create(K.preset(this.props.preset)) : K.shared;
+      this.unsub = this.store.sub(() => this.forceUpdate());
+      this.setState({ ready: true, draft: this.state.screen === 'setup' ? this.mkDraft(this.state.target) : null });
+    };
+    window.KF ? go() : import(new URL('kf-store.js', document.baseURI).href).then(go);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); }
+  mkDraft(target) {
+    const s = this.store.get(), H = window.KF.h;
+    const src = target === 'ahorn' ? (s.ahorn || { windows: [{ id: 'a1', date: '2026-10-15', label: H.dayLabel('2026-10-15'), start: '08:00', end: '12:00' }], slotLen: 30, deadline: 'Mo, 12. Okt' }) : s;
+    return { windows: src.windows.map(w => Object.assign({}, w)), slotLen: src.slotLen, deadline: src.deadline };
+  }
+  renderVals() {
+    if (!this.store) return Object.assign({ ready: false }, this.frame());
+    const K = window.KF, H = K.h, s = this.store.get(), st = this.state, len = s.slotLen, scr = st.screen;
+    const set = p => this.setState(p);
+    const c = H.counts(s), total = s.houses.length;
+    const pct = n => (n / total * 100) + '%';
+    const route = H.route(s), cur = H.current(s);
+    const routeSummary = route.length + ' Termine · ' + (route.length ? route[0].t + '–' + H.end(route[route.length - 1].t, len) : '–');
+    const isMissed = h => h.status === 'booked' && h.visit === 'missed';
+    const openList = s.houses.filter(h => h.status !== 'booked' || isMissed(h));
+    const go = screen => () => set({ screen, callNr: null, toast: null });
+    const openSetup = target => () => set({ screen: 'setup', target, draft: this.mkDraft(target), toast: null });
+    const nHouses = st.target === 'ahorn' ? 9 : total;
+
+    const rows = s.houses.filter(h => {
+      if (st.filter === 'open') return h.status !== 'booked' || isMissed(h);
+      if (st.filter === 'booked') return h.status === 'booked' && !isMissed(h);
+      return true;
+    }).map(h => {
+      const w = h.w ? H.win(s, h.w) : null;
+      let line = 'Keine Rückmeldung', lineFg = 'var(--color-neutral-500)', tag = null, tagCls = 'tag-neutral', showCall = false;
+      if (h.status === 'booked') {
+        line = H.short(w.label).day + ' ' + H.short(w.label).date + ' · ' + h.t + (h.src === 'phone' ? ' · telefonisch' : '');
+        lineFg = 'var(--color-neutral-400)';
+        if (h.visit === 'done') tag = 'erledigt';
+        else if (h.visit === 'missed') { line = 'Nicht angetroffen · ' + h.t; lineFg = 'var(--color-accent-300)'; showCall = true; }
+        else { tag = 'bestätigt'; tagCls = 'tag-accent'; }
+      } else if (h.moved) { line = 'Bewohner ausgezogen · neu verifizieren lassen'; tag = 'Umzug'; showCall = false;
+      } else if (h.status === 'cancelled') { line = 'Hat abgesagt'; lineFg = 'var(--color-accent-300)'; showCall = true; }
+      else { showCall = true; }
+      return { nr: h.nr, name: h.name, line, lineFg, tag, tagCls, showCall, key: !!(h.status === 'booked' && h.key), call: () => set({ callNr: h.nr, called: false }) };
+    });
+
+    const callHouse = st.callNr ? s.houses.find(h => h.nr === st.callNr) : null;
+    const callWins = callHouse ? s.windows.map(w => ({ label: w.label + ' · ' + w.start + '–' + w.end,
+      slots: H.slots(w, len).filter(t => !H.taken(s, w.id, t, callHouse.nr)).map(t => ({ t, pick: () => { this.store.house(callHouse.nr, { status: 'booked', w: w.id, t, src: 'phone', visit: null }); set({ callNr: null }); } })) })).filter(x => x.slots.length) : [];
+
+    const d = st.draft;
+    const upd = (i, k) => e => { const v = e.target.value; this.setState(x => ({ draft: Object.assign({}, x.draft, { windows: x.draft.windows.map((w, j) => j === i ? Object.assign({}, w, { [k]: v }) : w) }) })); };
+    const patchWin = (i, p) => this.setState(x => ({ draft: Object.assign({}, x.draft, { windows: x.draft.windows.map((w, j) => j === i ? Object.assign({}, w, p) : w) }) }));
+    const allDays = H.days('2026-10-05', '2026-10-31');
+    const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
+    const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
+    const draftWins = d ? d.windows.map((w, i) => {
+      const valid = w.start && w.end && H.toMin(w.end) > H.toMin(w.start);
+      const times = valid ? H.slots(w, d.slotLen) : [];
+      const used = d.windows.filter((_, j) => j !== i).map(x => x.date);
+      return { n: i + 1, label: w.label, start: w.start, end: w.end, slots: times.length + ' Slots à ' + d.slotLen + ' Min', noRemove: d.windows.length <= 1,
+        days: allDays.filter(x => !used.includes(x.iso)).map(x => Object.assign({ wd: x.wd, d: x.d, pick: () => patchWin(i, { date: x.iso, label: H.dayLabel(x.iso) }) }, chip(x.iso === w.date))),
+        presets: PRE.map(p => Object.assign({ label: p[0] + ' ' + p[1].slice(0, 2).replace(/^0/, '') + '–' + p[2].slice(0, 2), pick: () => patchWin(i, { start: p[1], end: p[2] }) }, chip(w.start === p[1] && w.end === p[2]))),
+        preview: times.map(t => { const b = st.target === 'linden' && H.taken(s, w.id, t); return { t, bg: b ? 'var(--color-accent-900)' : 'var(--color-bg)', fg: b ? 'var(--color-accent-300)' : 'var(--color-neutral-400)' }; }),
+        setStart: upd(i, 'start'), setEnd: upd(i, 'end'),
+        remove: () => this.setState(x => ({ draft: Object.assign({}, x.draft, { windows: x.draft.windows.filter((_, j) => j !== i) }) })) };
+    }) : [];
+    const cap = draftWins.reduce((a, w) => a + w.preview.length, 0);
+    const capOk = cap >= nHouses;
+
+    const rc = {
+      all: s.houses.map(h => h.nr),
+      open: openList.map(h => h.nr),
+      route: route.filter(h => !h.visit).map(h => h.nr)
+    };
+    const rcptNrs = rc[st.rcpt];
+    const templates = [
+      { label: 'Komme ca. 15 Min. später', text: 'Ich bin heute leider ca. 15 Minuten später dran. Danke für Ihre Geduld!' },
+      { label: 'Bitte Zeit wählen', text: 'Kurze Erinnerung: Bitte wählen Sie bis ' + s.deadline + ' in der App eine Zeit für die Feuerstättenschau.' },
+      { label: 'Heute kurzfristig frei', text: 'Heute sind noch Slots frei. Wenn es Ihnen passt, buchen Sie direkt in der App.' },
+      { label: 'Zugang freihalten', text: 'Bitte halten Sie den Zugang zu Heizraum und Dachboden frei. Vielen Dank!' }
+    ].map(t => ({ label: t.label, use: () => set({ text: t.text }) }));
+
+    const stops = route.map(h => {
+      const isCur = s.routeStarted && cur && cur.nr === h.nr;
+      const done = h.visit === 'done', missed = h.visit === 'missed';
+      return { t: h.t, nr: h.nr, name: h.name, key: h.key || null, isCur,
+        status: done ? 'erledigt' : missed ? 'niemand da · benachrichtigt' : h.nr === s.me ? 'per App' : '',
+        timeFg: isCur ? 'var(--color-accent)' : done || missed ? 'var(--color-neutral-600)' : 'var(--color-neutral-400)',
+        fg: done || missed ? 'var(--color-neutral-500)' : 'var(--color-text)',
+        sz: isCur ? '14px' : '12px',
+        bg: isCur ? 'var(--color-accent)' : done ? 'var(--color-neutral-500)' : missed ? 'var(--color-bg)' : 'var(--color-bg)',
+        sh: isCur ? '0 0 0 4px var(--color-accent-900), 0 0 14px var(--color-accent)' : missed ? '0 0 0 1.5px var(--color-accent-300)' : done ? 'none' : '0 0 0 1.5px var(--color-neutral-600)',
+        icon: done ? 'ph-check' : '',
+        pad: isCur ? '12px 12px 12px 14px' : '8px 0',
+        cardBg: isCur ? 'var(--color-surface)' : 'transparent',
+        cardSh: isCur ? '0 0 0 1px var(--color-accent-700), 0 0 30px color-mix(in srgb, var(--color-accent) 16%, transparent)' : 'none',
+        done: () => this.store.house(h.nr, { visit: 'done' }),
+        missed: () => { this.store.house(h.nr, { visit: 'missed' }); this.store.msg('Ich war um ' + h.t + ' Uhr bei Ihnen, leider hat niemand geöffnet. Bitte wählen Sie in der App eine neue Zeit.', [h.nr]); } };
+    });
+    const nDone = route.filter(h => h.visit === 'done').length, nMiss = route.filter(h => h.visit === 'missed').length;
+
+    const tabOf = { streets: 0, street: 0, setup: 0, route: 1, notify: 2 }[scr];
+    const tabs = [['Straßen', 'ph-map-trifold', 'streets'], ['Route', 'ph-path', 'route'], ['Nachrichten', 'ph-paper-plane-tilt', 'notify']]
+      .map((t, i) => ({ label: t[0], icon: t[1], go: go(t[2]), fg: tabOf === i ? 'var(--color-accent)' : 'var(--color-neutral-500)' }));
+    const whyOf = h => h.status === 'cancelled' ? 'hat abgesagt' : isMissed(h) ? 'nicht angetroffen' : 'keine Rückmeldung';
+
+    return {
+      ...this.frame(),
+      ready: true,
+      isStreets: scr === 'streets', isStreet: scr === 'street', isSetup: scr === 'setup', isRoute: scr === 'route', isNotify: scr === 'notify',
+      showTabs: scr !== 'setup', tabs,
+      todayLabel: s.windows[0].label, routeSummary, deadline: s.deadline,
+      pBooked: pct(c.booked), pOpen: pct(c.open), pCanc: pct(c.cancelled),
+      countsLine: c.booked + ' bestätigt · ' + c.open + ' offen · ' + c.cancelled + ' abgesagt',
+      goRoute: go('route'), goStreet: go('street'), goStreets: go('streets'),
+      editLinden: openSetup('linden'), setupAhorn: openSetup('ahorn'), backSetup: go(st.target === 'ahorn' ? 'streets' : 'street'),
+      ahornNew: !s.ahorn, ahornSent: !!s.ahorn, ahornWins: s.ahorn ? s.ahorn.windows.map(w => w.label.split(', ')[1]).join(' · ') : '',
+      toast: scr === 'streets' ? st.toast : null,
+      tenantAsked: (s.admin || {}).so === 'asked', isTenant: st.tenant && (s.admin || {}).so === 'asked',
+      openTenant: () => set({ tenant: true }), closeTenant: () => set({ tenant: false }),
+      tenantYes: () => { const t = 'Heute · ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        this.store.set(z => ({ admin: Object.assign({}, z.admin, { so: 'approved' }), adminLog: [{ t, what: 'S. Özdemir · Lindenstraße 9 freigegeben', note: 'Bestätigt durch Kaminfeger Markus Brandt' }].concat(z.adminLog || []) }));
+        set({ tenant: false, toast: 'S. Özdemir ist freigeschaltet und kann jetzt buchen.' }); },
+      tenantNo: () => { const t = 'Heute · ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        this.store.set(z => ({ admin: Object.assign({}, z.admin, { so: 'letter' }), adminLog: [{ t, what: 'S. Özdemir · Eigentümer per E-Mail gefragt', note: 'Kaminfeger konnte nicht bestätigen' }].concat(z.adminLog || []) }));
+        set({ tenant: false, toast: 'Danke – wir fragen den Eigentümer per E-Mail.' }); },
+      setupTitle: st.target === 'ahorn' && !s.ahorn ? 'Zeitfenster anlegen' : 'Zeitfenster bearbeiten',
+      setupSub: (st.target === 'ahorn' ? 'Ahornweg' : 'Lindenstraße') + ' · ' + nHouses + ' Haushalte',
+      saveLabel: 'Speichern & an ' + nHouses + ' Haushalte senden',
+      winStats: s.windows.map(w => { const b = H.slots(w, len).length - H.free(s, w.id); return { label: w.label, range: w.start + '–' + w.end, stat: b + ' / ' + H.slots(w, len).length + ' gebucht' }; }),
+      filters: [['all', 'Alle'], ['open', 'Offen · ' + openList.length], ['booked', 'Bestätigt']].map(f => ({ label: f[1], name: this.uid + '-f', on: st.filter === f[0], pick: () => set({ filter: f[0] }) })),
+      rows,
+      remindOpen: () => set({ screen: 'notify', rcpt: 'open', text: 'Kurze Erinnerung: Bitte wählen Sie bis ' + s.deadline + ' in der App eine Zeit für die Feuerstättenschau. So stehe ich nicht vor verschlossener Tür.' }),
+      callH: callHouse, callWhy: callHouse ? whyOf(callHouse) : '', callWins,
+      callBtn: st.called ? 'Anruf beendet' : 'Jetzt anrufen', callIcon: st.called ? 'ph-phone-disconnect' : 'ph-phone', callBtnCls: st.called ? 'btn-secondary' : 'btn-primary',
+      dial: () => set({ called: true }), closeCall: () => set({ callNr: null }),
+      draftWins, canAdd: d && d.windows.length < 3,
+      addWin: () => this.setState(x => {
+        const ws = x.draft.windows, taken = ws.map(w => w.date);
+        let dt = H.addDays(ws[ws.length - 1].date, 1);
+        while (taken.includes(dt) || new Date(dt + 'T12:00').getDay() === 0) dt = H.addDays(dt, 1);
+        return { draft: Object.assign({}, x.draft, { windows: ws.concat([{ id: 'w' + Date.now(), date: dt, label: H.dayLabel(dt), start: '13:00', end: '17:00' }]) }) };
+      }),
+      lens: [20, 30, 45].map(n => ({ label: n + ' Min', name: this.uid + '-len', on: d && d.slotLen === n, pick: () => this.setState(x => ({ draft: Object.assign({}, x.draft, { slotLen: n }) })) })),
+      draftDeadline: d ? d.deadline : '', setDeadline: e => { const v = e.target.value; this.setState(x => ({ draft: Object.assign({}, x.draft, { deadline: v }) })); },
+      capIcon: capOk ? 'ph-check-circle' : 'ph-warning', capFg: capOk ? 'var(--color-accent)' : 'var(--color-accent-300)',
+      capText: capOk ? cap + ' Slots für ' + nHouses + ' Haushalte – genug Auswahl.' : 'Nur ' + cap + ' Slots für ' + nHouses + ' Haushalte. Fenster verlängern oder hinzufügen.',
+      saveSetup: () => {
+        const dd = this.state.draft;
+        const sorted = dd.windows.slice().sort((a, b) => a.date < b.date ? -1 : 1);
+        if (st.target === 'ahorn') {
+          this.store.set({ ahorn: { windows: sorted, slotLen: dd.slotLen, deadline: dd.deadline } });
+          set({ screen: 'streets', draft: null, toast: 'Zeitfenster für den Ahornweg an 9 Haushalte gesendet.' });
+          return;
+        }
+        this.store.set({ windows: dd.windows, slotLen: dd.slotLen, deadline: dd.deadline });
+        this.store.msg('Neue Zeitfenster für die Lindenstraße: ' + dd.windows.map(w => w.label + ' ' + w.start + '–' + w.end).join(', ') + '. Bitte wählen Sie bis ' + dd.deadline + ' Ihre Zeit in der App.', s.houses.map(h => h.nr));
+        set({ screen: 'street', draft: null });
+      },
+      started: s.routeStarted, notStarted: !s.routeStarted, routeDone: s.routeStarted && !cur && route.length > 0,
+      doneSummary: nDone + ' erledigt · ' + nMiss + ' nicht angetroffen',
+      startRoute: () => this.store.set({ routeStarted: true }),
+      stops,
+      rcpts: [['all', 'Alle', rc.all.length], ['open', 'Offen', rc.open.length], ['route', 'Route heute', rc.route.length]].map(o => ({ label: o[1], n: o[2] + (o[2] === 1 ? ' Haushalt' : ' Haushalte'), name: this.uid + '-r', on: st.rcpt === o[0], pick: () => set({ rcpt: o[0] }) })),
+      templates, text: st.text, setText: e => set({ text: e.target.value }), noText: !st.text.trim() || !rcptNrs.length,
+      sendLabel: 'An ' + rcptNrs.length + (rcptNrs.length === 1 ? ' Haushalt' : ' Haushalte') + ' senden',
+      send: () => { if (!st.text.trim()) return; this.store.msg(st.text.trim(), rcptNrs); set({ text: '' }); },
+      sent: s.messages.slice().reverse().map(m => ({ text: m.text, time: m.time, n: m.to.length + (m.to.length === 1 ? ' Haushalt' : ' Haushalte') }))
+    };
+  }
+}
+</script>
+</body>
+</html>

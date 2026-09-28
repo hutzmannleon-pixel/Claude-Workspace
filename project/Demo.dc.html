@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<script src="kf-store.js"></script>
+<style>html,body{margin:0;background:var(--color-bg)}a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}</style>
+</helmet>
+<div style="min-height:100vh;padding:40px 48px 64px;font-family:var(--font-body);color:var(--color-text);display:flex;flex-direction:column;gap:28px;background:radial-gradient(80% 40% at 0% 0%, color-mix(in srgb, var(--color-accent) 9%, transparent), transparent 70%)">
+  <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:720px">
+      <span class="card-kicker">Komplette Demo · 3 Apps, live verbunden</span>
+      <h1 style="margin:0;font-size:40px;text-wrap:pretty">Kaminfeger-Termine zum Durchklicken</h1>
+      <p style="margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Von der Registrierung bis zum Besuch: Kaminfeger meldet sich an, du prüfst ihn als Betreiber, er gibt Zeitfenster frei, die Familie bucht – und sieht am Termintag live, wie weit er noch weg ist.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:13px;color:var(--color-neutral-400);font-variant-numeric:tabular-nums">{{ progress }}</span>
+      <button class="btn btn-secondary" onClick="{{ restart }}" style="min-height:44px"><i class="ph ph-arrow-counter-clockwise"></i>Neu starten</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+    <div style="width:340px;flex:none;display:flex;flex-direction:column;gap:8px;position:sticky;top:24px">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500);padding:0 4px 4px">Ablauf</div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s1.bg }};box-shadow:{{ s1.sh }};opacity:{{ s1.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s1.bd }};background:{{ s1.dot }};color:{{ s1.num }}"><sc-if value="{{ s1.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s1.open }}" hint-placeholder-val="{{ true }}">1</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Kaminfeger registrieren</span><span class="tag tag-neutral">Kaminfeger</span></div>
+          <sc-if value="{{ s1.cur }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Registrieren → Name <b style="font-weight:500">Markus Brandt</b>, Adresse, E-Mail, beliebiger 6-stelliger Code → Bezirk <b style="font-weight:500">14</b> → beide Dokumente antippen, Häkchen → <b style="font-weight:500">Zur Prüfung senden</b>.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s2.bg }};box-shadow:{{ s2.sh }};opacity:{{ s2.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s2.bd }};background:{{ s2.dot }};color:{{ s2.num }}"><sc-if value="{{ s2.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s2.open }}" hint-placeholder-val="{{ true }}">2</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Prüfen &amp; freigeben</span><span class="tag tag-outline">Betreiber</span></div>
+          <sc-if value="{{ s2.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Mit Face ID entsperren → <b style="font-weight:500">Markus Brandt</b> → Dokumente ansehen → alle 4 Punkte abhaken → <b style="font-weight:500">Freigeben</b>.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s3.bg }};box-shadow:{{ s3.sh }};opacity:{{ s3.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s3.bd }};background:{{ s3.dot }};color:{{ s3.num }}"><sc-if value="{{ s3.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s3.open }}" hint-placeholder-val="{{ true }}">3</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Bezirk freischalten</span><span class="tag tag-neutral">Kaminfeger</span></div>
+          <sc-if value="{{ s3.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Nach der Freigabe: <b style="font-weight:500">Link in der E-Mail öffnen</b> → <b style="font-weight:500">Zur App</b>.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s4.bg }};box-shadow:{{ s4.sh }};opacity:{{ s4.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s4.bd }};background:{{ s4.dot }};color:{{ s4.num }}"><sc-if value="{{ s4.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s4.open }}" hint-placeholder-val="{{ true }}">4</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Zeitfenster senden</span><span class="tag tag-neutral">Kaminfeger</span></div>
+          <sc-if value="{{ s4.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Lindenstraße → Zeitfenster <b style="font-weight:500">Bearbeiten</b> → Tag oder Uhrzeit anpassen → <b style="font-weight:500">Speichern &amp; senden</b>. (Oder beim Ahornweg neu anlegen.)</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s5.bg }};box-shadow:{{ s5.sh }};opacity:{{ s5.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s5.bd }};background:{{ s5.dot }};color:{{ s5.num }}"><sc-if value="{{ s5.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s5.open }}" hint-placeholder-val="{{ true }}">5</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Familie registrieren</span><span class="tag tag-accent">Kunde</span></div>
+          <sc-if value="{{ s5.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Registrieren → <b style="font-weight:500">Lindenstraße 7, 79102 Freiburg</b>, Name Keller → E-Mail + Code → Kundennummer <b style="font-weight:500">KF-14-0007</b> → Zur App.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s6.bg }};box-shadow:{{ s6.sh }};opacity:{{ s6.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s6.bd }};background:{{ s6.dot }};color:{{ s6.num }}"><sc-if value="{{ s6.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s6.open }}" hint-placeholder-val="{{ true }}">6</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Zeit buchen</span><span class="tag tag-accent">Kunde</span></div>
+          <sc-if value="{{ s6.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Zeit wählen → <b style="font-weight:500">ersten Tag</b> → freien Slot → optional „Schlüssel beim Nachbarn“ → verbindlich bestätigen.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s7.bg }};box-shadow:{{ s7.sh }};opacity:{{ s7.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s7.bd }};background:{{ s7.dot }};color:{{ s7.num }}"><sc-if value="{{ s7.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s7.open }}" hint-placeholder-val="{{ true }}">7</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Route starten</span><span class="tag tag-neutral">Kaminfeger</span></div>
+          <sc-if value="{{ s7.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Unten Tab <b style="font-weight:500">Route</b> → <b style="font-weight:500">Route starten</b>. Familie Keller steht jetzt in der Tagesroute.</div></sc-if></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:28px minmax(0, 1fr);gap:10px;padding:12px;border-radius:var(--radius-lg);background:{{ s8.bg }};box-shadow:{{ s8.sh }};opacity:{{ s8.op }}">
+        <div style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid {{ s8.bd }};background:{{ s8.dot }};color:{{ s8.num }}"><sc-if value="{{ s8.done }}" hint-placeholder-val="{{ false }}"><i class="ph-bold ph-check"></i></sc-if><sc-if value="{{ s8.open }}" hint-placeholder-val="{{ true }}">8</sc-if></div>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;font-weight:500;flex:1">Häuser abhaken</span><span class="tag tag-neutral">Kaminfeger</span></div>
+          <sc-if value="{{ s8.cur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">„Erledigt“ tippen und dabei den Kunden beobachten: <b style="font-weight:500">„2 Häuser entfernt“ → „Als Nächstes dran“</b>. Bei Keller „Erledigt“ oder „Niemand da“.</div></sc-if></div>
+      </div>
+
+      <sc-if value="{{ allDone }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:8px;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 30px color-mix(in srgb, var(--color-accent) 14%, transparent);display:flex;flex-direction:column;gap:8px">
+          <span class="card-kicker">Geschafft · weiter ausprobieren</span>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--color-neutral-300)">
+            <span>Kunde: Termin verschieben, absagen, Profil → Mitbewohner einladen, Umzug melden</span>
+            <span>Kaminfeger: Nachrichten → „Komme 15 Min. später“ senden</span>
+            <span>Kaminfeger: Straße → offene Haushalte anrufen und Zeit eintragen</span>
+            <span>Betreiber: Bewohner → S. Özdemir → Kaminfeger um Bestätigung bitten</span>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ mounted }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start;flex:1;min-width:0">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;padding:0 6px;min-height:28px"><span class="tag tag-neutral">Kaminfeger</span><span style="font-size:13px;color:var(--color-neutral-400);flex:1">Markus Brandt</span><sc-if value="{{ hlS }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:var(--color-accent);display:flex;gap:6px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent)"></span>jetzt hier</span></sc-if></div>
+          <div style="border-radius:60px;box-shadow:{{ ringS }};transition:box-shadow .3s">
+            <dc-import name="KaminfegerAnmeldung" linked="{{ true }}" live="{{ true }}" on-done="{{ sweepDone }}" hint-size="390px,844px"></dc-import>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;padding:0 6px;min-height:28px"><span class="tag tag-outline">Betreiber</span><span style="font-size:13px;color:var(--color-neutral-400);flex:1">Du</span><sc-if value="{{ hlO }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-accent);display:flex;gap:6px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent)"></span>jetzt hier</span></sc-if></div>
+          <div style="border-radius:60px;box-shadow:{{ ringO }};transition:box-shadow .3s">
+            <dc-import name="BetreiberApp" hint-size="390px,844px"></dc-import>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;padding:0 6px;min-height:28px"><span class="tag tag-accent">Kunde</span><span style="font-size:13px;color:var(--color-neutral-400);flex:1">Familie Keller</span><sc-if value="{{ hlK }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--color-accent);display:flex;gap:6px;align-items:center"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent);box-shadow:0 0 8px var(--color-accent)"></span>jetzt hier</span></sc-if></div>
+          <div style="border-radius:60px;box-shadow:{{ ringK }};transition:box-shadow .3s">
+            <dc-import name="KundenAnmeldung" live="{{ true }}" on-done="{{ custDone }}" hint-size="390px,844px"></dc-import>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { mounted: false, sweepIn: false, custIn: false };
+  persist() {}
+  componentDidMount() {
+    const go = () => {
+      this.store = window.KF.shared;
+      this.unsub = this.store.sub(() => this.forceUpdate());
+      this.store.story();
+      this.setState({ mounted: true });
+    };
+    window.KF ? go() : import(new URL('kf-store.js', document.baseURI).href).then(go);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); clearTimeout(this.t); }
+  renderVals() {
+    const s = this.store ? this.store.get() : null;
+    const st = this.state;
+    const mb = s && s.admin ? s.admin.mb : 'none';
+    const me = s ? s.houses.find(h => h.nr === s.me) : {};
+    const done = [
+      !!mb && mb !== 'none',
+      mb === 'approved',
+      st.sweepIn,
+      !!s && (s.messages.length >= 2 || !!s.ahorn),
+      st.custIn,
+      !!me && me.status === 'booked',
+      !!s && s.routeStarted,
+      !!me && !!me.visit
+    ];
+    const who = ['S', 'O', 'S', 'S', 'K', 'K', 'S', 'S'];
+    const cur = done.indexOf(false);
+    const step = i => {
+      const d = done[i], c = i === cur;
+      return { done: d, open: !d, cur: c,
+        bg: c ? 'var(--color-surface)' : 'transparent',
+        sh: c ? '0 0 0 1px var(--color-accent-700), 0 0 30px color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'none',
+        op: d ? '0.6' : '1',
+        bd: d ? 'var(--color-accent)' : c ? 'var(--color-accent)' : 'var(--color-neutral-700)',
+        dot: d ? 'var(--color-accent)' : 'transparent',
+        num: d ? 'var(--color-bg)' : c ? 'var(--color-accent)' : 'var(--color-neutral-400)' };
+    };
+    const at = cur >= 0 ? who[cur] : null;
+    const ring = on => on ? '0 0 0 2px var(--color-accent-700), 0 0 48px color-mix(in srgb, var(--color-accent) 22%, transparent)' : 'none';
+    // step 8 needs sweep for ticking but customer is watching
+    const alsoK = cur === 7;
+    const o = { progress: done.filter(Boolean).length + ' von 8 erledigt', allDone: cur === -1, mounted: st.mounted,
+      hlS: at === 'S', hlO: at === 'O', hlK: at === 'K' || alsoK,
+      ringS: ring(at === 'S'), ringO: ring(at === 'O'), ringK: ring(at === 'K' || alsoK),
+      sweepDone: () => { this.setState({ sweepIn: true }, () => this.persist({})); },
+      custDone: () => { this.setState({ custIn: true }, () => this.persist({})); },
+      restart: () => {
+        this.store && this.store.story();
+        this.setState({ mounted: false, sweepIn: false, custIn: false });
+        this.t = setTimeout(() => this.setState({ mounted: true }), 60);
+      } };
+    for (let i = 0; i < 8; i++) o['s' + (i + 1)] = step(i);
+    return o;
+  }
+}
+</script>
+</body>
+</html>

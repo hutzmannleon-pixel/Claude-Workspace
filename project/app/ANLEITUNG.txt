@@ -1,0 +1,18 @@
+Kaminfeger-Termine – auf dem Android-Handy installieren
+
+A) Als App installieren (ca. 5 Minuten, kostenlos)
+1. Diesen Ordner "app" komplett auf https://app.netlify.com/drop ziehen (oder GitHub Pages / eigener Webspace mit HTTPS).
+2. Den angezeigten Link auf dem Handy in Chrome öffnen.
+3. Menü (⋮) → "App installieren" bzw. "Zum Startbildschirm hinzufügen".
+   Die App startet dann im Vollbild mit eigenem Symbol und funktioniert auch offline.
+
+B) Echte APK-Datei erzeugen
+1. Schritt A1 erledigen (die App braucht eine HTTPS-Adresse).
+2. https://www.pwabuilder.com öffnen, den Link einfügen → "Package for stores" → Android.
+3. Die erzeugte .apk herunterladen, aufs Handy kopieren und öffnen
+   (einmalig "Installation aus unbekannten Quellen" erlauben).
+
+Wichtig: Das ist ein Prototyp ohne Server. Alle Daten bleiben auf dem jeweiligen Gerät.
+Kunde, Kaminfeger und Betreiber sehen sich gegenseitig nur, wenn sie auf DEMSELBEN Handy laufen
+(oben rechts "Rolle wechseln"). Für echte Nutzung auf mehreren Handys braucht es ein Backend
+(Konten, E-Mail-Versand, Datenbank).
