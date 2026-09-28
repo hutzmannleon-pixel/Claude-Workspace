@@ -6,7 +6,7 @@ import { live } from '../live.js';
 import { requestCode, checkCode, startSession, endSession, currentUser, COOKIE } from '../auth.js';
 import { readLink, useLink, activeSweepForDistrict, adminLog } from '../domain.js';
 import { queueMail } from '../mail.js';
-import { bad, notFound, nowIso, normEmail } from '../util.js';
+import { HttpError, bad, notFound, nowIso, normEmail } from '../util.js';
 
 export default async function publicRoutes(app) {
   app.get('/api/health', async () => ({ ok: true }));
@@ -26,7 +26,12 @@ export default async function publicRoutes(app) {
   // ---------- Login per E-Mail-Code ----------
   app.post('/api/auth/code', async req => {
     const { email, role, purpose } = req.body || {};
-    await requestCode(email, role, purpose || 'login');
+    try { await requestCode(email, role, purpose || 'login'); }
+    catch (e) {
+      if (e.statusCode) throw e;
+      // Versand gescheitert (z. B. Adresse abgelehnt) – verständliche Meldung statt „Interner Fehler“
+      throw new HttpError(502, 'Die E-Mail konnte nicht zugestellt werden. Bitte die Adresse prüfen oder später erneut versuchen.', 'mail');
+    }
     return { ok: true };
   });
 
