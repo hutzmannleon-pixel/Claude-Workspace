@@ -1,0 +1,6 @@
+html, body { margin: 0; background: var(--color-bg); }
+a { color: var(--color-accent); }
+a:hover { color: var(--color-accent-300); }
+button { -webkit-tap-highlight-color: transparent; }
+@keyframes kfpulse { 0% { transform: scale(1); opacity: .55 } 100% { transform: scale(2.6); opacity: 0 } }
+*::-webkit-scrollbar { display: none; }

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ false }}"><dc-import name="KaminfegerApp" preset="{{ appPreset }}" bare="{{ bare }}" bare-h="{{ bareH }}" hint-size="100%,100%"></dc-import></sc-if>
+<sc-if value="{{ showOb }}" hint-placeholder-val="{{ true }}">
+<div style="width:{{ fw }};height:{{ fh }};padding:{{ fp }};border-radius:{{ fr }};background:var(--color-neutral-900);box-shadow:{{ fsh }};flex:none;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45">
+<div style="position:relative;width:100%;height:100%;border-radius:{{ ir }};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-section-glow) 45%, transparent), transparent 70%)"></div>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}">
+  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:2">
+    <span>7:48</span>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black)"></div>
+    <div style="display:flex;gap:5px;align-items:center;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-bold ph-wifi-high"></i><i class="ph-fill ph-battery-full" style="font-size:22px"></i></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(10px, env(safe-area-inset-top));flex:none"></div></sc-if>
+
+  <sc-if value="{{ hasSteps }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;align-items:center;gap:8px;padding:4px 20px 0 12px;position:relative;z-index:2">
+      <button class="btn btn-icon" onClick="{{ back }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3, 1fr);gap:4px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="3"><div style="height:3px;border-radius:2px;background:{{ b.bg }}"></div></sc-for>
+      </div>
+      <span style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums;min-width:28px;text-align:right">{{ stepNo }}/3</span>
+    </div>
+  </sc-if>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none">
+
+    <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 26px 0;display:flex;flex-direction:column;gap:14px">
+        <span class="card-kicker">Für Kaminfeger</span>
+        <div style="font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;text-wrap:pretty">Weniger verschlossene Türen. Mehr erledigte Häuser.</div>
+        <div style="font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Zeitfenster pro Straße freigeben, Rückmeldungen sehen, Route planen.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:44px 26px 20px;font-size:14px">
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-seal-check" style="font-size:20px;color:var(--color-accent)"></i>Nur für bevollmächtigte Bezirks-Kaminfeger</div>
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-buildings" style="font-size:20px;color:var(--color-accent)"></i>Ihr Kehrbuch wird nach der Prüfung übernommen</div>
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-clock" style="font-size:20px;color:var(--color-accent)"></i>Prüfung in 1–2 Werktagen</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;padding:4px 12px 0"><button class="btn btn-icon" onClick="{{ toWelcome }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button></div>
+      <div style="padding:10px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Anmelden</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Mit Ihrer geschäftlichen E-Mail-Adresse.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div class="field"><label>E-Mail-Adresse</label><input class="input" type="email" value="{{ lEmail }}" onChange="{{ setLEmail }}" placeholder="name@beispiel.de" autocomplete="email" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ lSent }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px 16px 0;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;color:var(--color-neutral-400);display:flex;gap:8px;align-items:center;padding:0 6px"><i class="ph ph-envelope-simple-open" style="font-size:18px;color:var(--color-accent)"></i><span>Code an {{ lEmail }} gesendet</span></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(6, 1fr);gap:6px">
+            <sc-for list="{{ lDigits }}" as="dg" hint-placeholder-count="6">
+              <div style="height:54px;border-radius:var(--radius-md);border:1px solid {{ dg.bd }};background:var(--color-surface);display:grid;place-items:center;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums">{{ dg.ch }}</div>
+            </sc-for>
+            <input value="{{ lCode }}" onChange="{{ setLCode }}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Anmeldecode" style="position:absolute;inset:0;opacity:0;font-size:16px;cursor:text">
+          </div>
+          <button class="btn btn-ghost" onClick="{{ lResend }}" style="align-self:flex-start;min-height:40px;padding-inline:6px">Code erneut senden</button>
+        </div>
+      </sc-if>
+      <div style="margin:22px 16px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-shield-check" style="font-size:15px;margin-top:1px"></i><span style="text-wrap:pretty">Kein Passwort nötig. Der Code gilt 10 Minuten und nur einmal.</span></div>
+    </sc-if>
+
+    <sc-if value="{{ isAccount }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Ihr Konto</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px">Name wie in Ihrer Bestellungsurkunde.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:8px">
+          <div class="field"><label>Vorname</label><input class="input" value="{{ first }}" onChange="{{ setFirst }}" placeholder="Markus" style="min-height:46px;font-size:15px"></div>
+          <div class="field"><label>Nachname</label><input class="input" value="{{ last }}" onChange="{{ setLast }}" placeholder="Brandt" style="min-height:46px;font-size:15px"></div>
+        </div>
+        <div class="field"><label>Betriebsadresse</label><input class="input" value="{{ bstreet }}" onChange="{{ setBstreet }}" placeholder="Straße und Hausnummer" autocomplete="street-address" style="min-height:46px;font-size:15px"></div>
+        <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.6fr);gap:8px">
+          <div class="field"><label>PLZ</label><input class="input" value="{{ bplz }}" onChange="{{ setBplz }}" placeholder="79102" inputmode="numeric" maxlength="5" autocomplete="postal-code" style="min-height:46px;font-size:15px;font-variant-numeric:tabular-nums"></div>
+          <div class="field"><label>Ort</label><input class="input" value="{{ bort }}" onChange="{{ setBort }}" placeholder="Freiburg" autocomplete="address-level2" style="min-height:46px;font-size:15px"></div>
+        </div>
+        <div class="field"><label>Geschäftliche E-Mail</label><input class="input" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="name@betrieb.de" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ codeSent }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px 16px 20px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;color:var(--color-neutral-400);display:flex;gap:8px;align-items:center;padding:0 6px"><i class="ph ph-envelope-simple-open" style="font-size:18px;color:var(--color-accent)"></i><span>Code an {{ email }} gesendet</span></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(6, 1fr);gap:6px">
+            <sc-for list="{{ digits }}" as="dg" hint-placeholder-count="6">
+              <div style="height:54px;border-radius:var(--radius-md);border:1px solid {{ dg.bd }};background:var(--color-surface);display:grid;place-items:center;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums">{{ dg.ch }}</div>
+            </sc-for>
+            <input value="{{ code }}" onChange="{{ setCode }}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Bestätigungscode" style="position:absolute;inset:0;opacity:0;font-size:16px;cursor:text">
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isDistrict }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Ihr Kehrbezirk</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Wir gleichen ihn mit dem Bezirksverzeichnis der zuständigen Behörde ab.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div class="field"><label>Bundesland</label><select class="input" value="{{ land }}" onChange="{{ setLand }}" style="min-height:46px;font-size:15px;color-scheme:dark"><option>Baden-Württemberg</option><option>Bayern</option><option>Hessen</option><option>Rheinland-Pfalz</option></select></div>
+        <div class="field"><label>Stadt / Landkreis</label><select class="input" value="{{ kreis }}" onChange="{{ setKreis }}" style="min-height:46px;font-size:15px;color-scheme:dark"><option>Freiburg im Breisgau</option><option>Breisgau-Hochschwarzwald</option><option>Emmendingen</option></select></div>
+        <div class="field"><label>Bezirksnummer</label><input class="input" value="{{ bez }}" onChange="{{ setBez }}" inputmode="numeric" placeholder="z. B. 14" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ recOk }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:18px 16px 20px;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px"><span class="card-kicker" style="flex:1">Im Verzeichnis gefunden</span><span class="tag tag-accent" style="gap:5px"><i class="ph-bold ph-check"></i>Name stimmt</span></div>
+          <div style="font-size:18px;font-weight:500">Kehrbezirk {{ kreisShort }} {{ bez }}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--color-neutral-300)">
+            <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-user" style="color:var(--color-neutral-500)"></i><span>Bevollmächtigt: {{ fullName }}</span></div>
+            <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-calendar" style="color:var(--color-neutral-500)"></i>Bestellt bis 31.12.2031</div>
+            <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-buildings" style="color:var(--color-neutral-500)"></i>38 Straßen · 1.240 Liegenschaften</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ recOther }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:18px 16px 20px;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-neutral-600);display:flex;gap:12px">
+          <i class="ph ph-warning" style="font-size:20px;color:var(--color-accent-300)"></i>
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px"><div style="font-size:14px">Bezirk {{ bez }} ist einer anderen Person zugeordnet</div><div style="font-size:12px;color:var(--color-neutral-400);text-wrap:pretty">Bitte Nummer prüfen. Bei einem Wechsel des Bezirks laden Sie im nächsten Schritt die neue Bestellung hoch.</div></div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isProof }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Nachweis</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Damit niemand fremde Bezirke übernimmt, prüfen wir Ihre Bestellung.</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:20px 16px 0">
+        <sc-for list="{{ docs }}" as="d" hint-placeholder-count="2">
+          <button onClick="{{ d.toggle }}" style="text-align:left;display:flex;gap:12px;align-items:center;min-height:68px;padding:12px 14px;border-radius:var(--radius-lg);background:{{ d.bg }};border:1px {{ d.style }} {{ d.bd }};color:inherit;font:inherit;cursor:pointer">
+            <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--color-bg);display:grid;place-items:center;flex:none"><i class="ph {{ d.icon }}" style="font-size:20px;color:{{ d.ic }}"></i></div>
+            <div style="flex:1;min-width:0"><div style="font-size:14px">{{ d.title }}</div><div style="font-size:12px;color:{{ d.subFg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.sub }}</div></div>
+            <i class="ph {{ d.act }}" style="font-size:18px;color:var(--color-neutral-400)"></i>
+          </button>
+        </sc-for>
+      </div>
+      <label class="radio" style="margin:18px 22px 20px;align-items:flex-start;font-size:13px;color:var(--color-neutral-300);line-height:1.45">
+        <input type="checkbox" checked="{{ assure }}" onChange="{{ toggleAssure }}">
+        <span class="dot" style="border-radius:4px;margin-top:1px;background:{{ assureBg }};border-color:{{ assureBd }};box-shadow:none;display:grid;place-items:center;color:var(--color-bg);font-size:11px"><i class="ph-bold ph-check"></i></span>
+        <span style="text-wrap:pretty">Ich bin für diesen Bezirk bevollmächtigt. Die Behörde darf den Nachweis bestätigen.</span>
+      </label>
+    </sc-if>
+
+    <sc-if value="{{ isPending }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:26px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">{{ pendTitle }}</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">{{ pendSub }}</div></div>
+      <div style="display:flex;flex-direction:column;padding:22px 16px 0">
+        <sc-for list="{{ timeline }}" as="t" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:24px minmax(0, 1fr);column-gap:12px">
+            <div style="position:relative;display:flex;justify-content:center">
+              <div style="position:absolute;top:0;bottom:0;width:1px;background:{{ t.line }}"></div>
+              <div style="position:relative;margin-top:14px;width:20px;height:20px;border-radius:50%;background:{{ t.bg }};box-shadow:{{ t.sh }};display:grid;place-items:center;font-size:11px;color:var(--color-bg)"><i class="ph-bold {{ t.icon }}"></i></div>
+            </div>
+            <div style="padding:12px 0 14px"><div style="font-size:14px;color:{{ t.fg }}">{{ t.title }}</div><div style="font-size:12px;color:var(--color-neutral-500);text-wrap:pretty">{{ t.sub }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ needUnlock }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:20px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);overflow:hidden">
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-envelope-simple"></i><span style="flex:1">E-Mail · an buero@kaminfeger-brandt.de</span><span>jetzt</span></div>
+          <div style="font-size:14px;font-weight:500">Kehrbezirk 14 freischalten</div>
+        </div>
+        <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--color-neutral-300)">
+          <span style="text-wrap:pretty">Ihre Bestellung wurde geprüft. Diese E-Mail geht an die Adresse aus dem Bezirksverzeichnis – so wissen wir, dass wirklich Sie es sind.</span>
+          <span style="align-self:flex-start;padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--color-accent);color:var(--color-accent-200);font-size:13px">Bezirk freischalten</span>
+        </div>
+      </div>
+        <div style="padding:10px 22px 20px;font-size:12px;color:var(--color-neutral-500)">Vorschau der E-Mail · Link gilt 48 Stunden</div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:52px 24px 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--color-accent);color:var(--color-accent);box-shadow:0 0 40px color-mix(in srgb, var(--color-accent) 30%, transparent);margin-bottom:18px"><i class="ph-bold ph-seal-check" style="font-size:28px"></i></div>
+        <div style="font-size:28px;font-weight:500;letter-spacing:-0.02em">Bezirk {{ bez }} freigeschaltet</div>
+        <div style="font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">38 Straßen und 1.240 Liegenschaften aus Ihrem Kehrbuch sind übernommen. Legen Sie jetzt die ersten Zeitfenster an.</div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ cta }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;padding:10px 16px 2px;position:relative;z-index:2;display:flex;flex-direction:column;gap:2px">
+      <button class="btn btn-primary" onClick="{{ cta.go }}" disabled="{{ cta.off }}" style="width:100%;min-height:50px;font-size:15px">{{ cta.label }}</button>
+      <sc-if value="{{ alt }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ alt.go }}" style="min-height:44px;color:var(--color-neutral-400)">{{ alt.label }}</button></sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}"><div style="height:30px;flex:none;display:grid;place-items:center;position:relative;z-index:2"><div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300)"></div></div></sc-if><sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(8px, env(safe-area-inset-bottom));flex:none"></div></sc-if>
+</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;welcome&quot;,&quot;account&quot;,&quot;district&quot;,&quot;proof&quot;,&quot;pending&quot;,&quot;done&quot;],&quot;default&quot;:&quot;welcome&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bez&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;reviewed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  frame() { const b = !!this.props.bare; return { bare: b, framed: !b, fw: b ? '100%' : '390px', fh: b ? (this.props.bareH || '100dvh') : '844px', fp: b ? '0' : '10px', fr: b ? '0' : '56px', ir: b ? '0' : '46px', fsh: b ? 'none' : 'var(--shadow-md)', appPreset: (b || this.props.live) ? '' : 'fresh', bareH: this.props.bareH || '100dvh' }; }
+  constructor(p) {
+    super(p);
+    const demo = !!p.demo;
+    this.state = {
+      screen: p.screen || 'welcome', app: false,
+      first: demo ? 'Markus' : '', last: demo ? 'Brandt' : '', bstreet: demo ? 'Talstraße 12' : '', bplz: demo ? '79102' : '', bort: demo ? 'Freiburg' : '', email: demo ? 'm.brandt@kaminfeger-brandt.de' : '',
+      codeSent: demo, code: demo ? '382716' : '',
+      land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: demo ? (p.bez || '14') : '',
+      urkunde: demo, ausweis: demo, assure: demo, reviewed: !!p.reviewed, unlock: ''
+    };
+    if (p.bare && p.linked) { try { Object.assign(this.state, JSON.parse(localStorage.getItem('kf-sweep-ob') || '{}'), { app: false }); } catch (e) {} }
+  }
+  componentDidUpdate() { if (this.props.bare && this.props.linked) try { localStorage.setItem('kf-sweep-ob', JSON.stringify(this.state)); } catch (e) {} }
+  componentDidMount() {
+    if (!this.props.linked) return;
+    const go = () => { this.store = window.KF.shared; this.unsub = this.store.sub(() => this.forceUpdate()); this.forceUpdate(); };
+    window.KF ? go() : import(new URL('kf-store.js', document.baseURI).href).then(go);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); }
+  renderVals() {
+    const st = this.state, set = p => this.setState(p), scr = st.screen;
+    const linked = !!this.store;
+    const adm = linked ? (this.store.get().admin || {}).mb : null;
+    const reviewed = linked ? adm === 'approved' : st.reviewed;
+    const rejected = linked && adm === 'rejected';
+    const query = linked && adm === 'query';
+    const rejectReason = linked ? this.store.get().rejectReason : '';
+    const setAdm = v => this.store.set(x => ({ admin: Object.assign({}, x.admin, { mb: v }) }));
+    const fullName = (st.first + ' ' + st.last).trim();
+    const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.email);
+    const bez = st.bez.trim();
+    const known = /^\d{1,2}$/.test(bez) && +bez >= 1 && +bez <= 30;
+    const nameOk = fullName.toLowerCase() === 'markus brandt';
+    const recOk = known && bez === '14' && nameOk;
+    const recOther = known && !recOk;
+    const stepNo = { account: 1, district: 2, proof: 3 }[scr] || 0;
+    const back = { account: 'welcome', district: 'account', proof: 'district' }[scr];
+    const docs = [
+      { k: 'urkunde', title: 'Bestellungsurkunde', file: 'Bestellung_Bezirk14.pdf · 1,2 MB', empty: 'PDF oder Foto hochladen', icon: 'ph-file-text' },
+      { k: 'ausweis', title: 'Schornsteinfeger-Ausweis', file: 'Ausweis_Vorderseite.jpg · 840 KB', empty: 'Foto der Vorderseite', icon: 'ph-identification-card' }
+    ].map(d => { const on = st[d.k]; return {
+      title: d.title, sub: on ? d.file : d.empty, icon: on ? 'ph-check' : d.icon, ic: on ? 'var(--color-accent)' : 'var(--color-neutral-400)',
+      subFg: on ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', act: on ? 'ph-x' : 'ph-upload-simple',
+      bg: on ? 'var(--color-surface)' : 'transparent', bd: on ? 'var(--color-accent-800)' : 'var(--color-neutral-700)', style: on ? 'solid' : 'dashed',
+      toggle: () => set({ [d.k]: !on }) }; });
+    const unlockOk = st.unlock.replace(/\W/g, '').length >= 6;
+    const T = (state, title, sub) => ({ title, sub,
+      bg: state === 'done' ? 'var(--color-accent)' : state === 'now' ? 'var(--color-bg)' : 'var(--color-bg)',
+      sh: state === 'done' ? 'none' : state === 'now' ? '0 0 0 1.5px var(--color-accent), 0 0 14px color-mix(in srgb, var(--color-accent) 40%, transparent)' : '0 0 0 1.5px var(--color-neutral-700)',
+      icon: state === 'done' ? 'ph-check' : '', fg: state === 'todo' ? 'var(--color-neutral-500)' : 'var(--color-text)',
+      line: 'var(--color-neutral-800)' });
+    const timeline = [
+      T('done', 'E-Mail bestätigt', st.email || 'm.brandt@kaminfeger-brandt.de'),
+      T('done', 'Bezirk ' + (bez || '14') + ' im Verzeichnis', 'Name stimmt mit dem Eintrag der Behörde überein'),
+      T(reviewed ? 'done' : 'now', rejected ? 'Nachweis abgelehnt' : 'Bestellungsurkunde wird geprüft', reviewed ? 'Geprüft und bestätigt' : rejected ? rejectReason : query ? 'Rückfrage bei der Behörde läuft' : 'Abgleich mit der Behörde · 1–2 Werktage'),
+      T(reviewed ? (unlockOk ? 'done' : 'now') : 'todo', 'Freischaltlink per E-Mail', 'An die E-Mail-Adresse aus dem Bezirksverzeichnis – so bestätigen wir, dass Sie es wirklich sind')
+    ];
+    const toApp = () => { set({ app: true }); this.props.onDone && this.props.onDone(); };
+    let cta = null, alt = null;
+    if (scr === 'welcome') { cta = { label: 'Registrieren', go: () => set({ screen: 'account' }) }; alt = { label: 'Ich habe schon ein Konto', go: () => set({ screen: 'login', lSent: false, lCode: '' }) }; }
+    if (scr === 'account') cta = st.codeSent
+      ? { label: 'Bestätigen', off: st.code.length < 6, go: () => set({ screen: 'district' }) }
+      : { label: 'Code senden', off: !(emailOk && st.first.trim() && st.last.trim() && st.bstreet.trim() && /^\d{5}$/.test(st.bplz) && st.bort.trim()), go: () => set({ codeSent: true }) };
+    if (scr === 'district') cta = { label: 'Weiter', off: !recOk, go: () => set({ screen: 'proof' }) };
+    if (scr === 'proof') cta = { label: 'Zur Prüfung senden', off: !(st.urkunde && st.ausweis && st.assure), go: () => { if (linked) setAdm('pending'); set({ screen: 'pending' }); } };
+    if (scr === 'pending') {
+      if (rejected) cta = { label: 'Neue Unterlagen hochladen', go: () => set({ screen: 'proof', urkunde: false, ausweis: false }) };
+      else if (!reviewed && linked) cta = { label: 'Warte auf Prüfung durch den Betreiber', off: true };
+      else if (!reviewed) { cta = { label: 'Prüfung abschließen (Demo)', go: () => set({ reviewed: true }) }; }
+      else cta = { label: 'Link in der E-Mail öffnen (Demo)', go: () => set({ screen: 'done' }) };
+    }
+    if (scr === 'done') cta = { label: 'Zur App', go: toApp };
+    const lEmailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.lEmail || '');
+    const LV = {
+      isLogin: scr === 'login', toWelcome: () => set({ screen: 'welcome' }),
+      lEmail: st.lEmail || '', lCode: st.lCode || '', lSent: !!st.lSent,
+      setLEmail: e => set({ lEmail: e.target.value, lSent: false, lCode: '' }),
+      setLCode: e => set({ lCode: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      lResend: () => set({ lCode: '' }),
+      lDigits: [0, 1, 2, 3, 4, 5].map(i => ({ ch: (st.lCode || '')[i] || '', bd: i === (st.lCode || '').length ? 'var(--color-accent)' : 'var(--color-neutral-700)' }))
+    };
+    if (scr === 'login') cta = st.lSent
+      ? { label: 'Anmelden', off: (st.lCode || '').length < 6, go: toApp }
+      : { label: 'Code senden', off: !lEmailOk, go: () => set({ lSent: true }) };
+
+    return {
+      ...this.frame(),
+      ...LV,
+      showApp: st.app, showOb: !st.app,
+      isWelcome: scr === 'welcome', isAccount: scr === 'account', isDistrict: scr === 'district', isProof: scr === 'proof', isPending: scr === 'pending', isDone: scr === 'done',
+      hasSteps: stepNo > 0, stepNo, back: () => back && set({ screen: back }),
+      bars: [1, 2, 3].map(i => ({ bg: i <= stepNo ? 'var(--color-accent)' : 'var(--color-neutral-800)' })),
+      first: st.first, last: st.last, email: st.email, code: st.code, land: st.land, kreis: st.kreis, bez: st.bez, unlock: st.unlock,
+      setFirst: e => set({ first: e.target.value }), setLast: e => set({ last: e.target.value }),
+      setEmail: e => set({ email: e.target.value, codeSent: false, code: '' }),
+      setCode: e => set({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      setLand: e => set({ land: e.target.value }), setKreis: e => set({ kreis: e.target.value }), setBez: e => set({ bez: e.target.value }),
+      setUnlock: e => set({ unlock: e.target.value }),
+      codeSent: st.codeSent,
+      digits: [0, 1, 2, 3, 4, 5].map(i => ({ ch: st.code[i] || '', bd: i === st.code.length ? 'var(--color-accent)' : 'var(--color-neutral-700)' })),
+      bstreet: st.bstreet, bplz: st.bplz, bort: st.bort,
+      setBstreet: e => set({ bstreet: e.target.value }), setBplz: e => set({ bplz: e.target.value.replace(/\D/g, '').slice(0, 5) }), setBort: e => set({ bort: e.target.value }),
+      recOk, recOther, fullName: fullName || 'Markus Brandt', kreisShort: st.kreis.split(' ')[0],
+      docs, assure: st.assure, toggleAssure: () => set({ assure: !st.assure }),
+      assureBg: st.assure ? 'var(--color-accent)' : 'transparent', assureBd: st.assure ? 'var(--color-accent)' : 'var(--color-divider)',
+      pendTitle: rejected ? 'Nachweis abgelehnt' : reviewed ? 'Fast geschafft' : 'Wird geprüft',
+      pendSub: rejected ? 'Grund: ' + rejectReason + '. Bitte laden Sie neue Unterlagen hoch.' : reviewed ? 'Öffnen Sie den Link in der E-Mail, um Ihren Bezirk freizuschalten.' : 'Wir melden uns per E-Mail, sobald die Behörde Ihre Bestellung bestätigt hat.',
+      timeline, needUnlock: reviewed,
+      cta, alt
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<div style="width:{{ fw }};height:{{ fh }};padding:{{ fp }};border-radius:{{ fr }};background:var(--color-neutral-800);box-shadow:{{ fsh }};flex:none;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45">
+<div style="position:relative;width:100%;height:100%;border-radius:{{ ir }};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 40% at 100% 0%, color-mix(in srgb, var(--color-neutral-600) 22%, transparent), transparent 70%)"></div>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}">
+  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:2">
+    <span>10:22</span>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black)"></div>
+    <div style="display:flex;gap:5px;align-items:center;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-bold ph-wifi-high"></i><i class="ph-fill ph-battery-full" style="font-size:22px"></i></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(10px, env(safe-area-inset-top));flex:none"></div></sc-if>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none">
+  <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+
+    <sc-if value="{{ isLock }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:120px 26px 0;display:flex;flex-direction:column;gap:12px">
+        <span class="card-kicker">Betreiber-Zugang</span>
+        <div style="font-size:32px;font-weight:500;letter-spacing:-0.025em;line-height:1.1">Kaminfeger-Termine<br>Verwaltung</div>
+        <div style="font-size:14px;color:var(--color-neutral-400);text-wrap:pretty">Nur für freigeschaltete Admins. Jede Entscheidung wird mit deinem Namen protokolliert.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;padding:40px 26px 0;font-size:13px;color:var(--color-neutral-400)">
+        <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-key" style="font-size:18px;color:var(--color-accent)"></i>Passkey + Face ID</div>
+        <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-timer" style="font-size:18px;color:var(--color-accent)"></i>Sperrt nach 5 Minuten Inaktivität</div>
+        <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-screencast" style="font-size:18px;color:var(--color-accent)"></i>Keine Screenshots von Dokumenten</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isQueue }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div><div style="font-size:12px;color:var(--color-neutral-500)">Betreiber · Admin</div><div style="font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2">Prüfungen</div></div>
+        <button class="btn btn-secondary btn-icon" onClick="{{ lock }}" style="width:44px;height:44px" aria-label="Sperren"><i class="ph ph-lock-simple" style="font-size:18px"></i></button>
+      </div>
+      <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:12px 16px 0;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-700);display:flex;gap:10px;align-items:center;font-size:13px"><i class="ph ph-check-circle" style="font-size:18px;color:var(--color-accent)"></i><span style="flex:1;text-wrap:pretty">{{ toast }}</span></div>
+      </sc-if>
+      <div style="padding:14px 16px 0">
+        <div class="seg" style="display:flex">
+          <sc-for list="{{ tabsKind }}" as="k" hint-placeholder-count="2">
+            <label class="seg-opt" style="flex:1;justify-content:center;min-height:40px"><input type="radio" name="{{ k.name }}" checked="{{ k.on }}" onChange="{{ k.pick }}"><span>{{ k.label }}</span></label>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:12px 16px 0">
+        <sc-for list="{{ queue }}" as="q" hint-placeholder-count="3">
+          <button onClick="{{ q.open }}" style="text-align:left;padding:12px 14px;border-radius:var(--radius-lg);background:{{ q.bg }};border:0;box-shadow:{{ q.sh }};color:inherit;font:inherit;cursor:pointer;display:flex;gap:12px;align-items:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none">{{ q.ini }}</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+              <div style="display:flex;gap:8px;align-items:center"><span style="font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:{{ q.fg }}">{{ q.name }}</span><span class="tag {{ q.tagCls }}">{{ q.tag }}</span></div>
+              <div style="font-size:12px;color:var(--color-neutral-400)">{{ q.sub }}</div>
+              <div style="font-size:12px;color:{{ q.flagFg }};display:flex;gap:5px;align-items:center"><i class="ph {{ q.flagIcon }}"></i><span>{{ q.flag }}</span></div>
+            </div>
+          </button>
+        </sc-for>
+      </div>
+      <div style="margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-trash-simple" style="font-size:15px;margin-top:1px"></i><span style="text-wrap:pretty">Urkunden und Ausweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px 0">
+        <button class="btn btn-icon" onClick="{{ toQueue }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+        <div style="flex:1"><div style="font-size:17px;font-weight:500">{{ it.kindLabel }}</div><div style="font-size:12px;color:var(--color-neutral-500)">eingereicht {{ it.since }}</div></div>
+        <span class="tag {{ it.tagCls }}" style="margin-right:10px">{{ it.tag }}</span>
+      </div>
+      <div style="margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;gap:12px;align-items:center">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:15px;font-weight:500;flex:none">{{ it.ini }}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:500">{{ it.name }}</div><div style="font-size:13px;color:var(--color-neutral-400)">{{ it.headSub }}</div></div>
+      </div>
+      <div style="padding:20px 22px 6px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Automatisch geprüft</div>
+      <div style="margin:0 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:4px 14px">
+        <sc-for list="{{ it.auto }}" as="a" hint-placeholder-count="3">
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;font-size:13px"><i class="ph-bold {{ a.icon }}" style="color:{{ a.fg }};margin-top:2px"></i><span style="flex:1;text-wrap:pretty;color:{{ a.tfg }}">{{ a.text }}</span></div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isSweepItem }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:20px 22px 6px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Dokumente</span><span style="font-size:11px;color:var(--color-neutral-500)">werden nach Entscheidung gelöscht</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px">
+          <button onClick="{{ viewUrkunde }}" style="padding:10px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px;text-align:left">
+            <div aria-hidden="true" style="height:118px;border-radius:4px;background:var(--color-neutral-200);padding:10px 12px;display:flex;flex-direction:column;gap:5px;position:relative;overflow:hidden">
+              <div style="height:5px;width:55%;background:var(--color-neutral-500);align-self:center"></div>
+              <div style="height:3px;width:80%;background:var(--color-neutral-400);margin-top:8px"></div>
+              <div style="height:3px;width:90%;background:var(--color-neutral-400)"></div>
+              <div style="height:3px;width:70%;background:var(--color-neutral-400)"></div>
+              <div style="position:absolute;right:12px;bottom:12px;width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--color-accent-600)"></div>
+            </div>
+            <div style="font-size:13px;display:flex;gap:6px;align-items:center"><i class="ph ph-file-text" style="color:var(--color-neutral-400)"></i><span>Bestellungsurkunde</span></div>
+          </button>
+          <button onClick="{{ viewAusweis }}" style="padding:10px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px;text-align:left">
+            <div aria-hidden="true" style="height:118px;display:grid;place-items:center">
+              <div style="width:100%;aspect-ratio:1.58;border-radius:6px;background:var(--color-neutral-300);padding:8px;display:flex;gap:8px">
+                <div style="width:32%;border-radius:3px;background:var(--color-neutral-500)"></div>
+                <div style="flex:1;display:flex;flex-direction:column;gap:5px;padding-top:4px"><div style="height:4px;width:80%;background:var(--color-neutral-600)"></div><div style="height:3px;width:60%;background:var(--color-neutral-500)"></div><div style="height:3px;width:70%;background:var(--color-neutral-500)"></div></div>
+              </div>
+            </div>
+            <div style="font-size:13px;display:flex;gap:6px;align-items:center"><i class="ph ph-identification-card" style="color:var(--color-neutral-400)"></i><span>Ausweis</span></div>
+          </button>
+        </div>
+        <div style="padding:20px 22px 6px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Deine Prüfung</span><span style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ checkCount }}</span></div>
+        <div style="margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 14px">
+          <sc-for list="{{ checks }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.toggle }}" disabled="{{ decided }}" style="width:100%;display:flex;gap:12px;align-items:center;min-height:50px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer">
+              <span style="width:20px;height:20px;border-radius:6px;border:1.5px solid {{ c.bd }};background:{{ c.bg }};display:grid;place-items:center;color:{{ c.ic }};font-size:12px;flex:none"><i class="ph-bold ph-check"></i></span>
+              <span style="flex:1;font-size:14px;text-wrap:pretty">{{ c.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ canDecide }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px 16px 20px">
+            <button class="btn btn-primary" onClick="{{ approve }}" disabled="{{ approveOff }}" style="min-height:50px;font-size:15px"><i class="ph ph-seal-check"></i>Freigeben &amp; Link per E-Mail</button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="btn btn-secondary" onClick="{{ askQuery }}" style="min-height:44px"><i class="ph ph-phone-call"></i>Rückfrage</button>
+              <button class="btn btn-secondary" onClick="{{ askReject }}" style="min-height:44px;color:var(--color-neutral-400)">Ablehnen</button>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isResItem }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:14px 16px 0;padding:12px 14px;border-radius:var(--radius-md);background:var(--color-surface);display:flex;gap:10px;font-size:13px;color:var(--color-neutral-300)"><i class="ph ph-info" style="font-size:18px;color:var(--color-accent)"></i><span style="text-wrap:pretty">{{ it.hint }}</span></div>
+        <sc-if value="{{ canDecide }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:16px 16px 20px">
+            <sc-for list="{{ resActions }}" as="ra" hint-placeholder-count="3">
+              <button class="btn {{ ra.cls }}" onClick="{{ ra.go }}" style="min-height:46px;color:{{ ra.fg }}"><i class="ph {{ ra.icon }}"></i>{{ ra.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ decided }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);font-size:13px;color:var(--color-neutral-400);display:flex;gap:10px"><i class="ph ph-check-circle" style="font-size:18px;color:var(--color-accent)"></i><span>Bereits entschieden: {{ it.tag }}</span></div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isResult }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:52px 24px 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;border:1px solid {{ resRing }};color:{{ resRing }};box-shadow:{{ resGlow }};margin-bottom:18px"><i class="ph-bold {{ resIcon }}" style="font-size:28px"></i></div>
+        <div style="font-size:28px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">{{ resTitle }}</div>
+        <div style="font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">{{ resSub }}</div>
+      </div>
+      <div style="margin:24px 16px 20px;border-radius:var(--radius-lg);background:var(--color-surface);padding:4px 16px">
+        <sc-for list="{{ resSteps }}" as="r" hint-placeholder-count="4">
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+            <i class="ph-bold {{ r.icon }}" style="color:var(--color-accent);margin-top:3px"></i>
+            <div style="flex:1"><div style="font-size:14px">{{ r.t }}</div><div style="font-size:12px;color:var(--color-neutral-500);text-wrap:pretty">{{ r.s }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLog }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 22px 4px"><div style="font-size:23px;font-weight:500;letter-spacing:-0.015em">Protokoll</div><div style="font-size:12px;color:var(--color-neutral-500)">Wer hat wann was entschieden – ohne Dokumente</div></div>
+      <div style="display:flex;flex-direction:column;padding:12px 16px 20px">
+        <sc-for list="{{ log }}" as="l" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:2px;padding:12px 4px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:14px">{{ l.what }}</span></div>
+            <div style="font-size:12px;color:var(--color-neutral-500)">{{ l.t }} · Du</div>
+            <div style="font-size:12px;color:var(--color-accent-300);display:flex;gap:5px;align-items:center"><i class="ph ph-trash-simple"></i><span>{{ l.note }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+  </sc-if>
+  </div>
+
+  <sc-if value="{{ isLock }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2">
+      <button class="btn btn-primary" onClick="{{ unlock }}" style="width:100%;min-height:50px;font-size:15px"><i class="ph ph-scan" style="font-size:18px"></i>Mit Face ID entsperren</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isResult }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;padding:10px 16px 6px;position:relative;z-index:2">
+      <button class="btn btn-secondary" onClick="{{ toQueue }}" style="width:100%;min-height:50px;font-size:15px">Zur Prüfliste</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:grid;grid-template-columns:1fr 1fr;padding:8px 40px 0;position:relative;z-index:2;background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px">
+      <button onClick="{{ toQueue }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tabQFg }};position:relative">
+        <i class="ph ph-seal-check" style="font-size:24px"></i>Prüfungen
+        <sc-if value="{{ openCount }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--color-accent);color:var(--color-bg);font-size:10px;font-weight:600;display:grid;place-items:center">{{ openCount }}</span></sc-if>
+      </button>
+      <button onClick="{{ toLog }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:{{ tabLFg }}"><i class="ph ph-list-checks" style="font-size:24px"></i>Protokoll</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}"><div style="height:30px;flex:none;display:grid;place-items:center;position:relative;z-index:2"><div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300)"></div></div></sc-if><sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(8px, env(safe-area-inset-bottom));flex:none"></div></sc-if>
+
+  <sc-if value="{{ isDoc }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 92%, transparent);display:flex;flex-direction:column;padding:64px 16px 24px;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:17px;font-weight:500;flex:1">{{ docTitle }}</span><button class="btn btn-secondary btn-icon" onClick="{{ closeOverlay }}" style="width:44px;height:44px" aria-label="Schließen"><i class="ph ph-x" style="font-size:18px"></i></button></div>
+      <div style="flex:1;border-radius:var(--radius-md);background:var(--color-neutral-200);position:relative;overflow:hidden;display:grid;place-items:center;color:var(--color-neutral-600);font-size:13px;text-align:center;padding:24px">
+        <span>Dokumentvorschau<br>{{ it.name }} · {{ it.headSub }}</span>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:color-mix(in srgb, var(--color-bg) 85%, transparent);color:var(--color-neutral-200);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;display:flex;gap:8px;align-items:center"><i class="ph ph-eye"></i><span>Nur zur Prüfung · Admin · 10:22</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--color-neutral-400);display:flex;gap:8px"><i class="ph ph-trash-simple" style="font-size:15px"></i><span style="text-wrap:pretty">Wird nach deiner Entscheidung gelöscht. Download und Screenshots sind gesperrt.</span></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isQuery }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:20px;font-weight:500">Rückfrage stellen</div>
+        <div style="font-size:14px;color:var(--color-neutral-300);text-wrap:pretty">Zuständig für Kehrbezirk {{ it.bez }}: die Schornsteinfeger-Aufsicht der Stadt bzw. des Landkreises – oder die Innung.</div>
+        <div class="field"><label>Anfrage (Vorlage)</label><textarea class="input" value="{{ queryText }}" onChange="{{ setQuery }}" style="min-height:96px;font-size:14px"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-primary" onClick="{{ sendQuery }}" style="min-height:46px"><i class="ph ph-envelope-simple"></i>An Behörde</button>
+          <button class="btn btn-secondary" onClick="{{ sendQuery }}" style="min-height:46px"><i class="ph ph-users-three"></i>An Innung</button>
+        </div>
+        <button class="btn btn-ghost" onClick="{{ closeOverlay }}" style="min-height:44px;color:var(--color-neutral-400)">Abbrechen</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isReject }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;justify-content:flex-end">
+      <div style="margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:20px;font-weight:500">Ablehnen – Grund</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ reasons }}" as="rs" hint-placeholder-count="4">
+            <label class="radio" style="min-height:44px"><input type="radio" name="{{ rs.name }}" checked="{{ rs.on }}" onChange="{{ rs.pick }}"><span class="dot"></span><span>{{ rs.label }}</span></label>
+          </sc-for>
+        </div>
+        <button class="btn btn-primary" onClick="{{ doReject }}" disabled="{{ rejectOff }}" style="min-height:48px;margin-top:4px">Ablehnen &amp; per E-Mail informieren</button>
+        <button class="btn btn-ghost" onClick="{{ closeOverlay }}" style="min-height:44px;color:var(--color-neutral-400)">Abbrechen</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;lock&quot;,&quot;queue&quot;,&quot;detail&quot;,&quot;result&quot;,&quot;log&quot;],&quot;default&quot;:&quot;lock&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;preset&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;kind&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;item&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;overlay&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;checked&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;boolean&quot;},&quot;result&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  frame() { const b = !!this.props.bare; return { bare: b, framed: !b, fw: b ? '100%' : '390px', fh: b ? (this.props.bareH || '100dvh') : '844px', fp: b ? '0' : '10px', fr: b ? '0' : '56px', ir: b ? '0' : '46px', fsh: b ? 'none' : 'var(--shadow-md)', appPreset: b ? '' : 'fresh', bareH: this.props.bareH || '100dvh' }; }
+  uid = 'op' + Math.random().toString(36).slice(2, 8);
+  state = { ready: false, screen: this.props.screen || 'lock', kind: this.props.kind || 'sweep', sel: this.props.item || null, overlay: this.props.overlay || null,
+    checks: this.props.checked ? { mb: ['name', 'nr', 'valid', 'id'] } : {}, reason: null, queryText: '', toast: null, result: this.props.result || null };
+  componentDidMount() {
+    const go = () => {
+      const K = window.KF;
+      this.store = this.props.preset ? K.create(K.preset(this.props.preset)) : K.shared;
+      this.unsub = this.store.sub(() => this.forceUpdate());
+      this.setState({ ready: true });
+    };
+    window.KF ? go() : import(new URL('kf-store.js', document.baseURI).href).then(go);
+  }
+  componentWillUnmount() { this.unsub && this.unsub(); }
+  items() {
+    return [
+      { id: 'mb', kind: 'sweep', name: 'Markus Brandt', ini: 'MB', bez: 'Freiburg 14', since: 'vor 3 Std.', addr: 'Talstraße 12, 79102 Freiburg',
+        auto: [['ok', 'E-Mail bestätigt · m.brandt@kaminfeger-brandt.de'], ['ok', 'Bezirk 14 im Verzeichnis gefunden'], ['ok', 'Name stimmt mit Verzeichnis überein'], ['info', 'Betriebsadresse laut Verzeichnis: Talstraße 12, 79102 Freiburg']] },
+      { id: 'jw', kind: 'sweep', name: 'Jana Wolf', ini: 'JW', bez: 'Emmendingen 7', since: 'vor 1 Tag', addr: 'Hochburger Str. 3, 79312 Emmendingen',
+        auto: [['ok', 'E-Mail bestätigt'], ['ok', 'Bezirk 7 im Verzeichnis gefunden'], ['warn', 'Verzeichnis: „Jana Wolf-Berger“ – Name weicht ab']] },
+      { id: 'tr', kind: 'sweep', name: 'Thomas Ruf', ini: 'TR', bez: 'Freiburg 22', since: 'vor 2 Tagen', addr: 'Merzhauser Str. 40, 79100 Freiburg',
+        auto: [['ok', 'E-Mail bestätigt'], ['warn', 'Bezirk 22: Inhaberwechsel zum 1. Okt – Verzeichnis zeigt noch Vorgänger']] },
+      { id: 'so', kind: 'res', name: 'S. Özdemir', ini: 'SÖ', addr: 'Lindenstraße 9', since: 'vor 5 Std.', flag: 'Mieterin – keine Kundennummer',
+        hint: 'Den Feuerstättenbescheid bekommt der Eigentümer. Am schnellsten bestätigt der Kaminfeger, dass die Mieterin dort wohnt.',
+        auto: [['ok', 'E-Mail bestätigt'], ['ok', 'Adresse im Kehrbuch · Bezirk 14'], ['warn', 'Name nicht im Kehrbuch (Eigentümer: Fam. Lang)']] },
+      { id: 'pn', kind: 'res', name: 'Paul Neumann', ini: 'PN', addr: 'Ahornweg 4', since: 'vor 12 Tagen', flag: 'Bestätigungslink nicht geöffnet',
+        hint: 'Die Bestätigungs-E-Mail wurde am 11. Sep verschickt. Wird der Link 14 Tage nicht geöffnet, verfällt die Anfrage.',
+        auto: [['ok', 'E-Mail bestätigt'], ['ok', 'Adresse im Kehrbuch · Bezirk 14'], ['warn', 'Link aus der E-Mail noch nicht geöffnet']] }
+    ];
+  }
+  renderVals() {
+    if (!this.store) return Object.assign({ ready: false }, this.frame());
+    const s = this.store.get(), st = this.state, set = p => this.setState(p), scr = st.screen;
+    const A = s.admin || {};
+    const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
+      asked: ['beim Kaminfeger', 'tag-outline'], letter: ['E-Mail gesendet', 'tag-outline'], dismissed: ['verworfen', 'tag-neutral'] };
+    const isOpen = x => ['pending', 'query'].includes(A[x.id]);
+    const all = this.items();
+    const now = () => 'Heute · ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const decide = (id, status, what, note) => this.store.set(x => ({ admin: Object.assign({}, x.admin, { [id]: status }), adminLog: [{ t: now(), what, note }].concat(x.adminLog || []) }));
+    const flagOf = x => { const w = x.auto.find(a => a[0] === 'warn'); return w ? { t: x.flag || w[1], icon: 'ph-warning', fg: 'var(--color-accent-300)' } : { t: 'Alle automatischen Checks bestanden', icon: 'ph-check', fg: 'var(--color-neutral-400)' }; };
+    const queue = all.filter(x => x.kind === st.kind && A[x.id] && A[x.id] !== 'none').sort((a, b) => isOpen(b) - isOpen(a)).map(x => {
+      const f = flagOf(x), o = isOpen(x);
+      return { ini: x.ini, name: x.name, sub: x.kind === 'sweep' ? 'Kehrbezirk ' + x.bez + ' · ' + x.since : x.addr + ' · ' + x.since,
+        flag: f.t, flagIcon: f.icon, flagFg: o ? f.fg : 'var(--color-neutral-500)', tag: (TAG[A[x.id]] || TAG.pending)[0], tagCls: (TAG[A[x.id]] || TAG.pending)[1],
+        bg: o ? 'var(--color-surface)' : 'transparent', sh: o ? 'none' : 'var(--shadow-sm)', fg: o ? 'var(--color-text)' : 'var(--color-neutral-400)',
+        open: () => set({ screen: 'detail', sel: x.id, overlay: null, toast: null }) };
+    });
+    const cnt = k => all.filter(x => x.kind === k && isOpen(x)).length;
+    const x = all.find(i => i.id === st.sel) || all[0];
+    const status = A[x.id];
+    const decided = !['pending', 'query'].includes(status);
+    const it = Object.assign({}, x, {
+      kindLabel: x.kind === 'sweep' ? 'Kaminfeger prüfen' : 'Bewohner prüfen',
+      headSub: x.kind === 'sweep' ? 'Kehrbezirk ' + x.bez : x.addr,
+      tag: (TAG[status] || TAG.pending)[0], tagCls: (TAG[status] || TAG.pending)[1],
+      auto: x.auto.map(a => ({ text: a[1], icon: a[0] === 'ok' ? 'ph-check' : a[0] === 'warn' ? 'ph-warning' : 'ph-info',
+        fg: a[0] === 'ok' ? 'var(--color-accent)' : a[0] === 'warn' ? 'var(--color-accent-300)' : 'var(--color-neutral-500)',
+        tfg: a[0] === 'warn' ? 'var(--color-accent-200)' : 'var(--color-text)' }))
+    });
+    const mine = st.checks[x.id] || [];
+    const CH = [['name', 'Name auf der Urkunde = Konto-Name'], ['nr', 'Bezirksnummer auf der Urkunde stimmt'], ['valid', 'Bestellung gültig, nicht abgelaufen'], ['id', 'Ausweis lesbar und passt zur Urkunde']];
+    const checks = CH.map(c => { const on = mine.includes(c[0]); return { label: c[1],
+      bd: on ? 'var(--color-accent)' : 'var(--color-neutral-600)', bg: on ? 'var(--color-accent)' : 'transparent', ic: on ? 'var(--color-bg)' : 'transparent',
+      toggle: () => this.setState(z => { const m = z.checks[x.id] || []; return { checks: Object.assign({}, z.checks, { [x.id]: m.includes(c[0]) ? m.filter(k => k !== c[0]) : m.concat([c[0]]) }) }; }) }; });
+    const reasonsList = ['Urkunde unleserlich – bitte neu hochladen', 'Name passt nicht zur Urkunde', 'Bezirk gehört einer anderen Person', 'Verdacht auf gefälschte Unterlagen'];
+    const res = st.result;
+    let resTitle = '', resSub = '', resSteps = [], resIcon = 'ph-seal-check', resRing = 'var(--color-accent)', resGlow = '0 0 40px color-mix(in srgb, var(--color-accent) 30%, transparent)';
+    if (res === 'approved') {
+      resTitle = x.name + ' freigegeben'; resSub = 'Kehrbezirk ' + x.bez + ' wird freigeschaltet, sobald der Link in der E-Mail geöffnet ist.';
+      resSteps = [
+        { icon: 'ph-envelope-simple', t: 'Freischaltlink per E-Mail gesendet', s: 'An die E-Mail aus dem Bezirksverzeichnis – nicht an die vom Kaminfeger angegebene' },
+        { icon: 'ph-trash-simple', t: 'Bestellungsurkunde gelöscht', s: 'Datei endgültig entfernt' },
+        { icon: 'ph-trash-simple', t: 'Ausweisfoto gelöscht', s: 'Datei endgültig entfernt' },
+        { icon: 'ph-list-checks', t: 'Protokolliert', s: 'Prüfer, Zeitpunkt, Ergebnis und deine 4 Häkchen – keine Dokumente' }];
+    } else if (res === 'rejected') {
+      resTitle = 'Abgelehnt'; resSub = x.name + ' wurde per E-Mail informiert und kann neue Unterlagen einreichen.';
+      resIcon = 'ph-x'; resRing = 'var(--color-neutral-400)'; resGlow = 'none';
+      resSteps = [
+        { icon: 'ph-envelope-simple', t: 'E-Mail an den Kaminfeger', s: 'Grund: ' + (s.rejectReason || '–') },
+        { icon: 'ph-trash-simple', t: 'Urkunde und Ausweis gelöscht', s: 'Bei neuer Einreichung wird neu hochgeladen' },
+        { icon: 'ph-list-checks', t: 'Protokolliert', s: 'Prüfer, Zeitpunkt, Grund' }];
+    }
+    const resActions = x.id === 'so' ? [
+      { label: 'Kaminfeger um Bestätigung bitten', icon: 'ph-user-check', cls: 'btn-primary', go: () => { decide(x.id, 'asked', x.name + ' · Bestätigung beim Kaminfeger angefragt', 'Keine Dokumente nötig'); set({ screen: 'queue', toast: 'Anfrage an Markus Brandt gesendet – er bestätigt in seiner App.' }); } },
+      { label: 'Eigentümer per E-Mail fragen', icon: 'ph-envelope-simple', cls: 'btn-secondary', go: () => { decide(x.id, 'letter', x.name + ' · Eigentümer per E-Mail gefragt', 'Keine Dokumente gespeichert'); set({ screen: 'queue', toast: 'E-Mail an Fam. Lang (Eigentümer) gesendet.' }); } },
+      { label: 'Ablehnen', icon: 'ph-x', cls: 'btn-ghost', fg: 'var(--color-neutral-400)', go: () => { decide(x.id, 'rejected', x.name + ' · abgelehnt', 'Keine Dokumente gespeichert'); set({ screen: 'queue', toast: 'Abgelehnt und per E-Mail informiert.' }); } }
+    ] : [
+      { label: 'E-Mail erneut senden', icon: 'ph-envelope-simple', cls: 'btn-primary', go: () => { decide(x.id, 'letter', x.name + ' · Bestätigungs-E-Mail erneut gesendet', 'Neuer Link, alter Link ungültig'); set({ screen: 'queue', toast: 'Neue E-Mail gesendet, der alte Link ist ungültig.' }); } },
+      { label: 'Anfrage verwerfen', icon: 'ph-trash-simple', cls: 'btn-secondary', go: () => { decide(x.id, 'dismissed', x.name + ' · Anfrage verworfen', 'Kontodaten gelöscht'); set({ screen: 'queue', toast: 'Anfrage verworfen, Kontodaten gelöscht.' }); } }
+    ];
+    return {
+      ...this.frame(),
+      ready: true,
+      isLock: scr === 'lock', isQueue: scr === 'queue', isDetail: scr === 'detail', isResult: scr === 'result', isLog: scr === 'log',
+      showTabs: scr === 'queue' || scr === 'log',
+      tabQFg: scr === 'queue' ? 'var(--color-accent)' : 'var(--color-neutral-500)', tabLFg: scr === 'log' ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      openCount: cnt('sweep') + cnt('res'),
+      unlock: () => set({ screen: 'queue' }), lock: () => set({ screen: 'lock' }),
+      toQueue: () => set({ screen: 'queue', overlay: null, result: null }), toLog: () => set({ screen: 'log', toast: null }),
+      toast: st.toast,
+      tabsKind: [['sweep', 'Kaminfeger · ' + cnt('sweep')], ['res', 'Bewohner · ' + cnt('res')]].map(k => ({ label: k[1], name: this.uid + '-k', on: st.kind === k[0], pick: () => set({ kind: k[0] }) })),
+      queue, it, isSweepItem: x.kind === 'sweep', isResItem: x.kind === 'res', decided, canDecide: !decided,
+      checks, checkCount: mine.length + ' von 4', approveOff: mine.length < 4,
+      viewUrkunde: () => set({ overlay: 'doc', docTitle: 'Bestellungsurkunde' }), viewAusweis: () => set({ overlay: 'doc', docTitle: 'Ausweis' }),
+      isDoc: st.overlay === 'doc', docTitle: st.docTitle || 'Bestellungsurkunde',
+      isQuery: st.overlay === 'query', isReject: st.overlay === 'reject', closeOverlay: () => set({ overlay: null }),
+      askQuery: () => set({ overlay: 'query', queryText: 'Guten Tag, bitte bestätigen Sie uns: Ist ' + x.name + ' bevollmächtigte/r Bezirksschornsteinfeger/in für den Kehrbezirk ' + x.bez + '? Vielen Dank.' }),
+      queryText: st.queryText, setQuery: e => set({ queryText: e.target.value }),
+      sendQuery: () => { decide(x.id, 'query', x.name + ' · Rückfrage gestellt', 'Dokumente bleiben bis zur Entscheidung, max. 14 Tage'); set({ overlay: null }); },
+      askReject: () => set({ overlay: 'reject', reason: null }),
+      reasons: reasonsList.map(r => ({ label: r, name: this.uid + '-rr', on: st.reason === r, pick: () => set({ reason: r }) })),
+      rejectOff: !st.reason,
+      doReject: () => { this.store.set({ rejectReason: st.reason }); decide(x.id, 'rejected', x.name + ' · abgelehnt', 'Urkunde und Ausweis gelöscht'); set({ overlay: null, screen: 'result', result: 'rejected' }); },
+      approve: () => { decide(x.id, 'approved', x.name + ' · ' + x.bez + ' freigegeben', 'Urkunde und Ausweis gelöscht'); set({ screen: 'result', result: 'approved' }); },
+      resActions, resTitle, resSub, resSteps, resIcon, resRing, resGlow,
+      log: s.adminLog || []
+    };
+  }
+}
+</script>
+</body>
+</html>

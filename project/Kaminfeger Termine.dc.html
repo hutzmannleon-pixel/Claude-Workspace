@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>html,body{margin:0;background:var(--color-bg)}a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}</style>
+</helmet>
+
+<section data-screen-label="Betreiber" style="padding:56px 64px 64px;display:flex;flex-direction:column;gap:32px;font-family:var(--font-body);color:var(--color-text)">
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between;max-width:1360px">
+    <div style="max-width:640px;display:flex;flex-direction:column;gap:10px">
+      <span class="card-kicker">Neu · Betreiber-App, nur für dich</span>
+      <h1 style="margin:0;font-size:42px;text-wrap:pretty">Prüfen, entscheiden, löschen</h1>
+      <p style="margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Eigene App mit Face-ID-Sperre. Du siehst, was automatisch geprüft wurde, schaust Urkunde und Ausweis an, hakst vier Punkte ab und entscheidest: freigeben, Rückfrage bei Behörde oder Innung, oder ablehnen. Nach der Entscheidung werden die Dokumente gelöscht. Im Protokoll bleibt nur, wer wann was entschieden hat.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--color-neutral-400);max-width:380px">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Live verbunden</div>
+      <span>Entsperren → Markus Brandt → 4 Häkchen → „Freigeben“. Der Kaminfeger rechts springt sofort auf „Freischaltlink per E-Mail“. Probier auch „Ablehnen“ oder „Rückfrage“. Bewohner → S. Özdemir → „Kaminfeger bitten“: Die Anfrage erscheint in der Kaminfeger-App im Prototyp weiter unten.</span>
+      <button class="btn btn-secondary" onClick="{{ reset }}" style="align-self:flex-start;margin-top:6px"><i class="ph ph-arrow-counter-clockwise"></i>Demo zurücksetzen</button>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-outline">Betreiber</span><span style="font-size:13px;color:var(--color-neutral-400)">Deine App</span></div>
+      <dc-import name="BetreiberApp" hint-size="390px,844px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-neutral">Kaminfeger</span><span style="font-size:13px;color:var(--color-neutral-400)">wartet auf deine Prüfung</span></div>
+      <dc-import name="KaminfegerAnmeldung" screen="pending" demo="{{ true }}" linked="{{ true }}" hint-size="390px,844px"></dc-import>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:24px"><span class="card-kicker">Alle Screens</span><h2 style="margin:0;font-size:28px">Betreiber</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O1 · Gesperrt, Face ID</span><dc-import name="BetreiberApp" preset="fresh" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O2 · Prüfliste Kaminfeger</span><dc-import name="BetreiberApp" preset="fresh" screen="queue" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O3 · Prüfung Kaminfeger</span><dc-import name="BetreiberApp" preset="fresh" screen="detail" item="mb" checked="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O4 · Dokument ansehen</span><dc-import name="BetreiberApp" preset="fresh" screen="detail" item="mb" overlay="doc" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O5 · Rückfrage bei Behörde/Innung</span><dc-import name="BetreiberApp" preset="fresh" screen="detail" item="jw" overlay="query" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O6 · Ablehnen mit Grund</span><dc-import name="BetreiberApp" preset="fresh" screen="detail" item="jw" overlay="reject" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O7 · Freigegeben, Dokumente gelöscht</span><dc-import name="BetreiberApp" preset="fresh" screen="result" item="mb" result="approved" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O8 · Bewohner: Mieterin ohne Kundennummer</span><dc-import name="BetreiberApp" preset="fresh" screen="detail" kind="res" item="so" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">O9 · Protokoll</span><dc-import name="BetreiberApp" preset="fresh" screen="log" hint-size="390px,844px"></dc-import></div>
+  </div>
+</section>
+
+<section data-screen-label="Anmeldung" style="padding:56px 64px 64px;background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px;display:flex;flex-direction:column;gap:32px;font-family:var(--font-body);color:var(--color-text)">
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between;max-width:1360px">
+    <div style="max-width:640px;display:flex;flex-direction:column;gap:10px">
+      <span class="card-kicker">Neu · Anmeldung mit Prüfung</span>
+      <h1 style="margin:0;font-size:42px;text-wrap:pretty">Nur echte Bewohner, nur der echte Kaminfeger</h1>
+      <p style="margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Bewohner geben ihre Adresse an, bestätigen die E-Mail und weisen den Wohnsitz nach: sofort mit der Kundennummer vom Feuerstättenbescheid (Abgleich mit dem Kehrbuch) oder bestätigt durch den Kaminfeger per E-Mail. Der Kaminfeger gibt seinen Kehrbezirk an. Der wird mit dem Bezirksverzeichnis der Behörde abgeglichen, die Bestellungsurkunde geprüft und zum Schluss per Freischaltlink an die E-Mail-Adresse aus dem Verzeichnis bestätigt.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--color-neutral-400);max-width:380px">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">Demo-Hinweise</div>
+      <span>Straße „Lin…“ tippen → Vorschlag wählen. Code: beliebige 6 Ziffern.</span>
+      <span>Kaminfeger: Name „Markus Brandt“ + Bezirk 14 passt. Andere Nummern zeigen die Warnung.</span>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-accent">Kunde</span><span style="font-size:13px;color:var(--color-neutral-400)">Registrierung</span></div>
+      <dc-import name="KundenAnmeldung" hint-size="390px,844px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-neutral">Kaminfeger</span><span style="font-size:13px;color:var(--color-neutral-400)">Registrierung</span></div>
+      <dc-import name="KaminfegerAnmeldung" hint-size="390px,844px"></dc-import>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:24px"><span class="card-kicker">Alle Schritte</span><h2 style="margin:0;font-size:28px">Anmeldung Kunde</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A1 · Willkommen</span><dc-import name="KundenAnmeldung" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A1b · Schnellweg: Einladung per E-Mail</span><dc-import name="KundenAnmeldung" screen="scan" qr="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A1c · Einladung erkannt, Wohnsitz bestätigt</span><dc-import name="KundenAnmeldung" screen="scanned" qr="{{ true }}" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A2 · Adresse, Bezirk erkannt</span><dc-import name="KundenAnmeldung" screen="address" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A3 · E-Mail-Code</span><dc-import name="KundenAnmeldung" screen="email" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A4 · Wohnsitz: Kundennummer</span><dc-import name="KundenAnmeldung" screen="verify" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A5 · Alternativ: Kaminfeger bestätigt per E-Mail</span><dc-import name="KundenAnmeldung" screen="letter" demo="{{ true }}" method="letter" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">A6 · Verifiziert</span><dc-import name="KundenAnmeldung" screen="done" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:24px"><span class="card-kicker">Alle Schritte</span><h2 style="margin:0;font-size:28px">Anmeldung Kaminfeger</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B1 · Willkommen</span><dc-import name="KaminfegerAnmeldung" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B2 · Konto &amp; E-Mail-Code</span><dc-import name="KaminfegerAnmeldung" screen="account" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B3 · Bezirk im Verzeichnis gefunden</span><dc-import name="KaminfegerAnmeldung" screen="district" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B3b · Bezirk gehört jemand anderem</span><dc-import name="KaminfegerAnmeldung" screen="district" demo="{{ true }}" bez="12" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B4 · Bestellungsurkunde &amp; Ausweis</span><dc-import name="KaminfegerAnmeldung" screen="proof" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B5 · In Prüfung</span><dc-import name="KaminfegerAnmeldung" screen="pending" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B6 · Freischaltlink per E-Mail</span><dc-import name="KaminfegerAnmeldung" screen="pending" demo="{{ true }}" reviewed="{{ true }}" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">B7 · Freigeschaltet</span><dc-import name="KaminfegerAnmeldung" screen="done" demo="{{ true }}" hint-size="390px,844px"></dc-import></div>
+  </div>
+</section>
+
+<section data-screen-label="Prototyp" style="padding:56px 64px 64px;background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px;display:flex;flex-direction:column;gap:32px;font-family:var(--font-body);color:var(--color-text)">
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-end;justify-content:space-between;max-width:1360px">
+    <div style="max-width:620px;display:flex;flex-direction:column;gap:10px">
+      <span class="card-kicker">Prototyp · beide Seiten live verbunden</span>
+      <h1 style="margin:0;font-size:42px;text-wrap:pretty">Nie wieder vor verschlossener Tür</h1>
+      <p style="margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Der Kaminfeger schlägt pro Straße 2–3 Zeitfenster vor, Kunden buchen darin einen festen 30-Minuten-Slot. Wer nicht reagiert, erscheint als „offen“ – mit Anrufen-Knopf und Zeit-Eintrag direkt aus dem Telefonat.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:var(--color-neutral-400);max-width:420px">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)">So ausprobieren</div>
+      <div style="display:flex;gap:10px"><span style="color:var(--color-accent);font-variant-numeric:tabular-nums">0</span><span>Kaminfeger: Ahornweg → „Zeitfenster anlegen“ → Tag, Uhrzeit, Dauer → senden.</span></div>
+      <div style="display:flex;gap:10px"><span style="color:var(--color-accent);font-variant-numeric:tabular-nums">1</span><span>Kunde: „Zeit wählen“ → Di 09:00 → optional Schlüssel beim Nachbarn → bestätigen.</span></div>
+      <div style="display:flex;gap:10px"><span style="color:var(--color-accent);font-variant-numeric:tabular-nums">2</span><span>Kaminfeger: Route → „Route starten“ → Häuser abhaken. Der Kunde sieht live „2 Häuser entfernt“.</span></div>
+      <div style="display:flex;gap:10px"><span style="color:var(--color-accent);font-variant-numeric:tabular-nums">3</span><span>Nachrichten oder Straße → „Anrufen“ bei offenen Haushalten.</span></div>
+      <button class="btn btn-secondary" onClick="{{ reset }}" style="align-self:flex-start;margin-top:6px"><i class="ph ph-arrow-counter-clockwise"></i>Demo zurücksetzen</button>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-accent">Kunde</span><span style="font-size:13px;color:var(--color-neutral-400)">Familie Keller · Lindenstraße 7</span></div>
+      <dc-import name="KundenApp" hint-size="390px,844px"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:10px"><span class="tag tag-neutral">Kaminfeger</span><span style="font-size:13px;color:var(--color-neutral-400)">Markus Brandt · Kehrbezirk 14</span></div>
+      <dc-import name="KaminfegerApp" hint-size="390px,844px"></dc-import>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="Screens Kunde" style="padding:48px 64px 56px;display:flex;flex-direction:column;gap:24px;font-family:var(--font-body);color:var(--color-text);background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px">
+  <div style="display:flex;flex-direction:column;gap:4px"><span class="card-kicker">Alle Screens</span><h2 style="margin:0;font-size:28px">Kunde</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K1 · Einladung, Zeit wählen</span><dc-import name="KundenApp" preset="fresh" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K2 · Fenster &amp; Slot</span><dc-import name="KundenApp" preset="fresh" screen="pick" sel-t="09:00" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K3 · Prüfen, Schlüssel beim Nachbarn</span><dc-import name="KundenApp" preset="key" screen="confirm" sel-t="09:00" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K4 · Bestätigt, Erinnerungen</span><dc-import name="KundenApp" preset="booked" screen="done" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K5 · Termin-Übersicht</span><dc-import name="KundenApp" preset="key" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K6 · Absagen → lieber verschieben</span><dc-import name="KundenApp" preset="booked" overlay="cancel" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K7 · Termintag, live</span><dc-import name="KundenApp" preset="live" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K8 · Nachrichten</span><dc-import name="KundenApp" preset="fresh" screen="msgs" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K9 · Nicht angetroffen → neu buchen</span><dc-import name="KundenApp" preset="missed" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K10 · Profil, Haushalt, Umzug</span><dc-import name="KundenApp" preset="booked" screen="profile" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">K11 · Mitteilungen auf dem Sperrbildschirm</span>
+      <div style="width:390px;height:844px;padding:10px;border-radius:56px;background:var(--color-neutral-900);box-shadow:var(--shadow-md);flex:none;font-family:var(--font-body);color:var(--color-text)">
+        <div style="position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:radial-gradient(120% 70% at 20% 0%, var(--color-section-glow), var(--color-section) 45%, var(--color-bg) 100%);display:flex;flex-direction:column;align-items:center">
+          <div style="width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black);margin-top:11px"></div>
+          <i class="ph-fill ph-lock-simple" style="font-size:18px;margin-top:18px;color:var(--color-neutral-200)"></i>
+          <div style="font-size:15px;color:var(--color-neutral-200);margin-top:6px">Dienstag, 13. Oktober</div>
+          <div style="font-size:88px;font-weight:500;letter-spacing:-0.04em;line-height:1;margin-top:2px;color:var(--color-neutral-100)">8:14</div>
+          <div style="flex:1"></div>
+          <div style="width:100%;padding:0 10px 18px;display:flex;flex-direction:column;gap:8px">
+            <div style="padding:12px 14px;border-radius:22px;background:color-mix(in srgb, var(--color-surface) 82%, transparent);box-shadow:var(--shadow-sm);display:flex;gap:12px;align-items:flex-start">
+              <div style="width:36px;height:36px;border-radius:9px;background:var(--color-accent-900);box-shadow:0 0 0 1px var(--color-accent-700);display:grid;place-items:center;flex:none"><i class="ph ph-calendar-check" style="font-size:20px;color:var(--color-accent)"></i></div>
+              <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">Ihr Kaminfeger ist 2 Häuser entfernt</span><span style="color:var(--color-neutral-400)">jetzt</span></div><div style="font-size:13px;color:var(--color-neutral-300)">Gerade bei Nr. 1 · Ihr Slot 09:00–09:30</div></div>
+            </div>
+            <div style="padding:12px 14px;border-radius:22px;background:color-mix(in srgb, var(--color-surface) 82%, transparent);box-shadow:var(--shadow-sm);display:flex;gap:12px;align-items:flex-start">
+              <div style="width:36px;height:36px;border-radius:9px;background:var(--color-accent-900);box-shadow:0 0 0 1px var(--color-accent-700);display:grid;place-items:center;flex:none"><i class="ph ph-calendar-check" style="font-size:20px;color:var(--color-accent)"></i></div>
+              <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">Morgen kommt Ihr Kaminfeger</span><span style="color:var(--color-neutral-400)">gestern</span></div><div style="font-size:13px;color:var(--color-neutral-300);text-wrap:pretty">Di 09:00–09:30 · Bitte Zugang zu Heizraum und Dachboden freihalten.</div></div>
+            </div>
+          </div>
+          <div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300);margin-bottom:9px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-screen-label="Screens Kaminfeger" style="padding:48px 64px 72px;display:flex;flex-direction:column;gap:24px;font-family:var(--font-body);color:var(--color-text);background:linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px">
+  <div style="display:flex;flex-direction:column;gap:4px"><span class="card-kicker">Alle Screens</span><h2 style="margin:0;font-size:28px">Kaminfeger</h2></div>
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F1 · Straßen</span><dc-import name="KaminfegerApp" preset="fresh" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F2 · Zeitfenster anlegen (neue Straße)</span><dc-import name="KaminfegerApp" preset="fresh" screen="setup" target="ahorn" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F2b · Zeitfenster bearbeiten, gebuchte Slots markiert</span><dc-import name="KaminfegerApp" preset="fresh" screen="setup" target="linden" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F3 · Rückmeldungen</span><dc-import name="KaminfegerApp" preset="fresh" screen="street" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F4 · Unbestätigt → anrufen &amp; eintragen</span><dc-import name="KaminfegerApp" preset="fresh" screen="street" filter="open" call-nr="4" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F5 · Tagesroute, live</span><dc-import name="KaminfegerApp" preset="route" screen="route" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F6 · Kunden benachrichtigen</span><dc-import name="KaminfegerApp" preset="route" screen="notify" rcpt="route" text="Ich bin heute leider ca. 15 Minuten später dran. Danke für Ihre Geduld!" hint-size="390px,844px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:13px;color:var(--color-neutral-400)">F7 · Mieterin bestätigen (Anfrage vom Betreiber)</span><dc-import name="KaminfegerApp" preset="tenant" tenant="{{ true }}" hint-size="390px,844px"></dc-import></div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return { reset: () => window.KF && window.KF.shared.reset() };
+  }
+}
+</script>
+</body>
+</html>

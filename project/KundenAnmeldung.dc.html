@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/styles.css">
+<script src="_ds/nocturne-43240554-4346-4fbc-96c8-07de174f5806/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ false }}"><dc-import name="KundenApp" preset="{{ appPreset }}" bare="{{ bare }}" bare-h="{{ bareH }}" on-logout="{{ logout }}" hint-size="100%,100%"></dc-import></sc-if>
+<sc-if value="{{ showOb }}" hint-placeholder-val="{{ true }}">
+<div style="width:{{ fw }};height:{{ fh }};padding:{{ fp }};border-radius:{{ fr }};background:var(--color-neutral-900);box-shadow:{{ fsh }};flex:none;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45">
+<div style="position:relative;width:100%;height:100%;border-radius:{{ ir }};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 70%)"></div>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}">
+  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:2">
+    <span>9:41</span>
+    <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:color-mix(in srgb, var(--color-bg) 30%, black)"></div>
+    <div style="display:flex;gap:5px;align-items:center;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-bold ph-wifi-high"></i><i class="ph-fill ph-battery-full" style="font-size:22px"></i></div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(10px, env(safe-area-inset-top));flex:none"></div></sc-if>
+
+  <sc-if value="{{ hasSteps }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;align-items:center;gap:8px;padding:4px 20px 0 12px;position:relative;z-index:2">
+      <button class="btn btn-icon" onClick="{{ back }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button>
+      <div style="flex:1;display:flex;gap:4px">
+        <sc-for list="{{ bars }}" as="b" hint-placeholder-count="3"><div style="flex:1;height:3px;border-radius:2px;background:{{ b.bg }}"></div></sc-for>
+      </div>
+      <span style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums;min-width:28px;text-align:right">{{ stepNo }}/{{ stepTotal }}</span>
+    </div>
+  </sc-if>
+
+  <div style="flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none">
+
+    <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:64px 26px 0;display:flex;flex-direction:column;gap:14px">
+        <span class="card-kicker">Kaminfeger-Termine</span>
+        <div style="font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;text-wrap:pretty">Der Kaminfeger kommt, wenn Sie zu Hause sind.</div>
+        <div style="font-size:15px;color:var(--color-neutral-400);text-wrap:pretty">Ihr Kaminfeger gibt Zeitfenster für Ihre Straße frei – Sie wählen die halbe Stunde, die passt.</div>
+      </div>
+      <div style="position:relative;margin:40px 26px 0;height:44px;display:flex;align-items:center;justify-content:space-between">
+        <div style="position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(to right, transparent, var(--color-neutral-700) 48px, var(--color-neutral-700) calc(100% - 48px), transparent)"></div>
+        <span style="position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-neutral-600)"></span>
+        <span style="position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-neutral-600)"></span>
+        <span style="position:relative;width:14px;height:14px;border-radius:50%;background:var(--color-accent);box-shadow:0 0 0 4px var(--color-accent-900), 0 0 18px var(--color-accent)"></span>
+        <span style="position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-neutral-800)"></span>
+        <span style="position:relative;width:12px;height:12px;border-radius:50%;background:var(--color-bg);box-shadow:0 0 0 2px var(--color-accent-300)"></span>
+        <span style="position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-neutral-800)"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:36px 26px 20px;font-size:14px">
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-calendar-check" style="font-size:20px;color:var(--color-accent)"></i>Zeit selbst wählen</div>
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-map-pin-line" style="font-size:20px;color:var(--color-accent)"></i>Live sehen, wie weit er noch weg ist</div>
+        <div style="display:flex;gap:12px;align-items:center"><i class="ph ph-shield-check" style="font-size:20px;color:var(--color-accent)"></i>Nur verifizierte Bewohner buchen</div>
+      </div>
+      <button onClick="{{ toScan }}" style="margin:4px 16px 16px;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-800);color:inherit;font:inherit;cursor:pointer">
+        <div style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--color-accent-900);display:grid;place-items:center;flex:none"><i class="ph ph-envelope-open" style="font-size:22px;color:var(--color-accent)"></i></div>
+        <div style="flex:1"><div style="font-size:14px">Einladung per E-Mail erhalten?</div><div style="font-size:12px;color:var(--color-neutral-400);text-wrap:pretty">Link vom Kaminfeger öffnen – Adresse sofort bestätigt</div></div>
+        <i class="ph ph-caret-right" style="color:var(--color-neutral-500)"></i>
+      </button>
+    </sc-if>
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;padding:4px 12px 0"><button class="btn btn-icon" onClick="{{ toWelcome }}" style="width:44px;height:44px"><i class="ph ph-caret-left" style="font-size:22px"></i></button></div>
+      <div style="padding:10px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Anmelden</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Mit der E-Mail-Adresse, mit der Sie sich registriert haben.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div class="field"><label>E-Mail-Adresse</label><input class="input" type="email" value="{{ lEmail }}" onChange="{{ setLEmail }}" placeholder="name@beispiel.de" autocomplete="email" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ lSent }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px 16px 0;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;color:var(--color-neutral-400);display:flex;gap:8px;align-items:center;padding:0 6px"><i class="ph ph-envelope-simple-open" style="font-size:18px;color:var(--color-accent)"></i><span>Code an {{ lEmail }} gesendet</span></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(6, 1fr);gap:6px">
+            <sc-for list="{{ lDigits }}" as="dg" hint-placeholder-count="6">
+              <div style="height:54px;border-radius:var(--radius-md);border:1px solid {{ dg.bd }};background:var(--color-surface);display:grid;place-items:center;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums">{{ dg.ch }}</div>
+            </sc-for>
+            <input value="{{ lCode }}" onChange="{{ setLCode }}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Anmeldecode" style="position:absolute;inset:0;opacity:0;font-size:16px;cursor:text">
+          </div>
+          <button class="btn btn-ghost" onClick="{{ lResend }}" style="align-self:flex-start;min-height:40px;padding-inline:6px">Code erneut senden</button>
+        </div>
+      </sc-if>
+      <div style="margin:22px 16px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-shield-check" style="font-size:15px;margin-top:1px"></i><span style="text-wrap:pretty">Kein Passwort nötig. Der Code gilt 10 Minuten und nur einmal.</span></div>
+    </sc-if>
+
+    <sc-if value="{{ isScan }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Einladung öffnen</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Ihr Kaminfeger schickt die Einladung an die E-Mail-Adresse aus seinem Kehrbuch. Der Link darin bestätigt Ihre Adresse.</div></div>
+      <div style="margin:20px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);overflow:hidden">
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-envelope-simple"></i><span style="flex:1">E-Mail · von Markus Brandt</span><span>jetzt</span></div>
+          <div style="font-size:14px;font-weight:500">Einladung: Termin für die Feuerstättenschau wählen</div>
+        </div>
+        <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--color-neutral-300)">
+          <span style="text-wrap:pretty">Guten Tag Familie Keller, im Oktober komme ich in die Lindenstraße 7. Bitte wählen Sie Ihre Zeit in der App.</span>
+          <span style="align-self:flex-start;padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--color-accent);color:var(--color-accent-200);font-size:13px">Einladung annehmen</span>
+        </div>
+      </div>
+      <div style="padding:14px 22px 20px;font-size:12px;color:var(--color-neutral-500);display:flex;gap:8px"><i class="ph ph-info" style="font-size:15px;margin-top:1px"></i><span style="text-wrap:pretty">Keine Einladung bekommen? Dann normal registrieren – die Bestätigung läuft ebenfalls per E-Mail.</span></div>
+    </sc-if>
+
+    <sc-if value="{{ isScanned }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Einladung erkannt</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px">Sind das Sie?</div></div>
+      <div style="margin:20px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 30px color-mix(in srgb, var(--color-accent) 14%, transparent);display:flex;flex-direction:column;gap:10px">
+        <span class="card-kicker">Aus dem Kehrbuch</span>
+        <div style="font-size:22px;font-weight:500;letter-spacing:-0.015em">Familie Keller</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:14px">
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-map-pin" style="font-size:18px;color:var(--color-neutral-500)"></i><span>Lindenstraße 7, 79102 Freiburg</span></div>
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-user" style="font-size:18px;color:var(--color-neutral-500)"></i><span>Kehrbezirk 14 · Markus Brandt</span></div>
+          <div style="display:flex;gap:10px;align-items:center"><i class="ph ph-shield-check" style="font-size:18px;color:var(--color-accent)"></i><span>Wohnsitz damit bestätigt</span></div>
+        </div>
+      </div>
+      <div style="padding:14px 22px 20px;font-size:12px;color:var(--color-neutral-500);text-wrap:pretty">Der Link gilt nur einmal. Mitbewohner laden Sie später im Profil ein.</div>
+    </sc-if>
+
+    <sc-if value="{{ isAddress }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Wo wohnen Sie?</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px">Wir ordnen Sie Ihrem Kehrbezirk zu.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div class="field" style="position:relative"><label>Straße</label>
+          <input class="input" value="{{ street }}" onChange="{{ setStreet }}" placeholder="Straße eingeben" autocomplete="off" style="min-height:46px;font-size:15px">
+          <sc-if value="{{ searching }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-neutral-500);padding:6px 4px;display:flex;gap:6px;align-items:center"><i class="ph ph-magnifying-glass"></i><span>Suche Adressen …</span></div></sc-if>
+          <sc-if value="{{ hasSugg }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:4px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-md);overflow:hidden">
+              <sc-for list="{{ sugg }}" as="sg" hint-placeholder-count="2">
+                <button onClick="{{ sg.pick }}" style="width:100%;display:flex;gap:10px;align-items:center;min-height:46px;padding:0 12px;background:none;border:0;color:inherit;font:inherit;font-size:14px;cursor:pointer;text-align:left"><i class="ph ph-map-pin" style="color:var(--color-neutral-500)"></i><span style="flex:1">{{ sg.name }}</span><span style="font-size:12px;color:var(--color-neutral-500)">{{ sg.plz }}</span></button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div class="field" style="max-width:50%"><label>Hausnummer</label><input class="input" value="{{ nr }}" onChange="{{ setNr }}" placeholder="7" style="min-height:46px;font-size:15px"></div>
+        <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1.6fr);gap:8px">
+          <div class="field"><label>PLZ</label><input class="input" value="{{ plz }}" onChange="{{ setPlz }}" placeholder="79102" inputmode="numeric" maxlength="5" autocomplete="postal-code" style="min-height:46px;font-size:15px;font-variant-numeric:tabular-nums"></div>
+          <div class="field"><label>Ort</label><input class="input" value="{{ ort }}" onChange="{{ setOrt }}" placeholder="Freiburg" autocomplete="address-level2" style="min-height:46px;font-size:15px"></div>
+        </div>
+        <sc-if value="{{ plzWarn }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-accent-300);padding:0 4px"><i class="ph ph-warning" style="font-size:15px"></i><span>{{ plzWarn }}</span></div>
+        </sc-if>
+        <div class="field"><label>Familienname (wie auf dem Klingelschild)</label><input class="input" value="{{ name }}" onChange="{{ setName }}" placeholder="z. B. Keller" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ district }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;gap:12px;align-items:center">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none">{{ district.ini }}</div>
+          <div style="flex:1"><div style="font-size:12px;color:var(--color-accent-300)">Kehrbezirk {{ district.no }} gefunden</div><div style="font-size:14px">Ihr Kaminfeger: {{ district.sweep }}</div></div>
+          <i class="ph-bold ph-check" style="color:var(--color-accent)"></i>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noDistrict }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;gap:12px;align-items:flex-start">
+          <i class="ph ph-map-pin-line" style="font-size:20px;color:var(--color-accent);margin-top:1px"></i>
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px"><div style="font-size:14px">Adresse gefunden</div><div style="font-size:12px;color:var(--color-neutral-400);text-wrap:pretty">Ihr Kaminfeger nutzt die App noch nicht. Sie können sich trotzdem registrieren – wir laden ihn ein und melden uns, sobald er Zeitfenster freigibt.</div></div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isEmail }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">E-Mail bestätigen</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Dorthin schicken wir Terminbestätigungen und Erinnerungen.</div></div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding:20px 16px 0">
+        <div class="field"><label>E-Mail-Adresse</label><input class="input" type="email" value="{{ email }}" onChange="{{ setEmail }}" placeholder="name@beispiel.de" style="min-height:46px;font-size:15px"></div>
+      </div>
+      <sc-if value="{{ codeSent }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:22px 16px 0;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:13px;color:var(--color-neutral-400);display:flex;gap:8px;align-items:center;padding:0 6px"><i class="ph ph-envelope-simple-open" style="font-size:18px;color:var(--color-accent)"></i><span>Code an {{ email }} gesendet</span></div>
+          <div style="position:relative;display:grid;grid-template-columns:repeat(6, 1fr);gap:6px">
+            <sc-for list="{{ digits }}" as="dg" hint-placeholder-count="6">
+              <div style="height:54px;border-radius:var(--radius-md);border:1px solid {{ dg.bd }};background:var(--color-surface);display:grid;place-items:center;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums">{{ dg.ch }}</div>
+            </sc-for>
+            <input value="{{ code }}" onChange="{{ setCode }}" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Bestätigungscode" style="position:absolute;inset:0;opacity:0;font-size:16px;cursor:text">
+          </div>
+          <button class="btn btn-ghost" onClick="{{ resend }}" style="align-self:flex-start;min-height:40px;padding-inline:6px">Code erneut senden</button>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15;text-wrap:pretty">Wohnen Sie wirklich hier?</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Nur Bewohner dürfen Termine für {{ addrShort }} buchen. Wir gleichen mit dem Kehrbuch Ihres Kaminfegers ab.</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding:20px 16px 0">
+        <sc-for list="{{ methods }}" as="m" hint-placeholder-count="2">
+          <button onClick="{{ m.pick }}" style="text-align:left;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:var(--radius-lg);background:{{ m.bg }};border:1px solid {{ m.bd }};color:inherit;font:inherit;cursor:pointer">
+            <span style="width:18px;height:18px;border-radius:50%;flex:none;margin-top:2px;border:1.5px solid {{ m.bd2 }};box-shadow:{{ m.dot }}"></span>
+            <span style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ m.title }}</span><span style="font-size:12px;color:var(--color-neutral-400)">{{ m.sub }}</span></span>
+            <span class="tag {{ m.tagCls }}">{{ m.tag }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ byNumber }}" hint-placeholder-val="{{ true }}">
+        <div style="margin:14px 16px 20px;padding:14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:grid;grid-template-columns:minmax(0, 1fr) 76px;gap:14px;align-items:start">
+          <div class="field"><label>Kundennummer</label><input class="input" value="{{ kdnr }}" onChange="{{ setKdnr }}" placeholder="KF-14-0007" style="min-height:46px;font-size:15px;letter-spacing:0.04em;text-transform:uppercase"><div style="font-size:12px;color:var(--color-neutral-500);margin-top:6px;text-wrap:pretty">Steht oben rechts auf Ihrem letzten Feuerstättenbescheid.</div></div>
+          <div aria-hidden="true" style="height:100px;border-radius:4px;background:var(--color-neutral-200);padding:8px 7px;display:flex;flex-direction:column;gap:4px;margin-top:18px">
+            <div style="align-self:flex-end;width:30px;height:9px;border-radius:2px;box-shadow:0 0 0 2px var(--color-accent);background:var(--color-accent-300)"></div>
+            <div style="height:3px;width:60%;background:var(--color-neutral-400);margin-top:6px"></div>
+            <div style="height:3px;width:90%;background:var(--color-neutral-400)"></div>
+            <div style="height:3px;width:80%;background:var(--color-neutral-400)"></div>
+            <div style="height:3px;width:85%;background:var(--color-neutral-400)"></div>
+            <div style="height:3px;width:50%;background:var(--color-neutral-400)"></div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ byLetter }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:14px 16px 20px;padding:14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;gap:12px;font-size:13px;color:var(--color-neutral-300)">
+          <i class="ph ph-envelope-simple" style="font-size:20px;color:var(--color-accent)"></i>
+          <span style="text-wrap:pretty">Ihr Kaminfeger bekommt eine Anfrage und bestätigt, dass <strong style="font-weight:500;color:var(--color-text)">Familie {{ name }}</strong> in der {{ addrShort }} wohnt. Danach erhalten Sie eine E-Mail mit Bestätigungslink. Bis dahin können Sie Zeiten ansehen, aber noch nicht buchen.</span>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isLetter }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:18px 22px 0"><div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;line-height:1.15">Anfrage gesendet</div><div style="font-size:14px;color:var(--color-neutral-400);margin-top:4px;text-wrap:pretty">Sobald Markus Brandt bestätigt, bekommen Sie eine E-Mail an {{ email }}. Meist innerhalb von 1–2 Tagen.</div></div>
+      <div style="margin:20px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:10px;align-items:center;font-size:14px"><i class="ph-bold ph-check" style="color:var(--color-accent)"></i>E-Mail bestätigt</div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:14px"><i class="ph-bold ph-check" style="color:var(--color-accent)"></i>Adresse geprüft</div>
+        <div style="display:flex;gap:10px;align-items:center;font-size:14px;color:var(--color-neutral-400)"><i class="ph ph-hourglass-medium" style="color:var(--color-neutral-400)"></i>Bestätigung durch den Kaminfeger</div>
+      </div>
+      <div style="margin:20px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-sm);overflow:hidden">
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+          <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-neutral-500)"><i class="ph ph-envelope-simple"></i><span style="flex:1">E-Mail · an {{ email }}</span><span>jetzt</span></div>
+          <div style="font-size:14px;font-weight:500">Ihre Adresse ist bestätigt</div>
+        </div>
+        <div style="padding:12px 14px 14px;display:flex;flex-direction:column;gap:12px;font-size:13px;color:var(--color-neutral-300)">
+          <span style="text-wrap:pretty">Markus Brandt hat bestätigt, dass Sie in der {{ addrShort }} wohnen. Tippen Sie auf den Link, um Ihr Konto freizuschalten.</span>
+          <span style="align-self:flex-start;padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--color-accent);color:var(--color-accent-200);font-size:13px">Konto freischalten</span>
+        </div>
+      </div>
+      <div style="padding:10px 22px 20px;font-size:12px;color:var(--color-neutral-500)">Vorschau der E-Mail, die Sie erhalten.</div>
+    </sc-if>
+
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:52px 24px 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px">
+        <div style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--color-accent);color:var(--color-accent);box-shadow:0 0 40px color-mix(in srgb, var(--color-accent) 30%, transparent);margin-bottom:18px"><i class="ph-bold ph-shield-check" style="font-size:28px"></i></div>
+        <div style="font-size:28px;font-weight:500;letter-spacing:-0.02em">Willkommen, Familie {{ name }}</div>
+        <div style="font-size:15px;color:var(--color-neutral-400)">{{ doneSub }}</div>
+      </div>
+      <div style="margin:24px 16px 0;border-radius:var(--radius-lg);background:var(--color-surface);padding:4px 16px">
+        <sc-for list="{{ checks }}" as="c" hint-placeholder-count="3">
+          <div style="display:flex;gap:12px;align-items:center;min-height:52px;background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px">
+            <i class="ph-bold {{ c.icon }}" style="color:var(--color-accent)"></i>
+            <div style="flex:1"><div style="font-size:14px">{{ c.t }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ c.s }}</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ cta }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;padding:10px 16px 2px;position:relative;z-index:2;display:flex;flex-direction:column;gap:2px">
+      <button class="btn btn-primary" onClick="{{ cta.go }}" disabled="{{ cta.off }}" style="width:100%;min-height:50px;font-size:15px">{{ cta.label }}</button>
+      <sc-if value="{{ alt }}" hint-placeholder-val="{{ false }}"><button class="btn btn-ghost" onClick="{{ alt.go }}" style="min-height:44px;color:var(--color-neutral-400)">{{ alt.label }}</button></sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ framed }}" hint-placeholder-val="{{ true }}"><div style="height:30px;flex:none;display:grid;place-items:center;position:relative;z-index:2"><div style="width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300)"></div></div></sc-if><sc-if value="{{ bare }}" hint-placeholder-val="{{ false }}"><div style="height:max(8px, env(safe-area-inset-bottom));flex:none"></div></sc-if>
+</div>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;welcome&quot;,&quot;address&quot;,&quot;email&quot;,&quot;verify&quot;,&quot;letter&quot;,&quot;done&quot;],&quot;default&quot;:&quot;welcome&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;method&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;code&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  frame() { const b = !!this.props.bare; return { bare: b, framed: !b, fw: b ? '100%' : '390px', fh: b ? (this.props.bareH || '100dvh') : '844px', fp: b ? '0' : '10px', fr: b ? '0' : '56px', ir: b ? '0' : '46px', fsh: b ? 'none' : 'var(--shadow-md)', appPreset: (b || this.props.live) ? '' : 'fresh', bareH: this.props.bareH || '100dvh' }; }
+  constructor(p) {
+    super(p);
+    const demo = !!p.demo;
+    this.state = {
+      screen: p.screen || 'welcome',
+      street: demo ? 'Lindenstraße' : '', nr: demo ? '7' : '', plz: demo ? '79102' : '', ort: demo ? 'Freiburg' : '', name: demo ? 'Keller' : '',
+      email: demo ? 'keller.familie@web.de' : '', codeSent: demo, code: demo ? (p.code || '4829') : '',
+      method: p.method || 'number', kdnr: demo ? 'KF-14-0007' : '', letterCode: '', app: false, qr: !!p.qr, qrCode: ''
+    };
+  }
+  search(v) {
+    clearTimeout(this.t);
+    const q = v.trim();
+    if (q.length < 3) { this.setState({ results: [], searching: false }); return; }
+    this.t = setTimeout(() => {
+      const id = (this.qid = (this.qid || 0) + 1);
+      this.setState({ searching: true });
+      const loc = [q, this.state.plz, this.state.ort].filter(Boolean).join(' ');
+      fetch('https://photon.komoot.io/api/?lang=de&limit=8&osm_tag=highway&bbox=5.8,47.2,15.1,55.1&q=' + encodeURIComponent(loc))
+        .then(r => r.json()).then(j => {
+          if (id !== this.qid) return;
+          const seen = {}, out = [];
+          (j.features || []).forEach(ft => { const p = ft.properties || {}; if (p.countrycode && p.countrycode !== 'DE') return;
+            const k = p.name + '|' + p.postcode; if (!p.name || seen[k]) return; seen[k] = 1; out.push({ name: p.name, plz: p.postcode || '', city: p.city || p.town || p.village || p.county || '' }); });
+          this.setState({ results: out.slice(0, 5), searching: false });
+        }).catch(() => { if (id === this.qid) this.setState({ results: [], searching: false }); });
+    }, 350);
+  }
+  renderVals() {
+    const st = this.state, set = p => this.setState(p), scr = st.screen;
+    const STREETS = [
+      { name: 'Lindenstraße', plz: '79102 Freiburg', no: '14', sweep: 'Markus Brandt', ini: 'MB' },
+      { name: 'Lindenhofweg', plz: '79104 Freiburg', no: '9', sweep: 'Sabine Roth', ini: 'SR' },
+      { name: 'Ahornweg', plz: '79102 Freiburg', no: '14', sweep: 'Markus Brandt', ini: 'MB' },
+      { name: 'Kirchplatz', plz: '79102 Freiburg', no: '14', sweep: 'Markus Brandt', ini: 'MB' }
+    ];
+    const q = st.street.trim().toLowerCase();
+    const DEMO = STREETS.find(s => s.name.toLowerCase() === q && s.plz.startsWith(st.plz.trim() + ' '));
+    const plzValid = /^\d{5}$/.test(st.plz.trim());
+    const addrOk = st.street.trim().length >= 3 && plzValid && st.ort.trim().length >= 2;
+    const match = addrOk ? (DEMO || { unknown: true }) : null;
+    const plzWarn = st.plz && !plzValid ? 'Die PLZ hat 5 Ziffern.' : null;
+    const sugg = st.picked === st.street ? [] : (st.results || []).map(r => ({ name: r.name, plz: [r.plz, r.city].filter(Boolean).join(' '),
+      pick: () => set({ street: r.name, picked: r.name, plz: r.plz || st.plz, ort: r.city || st.ort, results: [] }) }));
+    const steps = st.qr ? { scan: 1, scanned: 1, email: 2 } : { address: 1, email: 2, verify: 3, letter: 3 };
+    const stepTotal = st.qr ? 2 : 3;
+    const stepNo = steps[scr] || 0;
+    const back = { scan: 'welcome', scanned: 'scan', address: 'welcome', email: st.qr ? 'scanned' : 'address', verify: 'email', letter: 'verify' }[scr];
+    const qrScan = () => set({ screen: 'scanned', qr: true, street: 'Lindenstraße', nr: '7', plz: '79102', ort: 'Freiburg', name: 'Keller' });
+    const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.email);
+    const addrShort = (st.street.trim() || 'Lindenstraße') + ' ' + (st.nr.trim() || '7');
+    const methods = [
+      { id: 'number', title: 'Kundennummer eingeben', sub: 'Vom Feuerstättenbescheid', tag: 'sofort', tagCls: 'tag-accent' },
+      { id: 'letter', title: 'Vom Kaminfeger bestätigen lassen', sub: 'Bestätigung kommt per E-Mail – z. B. für Mieter', tag: '1–2 Tage', tagCls: 'tag-neutral' }
+    ].map(m => { const on = st.method === m.id; return Object.assign(m, {
+      bg: on ? 'var(--color-accent-900)' : 'var(--color-surface)', bd: on ? 'var(--color-accent)' : 'transparent',
+      bd2: on ? 'var(--color-accent)' : 'var(--color-neutral-600)', dot: on ? 'inset 0 0 0 4px var(--color-accent-900), inset 0 0 0 9px var(--color-accent)' : 'none',
+      pick: () => set({ method: m.id }) }); });
+    const toApp = () => { set({ app: true }); this.props.onDone && this.props.onDone(); };
+    let cta = null, alt = null;
+    if (scr === 'scan') cta = { label: 'Einladungslink öffnen (Demo)', go: qrScan };
+    if (scr === 'scanned') cta = { label: 'Das sind wir – weiter', go: () => set({ screen: 'email' }) };
+    if (scr === 'welcome') { cta = { label: 'Registrieren', go: () => set({ screen: 'address', qr: false }) }; alt = { label: 'Ich habe schon ein Konto', go: () => set({ screen: 'login', lSent: false, lCode: '' }) }; }
+    if (scr === 'address') cta = { label: 'Weiter', off: !(match && st.nr.trim() && st.ort.trim() && st.name.trim()), go: () => set({ screen: 'email' }) };
+    if (scr === 'email') cta = st.codeSent
+      ? { label: 'Bestätigen', off: st.code.length < 6, go: () => set({ screen: (st.qr || !DEMO) ? 'done' : 'verify' }) }
+      : { label: 'Code senden', off: !emailOk, go: () => set({ codeSent: true }) };
+    if (scr === 'verify') cta = st.method === 'number'
+      ? { label: 'Adresse prüfen', off: st.kdnr.trim().length < 6, go: () => set({ screen: 'done' }) }
+      : { label: 'Bestätigung anfragen', go: () => set({ screen: 'letter' }) };
+    if (scr === 'letter') cta = { label: 'Link in der E-Mail öffnen (Demo)', go: () => set({ screen: 'done' }) };
+    if (scr === 'done') cta = { label: 'Zur App', go: toApp };
+    const lEmailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(st.lEmail || '');
+    const LV = {
+      isLogin: scr === 'login', toWelcome: () => set({ screen: 'welcome' }),
+      lEmail: st.lEmail || '', lCode: st.lCode || '', lSent: !!st.lSent,
+      setLEmail: e => set({ lEmail: e.target.value, lSent: false, lCode: '' }),
+      setLCode: e => set({ lCode: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      lResend: () => set({ lCode: '' }),
+      lDigits: [0, 1, 2, 3, 4, 5].map(i => ({ ch: (st.lCode || '')[i] || '', bd: i === (st.lCode || '').length ? 'var(--color-accent)' : 'var(--color-neutral-700)' }))
+    };
+    if (scr === 'login') cta = st.lSent
+      ? { label: 'Anmelden', off: (st.lCode || '').length < 6, go: toApp }
+      : { label: 'Code senden', off: !lEmailOk, go: () => set({ lSent: true }) };
+
+    return {
+      ...this.frame(),
+      ...LV,
+      showApp: st.app, showOb: !st.app,
+      isWelcome: scr === 'welcome', isAddress: scr === 'address', isEmail: scr === 'email', isVerify: scr === 'verify', isLetter: scr === 'letter', isDone: scr === 'done',
+      logout: () => { set({ app: false, screen: 'welcome' }); this.props.onLogout && this.props.onLogout(); },
+      doneSub: !st.qr && !DEMO ? 'Ihr Konto ist angelegt.' : 'Ihr Konto ist verifiziert.',
+      isScan: scr === 'scan', isScanned: scr === 'scanned', toScan: () => set({ screen: 'scan', qr: true }),
+      qrCode: st.qrCode, setQrCode: e => set({ qrCode: e.target.value }), stepTotal,
+      hasSteps: stepNo > 0 || scr === 'scan', stepNo, back: () => back && set({ screen: back }),
+      bars: (st.qr ? [1, 2] : [1, 2, 3]).map(i => ({ bg: i <= stepNo ? 'var(--color-accent)' : 'var(--color-neutral-800)' })),
+      street: st.street, nr: st.nr, name: st.name, email: st.email, code: st.code, kdnr: st.kdnr, letterCode: st.letterCode,
+      setStreet: e => { const v = e.target.value; set({ street: v, picked: null }); this.search(v); }, setNr: e => set({ nr: e.target.value }), setName: e => set({ name: e.target.value }),
+      setEmail: e => set({ email: e.target.value, codeSent: false, code: '' }),
+      setCode: e => set({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      setKdnr: e => set({ kdnr: e.target.value }), setLetterCode: e => set({ letterCode: e.target.value }),
+      resend: () => set({ code: '' }),
+      sugg, hasSugg: sugg.length > 0, plz: st.plz, ort: st.ort, plzWarn,
+      setPlz: e => set({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) }), setOrt: e => set({ ort: e.target.value }),
+      district: match && !match.unknown ? match : null, noDistrict: !!(match && match.unknown), searching: !!st.searching,
+      codeSent: st.codeSent,
+      digits: [0, 1, 2, 3, 4, 5].map(i => ({ ch: st.code[i] || '', bd: i === st.code.length ? 'var(--color-accent)' : 'var(--color-neutral-700)' })),
+      addrShort, methods, byNumber: st.method === 'number', byLetter: st.method === 'letter',
+      checks: [
+        { t: 'E-Mail bestätigt', s: st.email || 'keller.familie@web.de' },
+        { t: DEMO || st.qr ? 'Adresse im Kehrbuch gefunden' : 'Adresse geprüft', s: addrShort + (DEMO ? ' · Kehrbezirk ' + DEMO.no : st.qr ? ' · Kehrbezirk 14' : ', ' + st.plz + ' ' + st.ort) },
+        !st.qr && !DEMO ? { t: 'Wohnsitz wird später bestätigt', s: 'Sobald Ihr Kaminfeger die App nutzt – wir melden uns per E-Mail', icon: 'ph-hourglass-medium' } : { t: 'Wohnsitz bestätigt', s: st.qr ? 'per Einladungslink vom Kaminfeger' : st.method === 'number' ? 'per Kundennummer vom Feuerstättenbescheid' : 'bestätigt vom Kaminfeger, per E-Mail' }
+      ].map(c => Object.assign({ icon: 'ph-check' }, c)),
+      cta, alt
+    };
+  }
+}
+</script>
+</body>
+</html>
