@@ -1,0 +1,61 @@
+﻿strasse;hausnummer;plz;ort;eigentuemer;kundennummer;email;telefon
+Teststraße;1;99999;Musterstadt;Albrecht;TEST-0001;;0000 610266
+Teststraße;2;99999;Musterstadt;Fam. Bauer;TEST-0002;;0000 303254
+Teststraße;3;99999;Musterstadt;Fam. Clausen;TEST-0003;;0000 754434
+Teststraße;4;99999;Musterstadt;Fam. Dietrich;TEST-0004;;0000 937017
+Teststraße;5;99999;Musterstadt;Fam. Ebert;TEST-0005;;0000 366988
+Teststraße;6;99999;Musterstadt;Fam. Franke;TEST-0006;;0000 957869
+Teststraße;7;99999;Musterstadt;Gruber;TEST-0007;;0000 392166
+Teststraße;8;99999;Musterstadt;Fam. Hansen;TEST-0008;;0000 129357
+Ahornweg;1;99999;Musterstadt;Fam. Jung;TEST-1001;;0000 531875
+Ahornweg;2;99999;Musterstadt;Fam. Brandl;TEST-1002;;0000 651304
+Ahornweg;3;99999;Musterstadt;Fam. Ulrich;TEST-1003;;0000 545842
+Ahornweg;4;99999;Musterstadt;Fam. Dorn;TEST-1004;;0000 818664
+Ahornweg;5;99999;Musterstadt;Fam. Huber;TEST-1005;;0000 505472
+Ahornweg;6;99999;Musterstadt;Fam. Paul;TEST-1006;;0000 608424
+Ahornweg;7;99999;Musterstadt;Fam. Richter;TEST-1007;;0000 537983
+Ahornweg;8;99999;Musterstadt;Fam. Vogt;TEST-1008;;0000 199461
+Ahornweg;9;99999;Musterstadt;Fam. Sommer;TEST-1009;;0000 513220
+Ahornweg;10;99999;Musterstadt;Fam. Frey;TEST-1010;;0000 745258
+Birkenallee;1;99999;Musterstadt;Rieger;TEST-1011;;0000 169676
+Birkenallee;2;99999;Musterstadt;Fam. Graf;TEST-1012;;0000 612810
+Birkenallee;3;99999;Musterstadt;Fuchs;TEST-1013;;0000 699205
+Birkenallee;4;99999;Musterstadt;Fam. Jäger;TEST-1014;;0000 965442
+Birkenallee;5;99999;Musterstadt;Kaiser;TEST-1015;;0000 543663
+Birkenallee;6;99999;Musterstadt;Fam. Schäfer;TEST-1016;;0000 844199
+Birkenallee;7;99999;Musterstadt;Fam. Lorenz;TEST-1017;;0000 593925
+Birkenallee;8;99999;Musterstadt;Fam. Kraus;TEST-1018;;0000 416968
+Birkenallee;9;99999;Musterstadt;Fam. Imhof;TEST-1019;;0000 144874
+Birkenallee;10;99999;Musterstadt;Fam. Nagel;TEST-1020;;0000 592052
+Birkenallee;11;99999;Musterstadt;Vetter;TEST-1021;;0000 199992
+Birkenallee;12;99999;Musterstadt;Fam. Moser;TEST-1022;;0000 136468
+Kirchplatz;1;99999;Musterstadt;Fam. Neumann;TEST-1023;;0000 126408
+Kirchplatz;2;99999;Musterstadt;Koch;TEST-1024;;0000 714511
+Kirchplatz;3;99999;Musterstadt;Fam. Roth;TEST-1025;;0000 646908
+Kirchplatz;4;99999;Musterstadt;Ilg;TEST-1026;;0000 475679
+Kirchplatz;5;99999;Musterstadt;Oswald;TEST-1027;;0000 219324
+Kirchplatz;6;99999;Musterstadt;Fam. Mohr;TEST-1028;;0000 253302
+Lindenstraße;2;99999;Musterstadt;Thiel;TEST-1029;;0000 101867
+Lindenstraße;4;99999;Musterstadt;Fam. Quast;TEST-1030;;0000 624987
+Lindenstraße;6;99999;Musterstadt;Fam. Treiber;TEST-1031;;0000 360676
+Lindenstraße;8;99999;Musterstadt;Fam. Engel;TEST-1032;;0000 813162
+Lindenstraße;10;99999;Musterstadt;Conrad;TEST-1033;;0000 405528
+Lindenstraße;12;99999;Musterstadt;Weber;TEST-1034;;0000 486647
+Lindenstraße;14;99999;Musterstadt;Fam. Seitz;TEST-1035;;0000 724781
+Lindenstraße;16;99999;Musterstadt;Pohl;TEST-1036;;0000 925373
+Lindenstraße;18;99999;Musterstadt;Unger;TEST-1037;;0000 632834
+Lindenstraße;20;99999;Musterstadt;Fam. Hahn;TEST-1038;;0000 306914
+Am Bach;1;99999;Musterstadt;Fam. Lang;TEST-1039;;0000 502768
+Am Bach;2;99999;Musterstadt;Fam. Böhm;TEST-1040;;0000 506897
+Am Bach;3;99999;Musterstadt;Fam. Keil;TEST-1041;;0000 911011
+Am Bach;4;99999;Musterstadt;Maier;TEST-1042;;0000 611665
+Am Bach;5;99999;Musterstadt;Arnold;TEST-1043;;0000 742498
+Schulstraße;1;99999;Musterstadt;Fam. Yildiz;TEST-1044;;0000 774405
+Schulstraße;2;99999;Musterstadt;Zimmer;TEST-1045;;0000 591702
+Schulstraße;3;99999;Musterstadt;Xander;TEST-1046;;0000 193971
+Schulstraße;4;99999;Musterstadt;Fam. Peters;TEST-1047;;0000 208261
+Schulstraße;5;99999;Musterstadt;Fam. Haas;TEST-1048;;0000 157210
+Schulstraße;6;99999;Musterstadt;Fam. Link;TEST-1049;;0000 247472
+Schulstraße;7;99999;Musterstadt;Fam. Busch;TEST-1050;;0000 610685
+Schulstraße;8;99999;Musterstadt;Fam. Wolf;TEST-1051;;0000 671149
+Schulstraße;9;99999;Musterstadt;Otto;TEST-1052;;0000 153259
