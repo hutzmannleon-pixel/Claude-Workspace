@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from '../config.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
@@ -9,6 +11,14 @@ import { bad, notFound, nowIso, normEmail } from '../util.js';
 export default async function publicRoutes(app) {
   app.get('/api/health', async () => ({ ok: true }));
   app.get('/api/config', async () => ({ testMode: config.testMode }));
+
+  // Android-App (Trusted Web Activity): Verknüpfung App ↔ Domain. Datei liegt in DATA_DIR/assetlinks.json
+  app.get('/.well-known/assetlinks.json', async (req, reply) => {
+    const file = path.join(config.dataDir, 'assetlinks.json');
+    if (!fs.existsSync(file)) throw notFound();
+    reply.header('Content-Type', 'application/json').header('Cache-Control', 'public, max-age=3600');
+    return fs.readFileSync(file, 'utf8');
+  });
 
   // Live-Kanal: nur Versionsnummern, keine Daten
   app.get('/api/events', (req, reply) => { reply.hijack(); live.attach(reply.raw); });
