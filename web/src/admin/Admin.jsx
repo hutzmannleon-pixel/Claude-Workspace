@@ -31,7 +31,9 @@ function Lock({ onUnlock }) {
   const unlock = () => act.run(async () => {
     await api('/api/auth/login', { body: { email: email.trim(), role: 'admin', code } });
     lsSet(email.trim());
-    onUnlock((await api('/api/auth/me?role=admin')).user);
+    const u = (await api('/api/auth/me?role=admin')).user;
+    if (!u) throw new Error('Anmeldung nicht gespeichert – bitte Cookies erlauben und über https:// aufrufen.');
+    onUnlock(u);
   });
   return (
     <Shell glow={GLOW.admin} bottom={

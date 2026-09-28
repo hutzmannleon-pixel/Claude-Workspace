@@ -62,7 +62,8 @@ export function startSession(reply, userId, role) {
   const token = randomToken();
   const days = role === 'admin' ? 1 : config.sessionDays;
   run('INSERT INTO sessions (id, user_id, expires_at, last_seen) VALUES (?,?,?,?)', hmac(token), userId, isoIn(days * 86400000), nowIso());
-  reply.setCookie(COOKIE[role], token, { path: '/', httpOnly: true, sameSite: 'lax', secure: config.production, maxAge: days * 86400 });
+  // secure nur bei echter HTTPS-Verbindung (hinter Caddy über X-Forwarded-Proto) – sonst verwirft der Browser das Cookie
+  reply.setCookie(COOKIE[role], token, { path: '/', httpOnly: true, sameSite: 'lax', secure: reply.request.protocol === 'https', maxAge: days * 86400 });
 }
 
 export function endSession(req, reply, role) {
