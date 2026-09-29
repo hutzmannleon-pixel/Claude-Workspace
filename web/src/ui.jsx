@@ -10,8 +10,8 @@ export const GLOW = {
   admin: 'radial-gradient(90% 38% at 88% 0%, rgba(214, 228, 255, 0.12), transparent 70%)'
 };
 /** Illustration dezent hinter dem Kopfbereich, nach unten ausgeblendet */
-const HeaderScenery = ({ h = 240, o = 0.32, wide }) => (
-  <div aria-hidden="true" style={sx(`position:absolute;top:0;left:0;right:0;height:${h}px;pointer-events:none;opacity:${o};-webkit-mask-image:linear-gradient(to bottom, #000 45%, transparent);mask-image:linear-gradient(to bottom, #000 45%, transparent)`)}><Scenery simple wide={wide} /></div>
+const HeaderScenery = ({ o = 0.6, wide }) => (
+  <div aria-hidden="true" style={sx(`position:absolute;left:0;right:0;bottom:0;height:${wide ? '100%' : '64%'};pointer-events:none;opacity:${o};-webkit-mask-image:linear-gradient(to bottom, transparent, #000 18%);mask-image:linear-gradient(to bottom, transparent, #000 18%)`)}><Scenery wide={wide} /></div>
 );
 const BADGE = 'background:#e5484d;color:#fff;box-shadow:0 2px 8px rgba(229,72,77,0.4)';
 export const DIV_BOTTOM = 'linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px';
@@ -42,8 +42,8 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
     <WideCtx.Provider value={true}>
       <div style={sx('height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45;background:var(--app-bg);position:relative;overflow:hidden;display:flex')}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
-        <HeaderScenery h={260} o={0.3} wide />
-        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider);background:rgba(20,32,48,0.35);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)')}>
+        <HeaderScenery o={0.55} wide />
+        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider);background:rgba(20,32,48,0.16);-webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%)')}>
           <div style={sx('display:flex;gap:10px;align-items:center;padding:0 10px 20px')}>
             <LogoMark size={40} title="Kaminfeger Verwaltung" />
             <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
@@ -230,8 +230,8 @@ export function CheckRow({ on, label, onClick, disabled, strike, minH = '50px' }
 export function Sheet({ children, scroll }) {
   const wide = useIsWide();
   return (
-    <div className="kf-backdrop" style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
-      <div role="dialog" aria-modal="true" className={`kf-sheet${wide ? ' center' : ''}`} style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(62,86,116,0.96), rgba(38,55,78,0.97));box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
+    <div className="kf-backdrop" style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
+      <div role="dialog" aria-modal="true" className={`kf-sheet${wide ? ' center' : ''}`} style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(90,120,158,0.42), rgba(40,60,86,0.5));-webkit-backdrop-filter:blur(16px) saturate(190%);backdrop-filter:blur(16px) saturate(190%);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
     </div>
   );
 }
@@ -239,7 +239,7 @@ export function Sheet({ children, scroll }) {
 export function TabBar({ tabs, padX = '24px' }) {
   const idx = tabs.findIndex(t => t.on);
   return (
-    <div style={sx(`flex:none;padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.45);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 var(--color-divider)`)}>
+    <div style={sx(`flex:none;padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.14);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18)`)}>
      <div style={sx(`position:relative;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr)`)}>
       <LiquidPill index={idx} style={{ top: 0, bottom: 0, left: 0, width: `calc(100% / ${tabs.length} - 12px)`, borderRadius: 20, transform: `translateX(calc(${Math.max(0, idx)} * (100% + 12px) + 6px))` }} />
       {tabs.map(t => (
