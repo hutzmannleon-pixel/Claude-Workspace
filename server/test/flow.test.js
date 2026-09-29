@@ -561,3 +561,33 @@ test('Schutz: ungültige Herkunft, Einladungen begrenzt, Anfragen pro Anschluss 
   try { await fails(429, 'x', 'POST', '/api/auth/code', { email: 'irgendwer@test.de', role: 'customer', purpose: 'login' }); }
   finally { config.ipCodesPerHour = before; }
 });
+
+test('Straße abschließen: erst wenn alles erledigt, danach wieder ungeplant und unter „Abgeschlossen“', async () => {
+  await ok('s', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer\nBirkenweg;1;79102;Freiburg;Roth\nBirkenweg;2;79102;Freiburg;Lang\n'));
+  const D = iso(8);
+  const { id } = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Birkenweg', plz: '79102', slotLen: 30, deadline: iso(2), windows: [{ date: D, start: '08:00', end: '10:00' }] });
+  await fails(400, 's', 'POST', '/api/sweep/campaigns', { street: 'Birkenweg', plz: '79102', slotLen: 30, deadline: iso(2), windows: [{ date: D, start: '08:00', end: '10:00' }] });
+  const c = await ok('s', 'GET', `/api/sweep/campaigns/${id}`);
+  const [h1, h2] = c.houses, wid = c.windows[0].id;
+  await ok('s', 'POST', '/api/sweep/bookings', { campaignId: id, householdId: h1.id, windowId: wid, time: '08:00' });
+  await ok('s', 'POST', '/api/sweep/bookings', { campaignId: id, householdId: h2.id, windowId: wid, time: '08:30' });
+  await ok('s', 'POST', '/api/sweep/route/start', { date: D });
+  const b1 = get(`SELECT id FROM bookings WHERE household_id = ? AND status = 'booked'`, h1.id).id;
+  const b2 = get(`SELECT id FROM bookings WHERE household_id = ? AND status = 'booked'`, h2.id).id;
+  await ok('s', 'POST', '/api/sweep/visit', { bookingId: b1, result: 'done' });
+  assert.equal((await fails(400, 's', 'POST', `/api/sweep/campaigns/${id}/close`, {})).code, 'not_done');
+  await ok('s', 'POST', '/api/sweep/visit', { bookingId: b2, result: 'done' });
+  assert.equal((await ok('s', 'GET', `/api/sweep/campaigns/${id}`)).done, true);
+  await ok('s', 'POST', `/api/sweep/campaigns/${id}/close`, {});
+  const ov = await ok('s', 'GET', '/api/sweep/overview');
+  assert.equal(ov.streets.find(x => x.street === 'Birkenweg').campaign, null);
+  assert.ok(ov.closed.some(x => x.id === id && x.visited === 2 && x.households === 2));
+  const cu = (await ok('s', 'GET', '/api/sweep/customers')).customers.find(x => x.id === h1.id);
+  assert.equal(cu.status, 'none'); assert.ok(cu.line.startsWith('Zuletzt erledigt'));
+  // Abgeschlossen = schreibgeschützt; neue Runde möglich
+  await fails(400, 's', 'POST', '/api/sweep/campaigns', { id, slotLen: 30, deadline: iso(2), windows: [{ date: iso(30), start: '08:00', end: '10:00' }] });
+  await fails(400, 's', 'POST', '/api/sweep/messages', { campaignId: id, rcpt: 'all', text: 'Hallo' });
+  const next = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Birkenweg', plz: '79102', slotLen: 30, deadline: iso(25), windows: [{ date: iso(30), start: '08:00', end: '10:00' }] });
+  assert.notEqual(next.id, id);
+  assert.equal((await ok('s', 'GET', `/api/sweep/campaigns/${next.id}`)).houses.every(h => h.status === 'open'), true);
+});

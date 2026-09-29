@@ -53,13 +53,17 @@ export function houseRows(c) {
   });
 }
 
+/** Laufende (nicht abgeschlossene) Runden eines Bezirks */
 export function campaignsOfDistrict(districtId) {
-  return all('SELECT * FROM campaigns WHERE district_id = ? ORDER BY id DESC', districtId);
+  return all('SELECT * FROM campaigns WHERE district_id = ? AND closed_at IS NULL ORDER BY id DESC', districtId);
 }
+export const closedCampaigns = districtId => all('SELECT * FROM campaigns WHERE district_id = ? AND closed_at IS NOT NULL ORDER BY closed_at DESC, id DESC', districtId);
+/** Alle Häuser erledigt (oder ausgezogen)? Dann darf die Straße abgeschlossen werden. */
+export const campaignDone = rows => rows.length > 0 && rows.every(r => r.moved || (r.booking && r.booking.visit === 'done'));
 
-/** Für einen Haushalt: die jüngste gesendete Kampagne seiner Straße. */
+/** Für einen Haushalt: die laufende Kampagne seiner Straße (abgeschlossene zählen nicht mehr). */
 export function campaignForHousehold(h) {
-  return get(`SELECT * FROM campaigns WHERE district_id = ? AND street_key = ? AND plz = ? AND sent_at IS NOT NULL ORDER BY id DESC LIMIT 1`, h.district_id, h.street_key, h.plz);
+  return get(`SELECT * FROM campaigns WHERE district_id = ? AND street_key = ? AND plz = ? AND sent_at IS NOT NULL AND closed_at IS NULL ORDER BY id DESC LIMIT 1`, h.district_id, h.street_key, h.plz);
 }
 
 export function freeCount(campaign, w, exceptHouseholdId) {

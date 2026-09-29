@@ -165,6 +165,9 @@ export default async function customerRoutes(app) {
     const members = h ? all(`SELECT r.*, u.email FROM residents r JOIN users u ON u.id = r.user_id WHERE r.household_id = ? AND r.status = 'verified'`, h.id)
       .map(m => ({ ini: initials(m.person_name || m.family_name || m.email), name: (m.person_name || (m.is_member ? m.email : 'Familie ' + m.family_name)) + (m.id === r.id ? ' (Sie)' : ''),
         sub: m.is_member ? 'Erhält Erinnerungen' : 'Verifiziert · ' + ({ number: 'Kundennummer', invite: 'Einladung', sweep: 'Kaminfeger', owner: 'Eigentümer', admin: 'Betreiber' }[m.method] || '') })) : [];
+    // Nach abgeschlossener Runde: wann zuletzt erledigt
+    const lastDone = h && !c ? get(`SELECT MAX(w.date) d FROM bookings b JOIN windows w ON w.id = b.window_id JOIN campaigns c ON c.id = b.campaign_id
+      WHERE b.household_id = ? AND b.visit = 'done' AND c.closed_at IS NOT NULL`, h.id)?.d : null;
     const pending = all(`SELECT data FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h ? h.id : -1, nowIso())
       .map(t => JSON.parse(t.data).email).map(e => ({ ini: e.slice(0, 2).toUpperCase(), name: e, sub: 'Einladung gesendet' }));
     return {
@@ -173,7 +176,8 @@ export default async function customerRoutes(app) {
         status: r.status, method: r.method, isMember: !!r.is_member,
         prefs: { eve: !!r.rem_eve, hour: !!r.rem_hour, push: !!r.ch_push, mail: !!r.ch_mail }, prep: JSON.parse(r.prep || '[]') },
       district: d ? { no: d.number, kreis: d.kreis, sweep: s ? { name: sweepName(s), ini: initials(sweepName(s)), phone: s.phone || '' } : null } : null,
-      campaign, booking, houseStatus, live: live_, messages, members: members.concat(pending)
+      campaign, booking, houseStatus, live: live_, messages, members: members.concat(pending),
+      lastDone: lastDone ? { date: lastDone, label: longDay(dayLabel(lastDone)) } : null
     };
   });
 

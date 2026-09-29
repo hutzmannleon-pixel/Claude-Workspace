@@ -74,7 +74,8 @@ export default function SweepApp({ onLogout }) {
     } else if (h.moved) { line = 'Bewohner ausgezogen · neu verifizieren lassen'; tag = 'Umzug'; }
     else if (h.status === 'cancelled') { line = 'Hat abgesagt'; lineFg = 'var(--color-accent-300)'; showCall = true; }
     else showCall = true;
-    const canChange = h.status === 'booked' && !h.booking.visit;
+    if (c.closedAt) showCall = false;
+    const canChange = !c.closedAt && h.status === 'booked' && !h.booking.visit;
     return { ...h, line, lineFg, tag, tagCls, showCall, missed, canChange, isOpen: h.status !== 'booked' || missed, key: h.status === 'booked' && h.booking.key };
   }) : [];
   const counts = c ? { booked: c.houses.filter(h => h.status === 'booked').length, cancelled: c.houses.filter(h => h.status === 'cancelled').length } : null;
@@ -137,8 +138,21 @@ export default function SweepApp({ onLogout }) {
 
   const calW = scr === 'setup' && ui.calWin != null ? draftWins[ui.calWin] : null;
   const custH = ui.custId && cust.data ? cust.data.customers.find(c => c.id === ui.custId) : null;
+  const closeStreet = id => act.run(async () => {
+    const r = await api(`/api/sweep/campaigns/${id}/close`, { body: {} });
+    set({ sheet: null, screen: 'streets', campaignId: null, toast: r.toast, showClosed: true });
+    ov.reload();
+  });
+  const closeTarget = ui.sheet === 'close' ? (o.streets.find(x => x.campaign?.id === ui.closeId) || null) : null;
   const overlay = <>
     <PasskeyOffer role="sweep" />
+    {ui.sheet === 'close' && <Sheet>
+      <div style={sx('font-size:20px;font-weight:600')}>Straße abschließen?</div>
+      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Alle Häuser {closeTarget ? `in der ${closeTarget.street} ` : ''}sind erledigt. Die Straße erscheint danach wieder ohne Zeitfenster in Ihrer Liste – bereit für die nächste Runde. Die abgeschlossene Runde finden Sie unter „Abgeschlossen“.</div>
+      {act.error && <ErrorLine text={act.error} />}
+      <button className="btn btn-primary" disabled={act.busy} onClick={() => closeStreet(ui.closeId)} style={sx('min-height:48px;margin-top:6px')}><Icon n="ph-check-circle" />Straße abschließen</button>
+      <button className="btn btn-ghost" onClick={() => { act.setError(null); set({ sheet: null }); }} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Später</button>
+    </Sheet>}
     {ui.sheet === 'passkeys' && <Sheet scroll>
       <div style={sx('font-size:20px;font-weight:600')}>Anmeldung mit Passkey</div>
       <PasskeyPanel role="sweep" intro="Melden Sie sich per Fingerabdruck, Gesicht oder Geräte-PIN an – ohne Code per E-Mail. Freiwillig; der E-Mail-Code funktioniert weiterhin." />
@@ -314,10 +328,13 @@ export default function SweepApp({ onLogout }) {
               </div>
             );
             if (k.done) return (
-              <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx(`text-align:left;padding:14px 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
-                <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:16px;font-weight:500;flex:1;color:var(--color-neutral-400)')}>{s.street}</span><span style={sx('font-size:12px;color:var(--color-neutral-500);display:flex;gap:4px;align-items:center')}><Icon n="ph-check" />abgeschlossen</span></div>
-                <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{k.visited} von {k.total} besucht · {k.missed} × vor verschlossener Tür</div>
-              </button>
+              <div key={s.street + s.plz} style={sx(`padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:6px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
+                <button onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx('text-align:left;padding:0;background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px')}>
+                  <div style={sx('display:flex;align-items:center;gap:8px;width:100%')}><span style={sx('font-size:16px;font-weight:500;flex:1')}>{s.street}</span><span className="tag tag-accent" style={sx('gap:4px')}><Icon w="ph-bold" n="ph-check" />alles erledigt</span></div>
+                  <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{k.visited} von {k.total} besucht{k.missed ? ` · ${k.missed} × vor verschlossener Tür` : ''}</div>
+                </button>
+                <button className="btn btn-primary" onClick={() => { act.setError(null); set({ sheet: 'close', closeId: k.id }); }} style={sx('min-height:44px;margin-top:6px')}><Icon n="ph-check-circle" />Straße abschließen</button>
+              </div>
             );
             return (
               <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx(`text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
@@ -329,6 +346,25 @@ export default function SweepApp({ onLogout }) {
           })}
           {o.streets.length > 0 && <button className="btn btn-ghost" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:44px;color:var(--color-neutral-400);align-self:flex-start;padding-inline:6px')}><Icon n="ph-upload-simple" />Kehrbuch aktualisieren</button>}
         </div>
+        {o.closed?.length > 0 && <>
+          <button onClick={() => set({ showClosed: !ui.showClosed })} aria-expanded={!!ui.showClosed} style={sx('display:flex;align-items:center;gap:8px;width:calc(100% - 32px);margin:0 16px;padding:12px 6px;background:none;border:0;border-top:1px solid var(--color-divider);color:var(--color-neutral-300);font:inherit;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer')}>
+            <Icon n="ph-archive" style={sx('font-size:17px')} /><span style={sx('flex:1;text-align:left')}>Abgeschlossen · {o.closed.length}</span><Icon n={ui.showClosed ? 'ph-caret-up' : 'ph-caret-down'} />
+          </button>
+          {ui.showClosed && <div style={sx('display:flex;flex-direction:column;gap:8px;padding:4px 16px 24px')}>
+            {o.closed.map(k => {
+              const running = o.streets.find(x => x.street === k.street && x.plz === k.plz)?.campaign;
+              return (
+                <div key={k.id} style={sx(`padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:10px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
+                  <button onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx('flex:1;min-width:0;text-align:left;padding:0;background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px')}>
+                    <span style={sx('font-size:15px;font-weight:500')}>{k.street}</span>
+                    <span style={sx('font-size:12px;color:var(--color-neutral-500)')}>Abgeschlossen am {k.closedLabel} · {k.visited} von {k.households} erledigt</span>
+                  </button>
+                  {!running && <button className="btn btn-secondary" onClick={() => openSetup({ street: k.street, plz: k.plz, households: k.households })} style={sx('min-height:40px;flex:none')}><Icon n="ph-calendar-plus" />Neue Runde</button>}
+                </div>
+              );
+            })}
+          </div>}
+        </>}
   </>;
   const nav = { title: o.name, sub: `Kehrbezirk ${o.bez} · ${o.kreis}`, tabs, side, bar: scr !== 'setup',
     footer: <button className="btn btn-secondary" onClick={() => set({ sheet: 'account' })} style={sx('min-height:44px')}><Icon n="ph-user-circle" />Konto</button> };
@@ -393,16 +429,22 @@ export default function SweepApp({ onLogout }) {
       {scr === 'streets' && (wide ? <EmptyPane icon="ph-map-trifold" text="Wählen Sie links eine Straße." /> : streetsView)}
 
       {scr === 'street' && (!c ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
-        <BackHeader onBack={go('streets')} title={c.street} sub={`${plural(c.houses.length, 'Haushalt', 'Haushalte')} · Frist ${c.deadlineLabel}`} />
+        <BackHeader onBack={go('streets')} title={c.street} sub={c.closedAt ? `${plural(c.houses.length, 'Haushalt', 'Haushalte')} · abgeschlossen am ${c.closedLabel}` : `${plural(c.houses.length, 'Haushalt', 'Haushalte')} · Frist ${c.deadlineLabel}`} />
         <Toast text={ui.toast} icon="ph-paper-plane-tilt" />
-        <SectionLabel pad="14px 22px 0" right={<button className="btn btn-ghost" onClick={() => openSetup({ street: c.street, plz: c.plz, households: c.houses.length, campaign: c })} style={sx('min-height:36px;padding-inline:8px')}><Icon n="ph-pencil-simple" />Bearbeiten</button>}>Zeitfenster</SectionLabel>
+        {c.closedAt && <div style={sx('margin:12px 16px 0;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-neutral-300)')}><Icon n="ph-archive" style={sx('font-size:18px')} /><span style={sx('text-wrap:pretty')}>Diese Runde ist abgeschlossen und nur noch zum Nachsehen da.</span></div>}
+        {!c.closedAt && c.done && <div style={sx('margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700);display:flex;flex-direction:column;gap:8px')}>
+          <div style={sx('font-size:16px;font-weight:500')}>Alle Häuser erledigt</div>
+          <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>Straße abschließen? Sie erscheint dann wieder ohne Zeitfenster in Ihrer Liste.</div>
+          <button className="btn btn-primary" onClick={() => { act.setError(null); set({ sheet: 'close', closeId: c.id }); }} style={sx('min-height:44px')}><Icon n="ph-check-circle" />Straße abschließen</button>
+        </div>}
+        <SectionLabel pad="14px 22px 0" right={c.closedAt ? null : <button className="btn btn-ghost" onClick={() => openSetup({ street: c.street, plz: c.plz, households: c.houses.length, campaign: c })} style={sx('min-height:36px;padding-inline:8px')}><Icon n="ph-pencil-simple" />Bearbeiten</button>}>Zeitfenster</SectionLabel>
         <div style={sx('display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:4px 16px 0')}>
           {c.windows.map(w => (
             <div key={w.id} style={sx('padding:10px;border-radius:var(--radius-md);background:var(--color-surface);display:flex;flex-direction:column;gap:1px')}>
               <span style={sx('font-size:12px;color:var(--color-neutral-500)')}>{w.label}</span>
               <span style={sx('font-size:13px')}>{w.start}–{w.end}</span>
               <span style={sx('font-size:11px;color:var(--color-accent-300);margin-top:4px')}>{w.booked} / {w.total} gebucht</span>
-              {w.date >= todayIso() && <button onClick={() => { closeChange(); set({ dayId: w.id }); }} style={sx('align-self:flex-start;margin-top:6px;padding:0;border:0;background:none;font:inherit;font-size:12px;color:var(--color-neutral-400);text-decoration:underline;text-underline-offset:2px;cursor:pointer')}>Tag absagen</button>}
+              {w.date >= todayIso() && !c.closedAt && <button onClick={() => { closeChange(); set({ dayId: w.id }); }} style={sx('align-self:flex-start;margin-top:6px;padding:0;border:0;background:none;font:inherit;font-size:12px;color:var(--color-neutral-400);text-decoration:underline;text-underline-offset:2px;cursor:pointer')}>Tag absagen</button>}
             </div>
           ))}
         </div>
@@ -427,9 +469,11 @@ export default function SweepApp({ onLogout }) {
             </div>
           ))}
         </div>
-        <div style={sx('padding:16px 16px 20px')}>
+        {!c.closedAt && <div style={sx('padding:16px 16px 20px;display:flex;flex-direction:column;gap:6px')}>
           <button className="btn btn-primary" onClick={() => set({ screen: 'notify', msgCampaign: c.id, rcpt: 'open', text: `Kurze Erinnerung: Bitte wählen Sie bis ${c.deadlineLabel} in der App eine Zeit für die Feuerstättenschau. So stehe ich nicht vor verschlossener Tür.` })} style={sx('width:100%;min-height:46px')}><Icon n="ph-bell-ringing" />Offene erinnern</button>
-        </div>
+          <button className="btn btn-ghost" disabled={!c.done} onClick={() => { act.setError(null); set({ sheet: 'close', closeId: c.id }); }} style={sx('min-height:44px;color:var(--color-neutral-300)')}><Icon n="ph-archive" />Straße abschließen</button>
+          {!c.done && <div style={sx('font-size:12px;color:var(--color-neutral-500);text-align:center;text-wrap:pretty')}>Abschließen geht, sobald alle Häuser erledigt sind.</div>}
+        </div>}
       </>)}
 
       {scr === 'setup' && d && <>

@@ -8,7 +8,8 @@ import { checkCode, requireUser, startSession, endSession } from '../auth.js';
 import { queueMail } from '../mail.js';
 import {
   makeLink, sweepByUser, activeSweepForDistrict, sweepName, initials, windowsOf, houseRows, campaignsOfDistrict, validateWindows,
-  routeFor, routeStarted, routeDates, defaultRouteDate, postMessage, householdEmails, householdName, adminLog, streetHouseholds
+  routeFor, routeStarted, routeDates, defaultRouteDate, postMessage, householdEmails, householdName, adminLog, streetHouseholds,
+  closedCampaigns, campaignDone
 } from '../domain.js';
 import {
   bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nameKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
@@ -33,6 +34,13 @@ const ownCampaign = (s, id) => {
   if (!c) throw notFound('Straße nicht gefunden.');
   return c;
 };
+/** Für Änderungen: abgeschlossene Straßen sind schreibgeschützt */
+const openCampaign = (s, id) => {
+  const c = ownCampaign(s, id);
+  if (c.closed_at) throw bad('Diese Straße ist abgeschlossen. Legen Sie für die nächste Runde neue Zeitfenster an.');
+  return c;
+};
+const fmtDay = iso => dayLabel(iso.slice(0, 10));
 const plural = n => n + (n === 1 ? ' Haushalt' : ' Haushalte');
 
 /** Namensabgleich mit dem Bezirksverzeichnis: exakt, teilweise (z. B. Doppelname) oder gar nicht. */
@@ -205,7 +213,7 @@ export default async function sweepRoutes(app) {
       const rows = houseRows(c);
       const booked = rows.filter(r => r.status === 'booked').length, cancelled = rows.filter(r => r.status === 'cancelled').length;
       const visited = rows.filter(r => r.booking && r.booking.visit === 'done').length, missed = rows.filter(r => r.booking && r.booking.visit === 'missed').length;
-      const done = rows.length > 0 && rows.every(r => r.moved || (r.booking && r.booking.visit === 'done'));
+      const done = campaignDone(rows);
       return { street: g.street, plz: g.plz, households: g.n,
         campaign: { id: c.id, booked, open: rows.length - booked - cancelled, cancelled, total: rows.length, visited, missed, done,
           windows: windowsOf(c.id).map(w => w.label.split(', ')[1]) } };
@@ -224,7 +232,10 @@ export default async function sweepRoutes(app) {
       name: sweepName(s), first: s.first, ini: initials(sweepName(s)), bez: s.bez, kreis: s.kreis,
       today: { date, label: dayLabel(date), isToday: date === today(), count: route.length, from: route[0]?.t || null, to: route[route.length - 1]?.end || null,
         streets: [...new Set(route.map(r => r.street))] },
-      streets, tenants, households: hh, alerts
+      streets, tenants, households: hh, alerts,
+      closed: closedCampaigns(s.district_id).slice(0, 100).map(c => ({ id: c.id, street: c.street, plz: c.plz, closedAt: c.closed_at, closedLabel: fmtDay(c.closed_at),
+        households: get('SELECT COUNT(*) n FROM households WHERE district_id = ? AND street_key = ? AND plz = ?', s.district_id, c.street_key, c.plz).n,
+        visited: get(`SELECT COUNT(DISTINCT household_id) n FROM bookings WHERE campaign_id = ? AND visit = 'done'`, c.id).n }))
     };
   });
 
@@ -239,9 +250,12 @@ export default async function sweepRoutes(app) {
       byStreet.set(k, { c, rows: new Map(houseRows(c).map(r => [r.id, r])), wins });
     }
     const hs = all('SELECT * FROM households WHERE district_id = ? ORDER BY street, CAST(nr AS INTEGER), nr', s.district_id);
+    // Zuletzt erledigt (aus abgeschlossenen Runden)
+    const lastDone = new Map(all(`SELECT b.household_id h, MAX(w.date) d FROM bookings b JOIN windows w ON w.id = b.window_id JOIN campaigns c ON c.id = b.campaign_id
+      WHERE c.district_id = ? AND c.closed_at IS NOT NULL AND b.visit = 'done' GROUP BY b.household_id`, s.district_id).map(r => [r.h, r.d]));
     return { customers: hs.map(h => {
       const g = byStreet.get(h.street_key + '|' + h.plz), r = g?.rows.get(h.id);
-      let status = 'none', line = 'Noch keine Zeitfenster';
+      let status = 'none', line = lastDone.has(h.id) ? `Zuletzt erledigt am ${dayLabel(lastDone.get(h.id))}` : 'Noch keine Zeitfenster';
       if (h.moved_at) { status = 'moved'; line = 'Ausgezogen'; }
       else if (r) {
         const w = r.booking && g.wins.get(r.booking.windowId);
@@ -259,6 +273,7 @@ export default async function sweepRoutes(app) {
     const s = activeSweep(req), c = ownCampaign(s, req.params.id);
     const rows = houseRows(c), wins = windowsOf(c.id);
     return { id: c.id, street: c.street, plz: c.plz, slotLen: c.slot_len, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline),
+      done: campaignDone(rows), closedAt: c.closed_at, closedLabel: c.closed_at ? fmtDay(c.closed_at) : null,
       windows: wins.map(w => { const total = slotsOf(w, c.slot_len).length, booked = rows.filter(r => r.booking && r.booking.windowId === w.id).length; return { ...w, total, booked }; }),
       houses: rows };
   });
@@ -269,7 +284,9 @@ export default async function sweepRoutes(app) {
     const slotLen = Number(b.slotLen), deadline = clean(b.deadline, 10);
     validateWindows(b.windows, slotLen);
     if (!DATE_RE.test(deadline)) throw bad('Bitte eine Antwortfrist angeben.');
-    let c = b.id ? ownCampaign(s, b.id) : null;
+    let c = b.id ? openCampaign(s, b.id) : null;
+    if (!c && get('SELECT 1 x FROM campaigns WHERE district_id = ? AND street_key = ? AND plz = ? AND closed_at IS NULL', s.district_id, streetKey(clean(b.street)), clean(b.plz, 5)))
+      throw bad('Für diese Straße läuft schon eine Runde. Bitte dort die Zeitfenster bearbeiten.');
     // Neue oder verlegte Tage nicht in der Vergangenheit und nicht am Sonntag; bestehende (evtl. schon vorbei) bleiben erlaubt
     for (const w of b.windows) {
       const ex = c && w.id && get('SELECT date FROM windows WHERE id = ? AND campaign_id = ?', Number(w.id), c.id);
@@ -336,10 +353,24 @@ export default async function sweepRoutes(app) {
     return { id: c.id, households: hs.length, dropped: dropped.length };
   });
 
+  // Straße abschließen: nur wenn alle Häuser erledigt (oder ausgezogen) sind. Danach erscheint sie wieder
+  // als ungeplante Straße; die Runde bleibt unter „Abgeschlossen“ sichtbar.
+  app.post('/api/sweep/campaigns/:id/close', async req => {
+    const s = activeSweep(req), c = openCampaign(s, req.params.id);
+    const rows = houseRows(c);
+    if (!campaignDone(rows)) {
+      const left = rows.filter(r => !r.moved && !(r.booking && r.booking.visit === 'done')).length;
+      throw bad(`Noch ${left === 1 ? '1 Haus' : left + ' Häuser'} nicht erledigt. Abschließen geht, sobald alle Häuser erledigt sind.`, 'not_done');
+    }
+    run('UPDATE campaigns SET closed_at = ? WHERE id = ?', nowIso(), c.id);
+    live.bump();
+    return { ok: true, toast: `${c.street} abgeschlossen – unter „Abgeschlossen“ zu finden.` };
+  });
+
   // Telefonisch vereinbarte Zeit eintragen
   app.post('/api/sweep/bookings', async req => {
     const s = activeSweep(req), b = req.body || {};
-    const c = ownCampaign(s, b.campaignId);
+    const c = openCampaign(s, b.campaignId);
     const h = get('SELECT * FROM households WHERE id = ? AND district_id = ?', Number(b.householdId), s.district_id);
     const w = get('SELECT * FROM windows WHERE id = ? AND campaign_id = ?', Number(b.windowId), c.id);
     if (!h || !w || !slotsOf(w, c.slot_len).includes(b.time)) throw bad('Ungültige Zeit.');
@@ -369,7 +400,7 @@ export default async function sweepRoutes(app) {
   function ownBooking(s, id) {
     const b = get(`SELECT b.*, w.date, h.street, h.nr FROM bookings b JOIN windows w ON w.id = b.window_id JOIN households h ON h.id = b.household_id WHERE b.id = ? AND b.status = 'booked'`, Number(id));
     if (!b) throw notFound('Termin nicht gefunden.');
-    const c = ownCampaign(s, b.campaign_id);
+    const c = openCampaign(s, b.campaign_id);
     if (b.visit) throw bad('Dieser Termin ist schon erledigt.');
     return { b, c };
   }
@@ -412,7 +443,7 @@ export default async function sweepRoutes(app) {
     const s = activeSweep(req), body = req.body || {};
     const w = get('SELECT * FROM windows WHERE id = ?', Number(req.params.id));
     if (!w) throw notFound('Zeitfenster nicht gefunden.');
-    const c = ownCampaign(s, w.campaign_id);
+    const c = openCampaign(s, w.campaign_id);
     if (get(`SELECT 1 x FROM bookings WHERE window_id = ? AND visit IS NOT NULL`, w.id)) throw bad('An diesem Tag wurden schon Häuser besucht – er kann nicht mehr abgesagt werden.');
     const others = get('SELECT COUNT(*) n FROM windows WHERE campaign_id = ? AND id != ?', c.id, w.id).n;
     const date = body.date ? clean(body.date, 10) : null;
@@ -498,7 +529,7 @@ export default async function sweepRoutes(app) {
 
   app.post('/api/sweep/messages', async req => {
     const s = activeSweep(req), b = req.body || {};
-    const c = ownCampaign(s, b.campaignId), text = clean(b.text, 1000);
+    const c = openCampaign(s, b.campaignId), text = clean(b.text, 1000);
     if (!text) throw bad('Bitte eine Nachricht eingeben.');
     const ids = recipients(s, c)[b.rcpt];
     if (!ids) throw bad('Unbekannte Empfänger.');

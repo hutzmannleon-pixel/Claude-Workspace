@@ -131,7 +131,8 @@ CREATE TABLE IF NOT EXISTS campaigns (
   slot_len INTEGER NOT NULL,
   deadline TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  sent_at TEXT
+  sent_at TEXT,
+  closed_at TEXT
 );
 CREATE TABLE IF NOT EXISTS windows (
   id INTEGER PRIMARY KEY,
@@ -233,6 +234,8 @@ CREATE TABLE IF NOT EXISTS outbox (
   }
 }
 db.exec(SCHEMA);
+// Straßen abschließen (neue Spalte in bestehenden Datenbanken)
+if (!db.prepare('PRAGMA table_info(campaigns)').all().some(c => c.name === 'closed_at')) db.exec('ALTER TABLE campaigns ADD COLUMN closed_at TEXT');
 
 const norm = params => params.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
 export const get = (sql, ...p) => db.prepare(sql).get(...norm(p));

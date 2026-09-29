@@ -178,8 +178,13 @@ export default function CustomerApp({ onLogout, onReaddress }) {
         </div>}
         {!c && ['verified', 'asked', 'owner', 'review'].includes(r.status) && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px`)}>
           <span className="card-kicker">Feuerstättenschau</span>
-          <div style={sx('font-size:20px;font-weight:500;line-height:1.2;text-wrap:pretty')}>Noch keine Zeitfenster</div>
-          <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street} freigibt, bekommen Sie eine E-Mail und wählen hier Ihre Zeit.</div>
+          {s.lastDone ? <>
+            <div style={sx('font-size:20px;font-weight:500;line-height:1.2;text-wrap:pretty')}>Erledigt – vielen Dank!</div>
+            <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Die letzte Feuerstättenschau war am {s.lastDone.label}. Für die nächste bekommen Sie rechtzeitig eine E-Mail.</div>
+          </> : <>
+            <div style={sx('font-size:20px;font-weight:500;line-height:1.2;text-wrap:pretty')}>Noch keine Zeitfenster</div>
+            <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street} freigibt, bekommen Sie eine E-Mail und wählen hier Ihre Zeit.</div>
+          </>}
         </div>}
 
         {b && !lv && <NextCard kicker="Nächster Termin" title={myDate} lines={['Feuerstättenschau', `${myTime} Uhr`]} tag="Geplant" onClick={toTermin} />}
@@ -255,8 +260,8 @@ export default function CustomerApp({ onLogout, onReaddress }) {
 
         {!b && !(c && s.houseStatus === 'open') && s.houseStatus !== 'cancelled' && <div className="glass" style={sx(`${cardS};display:flex;flex-direction:column;gap:8px`)}>
           <span className="card-kicker">Feuerstättenschau</span>
-          <div style={sx('font-size:20px;font-weight:600;line-height:1.2')}>Noch kein Termin</div>
-          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street || 'Ihre Straße'} freigibt, wählen Sie hier Ihre Zeit. Sie bekommen dann eine E-Mail.</div>
+          <div style={sx('font-size:20px;font-weight:600;line-height:1.2')}>{s.lastDone ? 'Erledigt – vielen Dank!' : 'Noch kein Termin'}</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>{s.lastDone ? `Die letzte Feuerstättenschau war am ${s.lastDone.label}. ` : ''}Sobald {sweepName} {s.lastDone ? 'neue ' : ''}Zeitfenster für {r.street || 'Ihre Straße'} freigibt, wählen Sie hier Ihre Zeit. Sie bekommen dann eine E-Mail.</div>
         </div>}
         <div style={sx('height:20px')} />
       </>}
