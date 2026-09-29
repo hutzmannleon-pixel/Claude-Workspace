@@ -1,6 +1,6 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
-import { sx, EMBED, useWide } from './lib/core.js';
+import { sx, EMBED, useWide, parseDate, isoDate, dayLabel } from './lib/core.js';
 import { FeedbackButton } from './Feedback.jsx';
 
 export const GLOW = {
@@ -300,3 +300,46 @@ export function DeleteSheet({ text, onDelete, onClose, busy, error }) {
 export const LegalLinks = () => (
   <div style={sx('display:flex;gap:18px;padding:0 22px 20px;font-size:12px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></div>
 );
+
+const MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+/**
+ * Monatskalender als Dialog. min/max als ISO-Datum, disabled(iso) sperrt einzelne Tage (z. B. Sonntage, schon belegte).
+ */
+export function DatePicker({ value, min, max, disabled = () => false, onPick, onClose, title = 'Datum wählen' }) {
+  const start = parseDate(value || min);
+  const [ym, setYm] = useState({ y: start.getFullYear(), m: start.getMonth() });
+  const first = new Date(ym.y, ym.m, 1), lead = (first.getDay() + 6) % 7, count = new Date(ym.y, ym.m + 1, 0).getDate();
+  const cells = Array.from({ length: lead }, () => null).concat(Array.from({ length: count }, (_, i) => isoDate(new Date(ym.y, ym.m, i + 1))));
+  const shift = n => setYm(({ y, m }) => { const d = new Date(y, m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const monthKey = (y, m) => y * 12 + m;
+  const canPrev = !min || monthKey(ym.y, ym.m) > monthKey(parseDate(min).getFullYear(), parseDate(min).getMonth());
+  const canNext = !max || monthKey(ym.y, ym.m) < monthKey(parseDate(max).getFullYear(), parseDate(max).getMonth());
+  const today = isoDate(new Date());
+  return (
+    <Sheet>
+      <div style={sx('display:flex;align-items:center;gap:8px')}>
+        <div style={sx('flex:1;font-size:18px;font-weight:500')}>{title}</div>
+        <button className="btn btn-icon" onClick={onClose} aria-label="Schließen" style={sx('width:40px;height:40px')}><Icon n="ph-x" style={sx('font-size:18px')} /></button>
+      </div>
+      <div style={sx('display:flex;align-items:center;gap:6px')}>
+        <button className="btn btn-secondary btn-icon" disabled={!canPrev} onClick={() => shift(-1)} aria-label="Vorheriger Monat" style={sx('width:40px;height:40px')}><Icon n="ph-caret-left" /></button>
+        <div style={sx('flex:1;text-align:center;font-size:15px;font-weight:500')} aria-live="polite">{MONTHS_LONG[ym.m]} {ym.y}</div>
+        <button className="btn btn-secondary btn-icon" disabled={!canNext} onClick={() => shift(1)} aria-label="Nächster Monat" style={sx('width:40px;height:40px')}><Icon n="ph-caret-right" /></button>
+      </div>
+      <div role="grid" style={sx('display:grid;grid-template-columns:repeat(7, minmax(0, 1fr));gap:4px')}>
+        {['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => <div key={d} style={sx('text-align:center;font-size:11px;color:var(--color-neutral-500);padding:4px 0')}>{d}</div>)}
+        {cells.map((iso, i) => {
+          if (!iso) return <div key={'e' + i} />;
+          const off = (min && iso < min) || (max && iso > max) || disabled(iso), on = iso === value;
+          return (
+            <button key={iso} disabled={off} onClick={() => onPick(iso)} aria-label={dayLabel(iso)} aria-pressed={on}
+              style={sx(`min-height:42px;border-radius:var(--radius-md);font:inherit;font-size:15px;font-variant-numeric:tabular-nums;cursor:${off ? 'default' : 'pointer'};border:1px solid ${on ? 'var(--color-accent)' : iso === today ? 'var(--color-neutral-700)' : 'transparent'};background:${on ? 'var(--color-accent-900)' : 'transparent'};color:${on ? 'var(--color-accent-200)' : off ? 'var(--color-neutral-700)' : 'var(--color-text)'}`)}>
+              {parseDate(iso).getDate()}
+            </button>
+          );
+        })}
+      </div>
+      <button className="btn btn-ghost" onClick={onClose} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
+    </Sheet>
+  );
+}

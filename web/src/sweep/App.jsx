@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -46,7 +46,8 @@ export default function SweepApp({ onLogout }) {
     const times = valid ? slotsOf(w, d.slotLen) : [];
     const used = d.windows.filter((_, j) => j !== i).map(x => x.date);
     const first = w.date < tomorrow ? w.date : tomorrow;
-    return { ...w, n: i + 1, times, days: days(first, addDays(tomorrow, 62)).filter(x => !used.includes(x.iso)) };
+    const last = w.date > addDays(tomorrow, 62) ? w.date : addDays(tomorrow, 62);
+    return { ...w, n: i + 1, times, used, days: days(first, last).filter(x => !used.includes(x.iso)) };
   }) : [];
   const cap = draftWins.reduce((a, w) => a + w.times.length, 0), capOk = cap >= nHouses;
   const saveSetup = () => act.run(async () => {
@@ -116,7 +117,11 @@ export default function SweepApp({ onLogout }) {
     </div>}
   </>;
 
+  const calW = scr === 'setup' && ui.calWin != null ? draftWins[ui.calWin] : null;
   const overlay = <>
+    {calW && <DatePicker title={`Fenster ${calW.n} · Datum`} value={calW.date} min={calW.date < tomorrow ? calW.date : tomorrow} max={addDays(tomorrow, 365)}
+      disabled={x => parseDate(x).getDay() === 0 || calW.used.includes(x)}
+      onPick={x => { patchWin(ui.calWin, { date: x, label: dayLabel(x) }); set({ calWin: null }); }} onClose={() => set({ calWin: null })} />}
     {tenant && <Sheet>
       <span className="card-kicker">Bewohner bestätigen</span>
       <div style={sx('font-size:20px;font-weight:500;line-height:1.2')}>Wohnt {tenant.name} in der {tenant.street} {tenant.nr}?</div>
@@ -288,10 +293,10 @@ export default function SweepApp({ onLogout }) {
           {draftWins.map((w, i) => (
             <div key={w.id} style={sx('padding:12px 12px 14px 14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:12px')}>
               <div style={sx('display:flex;align-items:center;gap:8px')}>
-                <div style={sx('flex:1;display:flex;flex-direction:column')}>
+                <button onClick={() => set({ calWin: i })} aria-label={`Fenster ${w.n}: Datum im Kalender wählen`} style={sx('flex:1;display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer')}>
                   <span style={sx('font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)')}>Fenster {w.n}</span>
-                  <span style={sx('font-size:17px;font-weight:500;letter-spacing:-0.01em')}>{w.label} · {w.start}–{w.end}</span>
-                </div>
+                  <span style={sx('font-size:17px;font-weight:500;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px')}>{w.label} · {w.start}–{w.end}<Icon n="ph-calendar-dots" style={sx('font-size:18px;color:var(--color-accent)')} /></span>
+                </button>
                 <button className="btn btn-icon" aria-label="Fenster löschen" onClick={() => setUi(u => ({ ...u, draft: { ...u.draft, windows: u.draft.windows.filter((_, j) => j !== i) } }))} disabled={d.windows.length <= 1} style={sx('width:40px;height:40px;color:var(--color-neutral-400)')}><Icon n="ph-trash" style={sx('font-size:18px')} /></button>
               </div>
               <DayStrip days={w.days} value={w.date} onPick={x => patchWin(i, { date: x, label: dayLabel(x) })} />
@@ -418,10 +423,16 @@ export default function SweepApp({ onLogout }) {
 
 function DayStrip({ days: list, value, onPick }) {
   // Monatsname über dem ersten Tag eines Monats, damit bei 8 Wochen Auswahl klar bleibt, welcher Monat gemeint ist
+  const ref = useRef(null);
+  // Gewählten Tag sichtbar machen (auch nach Auswahl im Kalender)
+  useEffect(() => {
+    const el = ref.current?.querySelector('[aria-pressed="true"]');
+    if (el) ref.current.scrollTo({ left: el.offsetLeft - ref.current.clientWidth / 2 + el.clientWidth / 2 });
+  }, [value]);
   return (
-    <div style={sx('display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -12px 0 -14px;padding:0 12px 0 14px')}>
+    <div ref={ref} style={sx('display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -12px 0 -14px;padding:0 12px 0 14px;position:relative')}>
       {list.map((x, i) => { const ch = chip(x.iso === value); const newMonth = i === 0 || list[i - 1].m !== x.m; return (
-        <button key={x.iso} onClick={() => onPick(x.iso)} aria-label={dayLabel(x.iso)} style={sx(`flex:none;width:44px;min-height:52px;padding:6px 0;border-radius:var(--radius-md);border:1px solid ${ch.bd};background:${ch.bg};color:${ch.fg};display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;cursor:pointer;line-height:1.15;position:relative`)}>
+        <button key={x.iso} onClick={() => onPick(x.iso)} aria-label={dayLabel(x.iso)} aria-pressed={x.iso === value} style={sx(`flex:none;width:44px;min-height:52px;padding:6px 0;border-radius:var(--radius-md);border:1px solid ${ch.bd};background:${ch.bg};color:${ch.fg};display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;cursor:pointer;line-height:1.15;position:relative`)}>
           <span style={sx('font-size:11px;opacity:.75')}>{newMonth ? x.m : x.wd}</span><span style={sx('font-size:16px;font-weight:500;font-variant-numeric:tabular-nums')}>{x.d}</span>
         </button>
       ); })}
