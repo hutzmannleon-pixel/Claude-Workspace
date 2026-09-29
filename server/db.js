@@ -180,6 +180,18 @@ CREATE TABLE IF NOT EXISTS message_reads (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   PRIMARY KEY (message_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  page TEXT,
+  note TEXT NOT NULL,
+  mark TEXT,
+  image BLOB,
+  device TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','done')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS admin_log (
   id INTEGER PRIMARY KEY,
   admin_email TEXT NOT NULL,
@@ -216,7 +228,7 @@ export function tx(fn) {
 
 export function wipe() {
   const tables = ['message_reads', 'message_recipients', 'messages', 'route_days', 'bookings', 'windows', 'campaigns', 'residents', 'households',
-    'documents', 'sweeps', 'districts', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox'];
+    'feedback', 'documents', 'sweeps', 'districts', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox'];
   db.exec('PRAGMA foreign_keys = OFF');
   for (const t of tables) db.exec(`DELETE FROM ${t}`);
   db.exec('PRAGMA foreign_keys = ON');

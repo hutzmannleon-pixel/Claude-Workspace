@@ -40,6 +40,7 @@ export function purge() {
     fs.rmSync(path.join(config.dataDir, 'uploads', d.stored), { force: true });
     run('DELETE FROM documents WHERE id = ?', d.id);
   }
+  run(`DELETE FROM feedback WHERE (status = 'done' AND created_at < datetime('now','-90 days')) OR created_at < datetime('now','-180 days')`);
   run(`DELETE FROM codes WHERE created_at < datetime('now','-1 day')`);
   run(`DELETE FROM sessions WHERE expires_at < ?`, new Date().toISOString());
   run(`DELETE FROM tokens WHERE expires_at < ? AND used_at IS NULL`, new Date(Date.now() - 30 * 86400000).toISOString());

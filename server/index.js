@@ -13,6 +13,7 @@ import publicRoutes from './routes/public.js';
 import customerRoutes from './routes/customer.js';
 import sweepRoutes from './routes/sweep.js';
 import adminRoutes from './routes/admin.js';
+import feedbackRoutes from './routes/feedback.js';
 
 export async function build({ logger = !config.testMode } = {}) {
   const app = Fastify({ logger: logger ? { level: 'info' } : false, trustProxy: true, bodyLimit: 256 * 1024 });
@@ -41,6 +42,7 @@ export async function build({ logger = !config.testMode } = {}) {
   await app.register(customerRoutes);
   await app.register(sweepRoutes);
   await app.register(adminRoutes);
+  await app.register(feedbackRoutes);
 
   if (config.testMode) {
     app.get('/api/test/status', async () => ({ done: testStatus() }));

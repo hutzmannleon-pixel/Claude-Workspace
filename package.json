@@ -19,6 +19,7 @@
     "@fastify/multipart": "^10.1.2",
     "@fastify/static": "^10.1.5",
     "fastify": "^5.12.5",
+    "html-to-image": "^1.11.13",
     "nodemailer": "^10.0.12"
   },
   "devDependencies": {

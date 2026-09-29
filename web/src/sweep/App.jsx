@@ -240,7 +240,7 @@ export default function SweepApp({ onLogout }) {
     footer: <button className="btn btn-secondary" onClick={() => set({ sheet: 'account' })} style={sx('min-height:44px')}><Icon n="ph-user-circle" />Konto</button> };
 
   return (
-    <Shell glow={GLOW.sweep} scrollKey={scr + (ui.campaignId || '')} bottom={bottom} overlay={overlay} nav={nav} aside={wide && ['streets', 'street', 'setup'].includes(scr) ? streetsView : null}>
+    <Shell glow={GLOW.sweep} scrollKey={scr + (ui.campaignId || '')} bottom={bottom} overlay={overlay} nav={nav} feedback={{ role: 'sweep', where: scr }} aside={wide && ['streets', 'street', 'setup'].includes(scr) ? streetsView : null}>
       {scr === 'streets' && (wide ? <EmptyPane icon="ph-map-trifold" text="Wählen Sie links eine Straße." /> : streetsView)}
 
       {scr === 'street' && (!c ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>

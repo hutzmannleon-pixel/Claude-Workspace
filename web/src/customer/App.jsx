@@ -111,7 +111,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   </>;
 
   return (
-    <Shell glow={GLOW.customer} scrollKey={scr} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
+    <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
       {scr === 'home' && <>
         <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div>

@@ -410,3 +410,25 @@ test('Konfiguration für die App: Testbetrieb und Betreiberangaben', async () =>
   assert.equal(typeof c.restricted, 'boolean');
   assert.equal(c.operator.email, 'admin@test.de');
 });
+
+test('Feedback: mit Bild und Markierung, beim Betreiber sichtbar, verschwindet mit dem Konto', async () => {
+  await registerCustomer('fbk', 'feedback@test.de', { street: 'Lindenstraße', nr: '6', plz: '79102', ort: 'Freiburg', name: 'Rückmeldung' });
+  const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]).toString('base64');
+  await fails(401, 'niemand', 'POST', '/api/feedback', { role: 'customer', note: 'Hallo Welt' });
+  await fails(400, 'fbk', 'POST', '/api/feedback', { role: 'customer', note: 'x' });
+  await fails(400, 'fbk', 'POST', '/api/feedback', { role: 'customer', note: 'Kein JPEG', image: 'data:image/png;base64,AAAA' });
+  await ok('fbk', 'POST', '/api/feedback', { role: 'customer', note: 'Knopf reagiert nicht', page: '/kunde · home', image: jpeg, mark: { x: 0.1, y: 0.2, w: 0.3, h: 0.1 }, device: '390×844' });
+  await fails(401, 'fbk', 'GET', '/api/admin/feedback');
+  await login('admin', 'admin@test.de');
+  const { items } = await ok('admin', 'GET', '/api/admin/feedback');
+  const f = items.find(i => i.email === 'feedback@test.de');
+  assert.equal(f.note, 'Knopf reagiert nicht');
+  assert.deepEqual(f.mark, { x: 0.1, y: 0.2, w: 0.3, h: 0.1 });
+  assert.equal(f.status, 'open');
+  const img = await call('admin', 'GET', `/api/admin/feedback/${f.id}/image`);
+  assert.equal(img.res.headers['content-type'], 'image/jpeg');
+  await ok('admin', 'POST', `/api/admin/feedback/${f.id}`, { action: 'done' });
+  assert.equal(get('SELECT status FROM feedback WHERE id = ?', f.id).status, 'done');
+  await ok('fbk', 'POST', '/api/customer/delete', { confirm: 'LÖSCHEN' });
+  assert.equal(get('SELECT COUNT(*) n FROM feedback WHERE id = ?', f.id).n, 0, 'Feedback mit Konto gelöscht');
+});

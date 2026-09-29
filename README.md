@@ -8,8 +8,10 @@ Die App besteht aus drei Teilen, die über einen gemeinsamen Server live verbund
 |---|---|---|
 | `/kunde` | Bewohner | Registrieren (Adresse, E-Mail-Code, Wohnsitz-Nachweis), Zeit buchen, verschieben/absagen, live sehen, wie weit der Kaminfeger weg ist, Nachrichten, Profil |
 | `/kaminfeger` | Bezirks-Kaminfeger | Registrieren mit Bezirksabgleich und Nachweis, Kehrbuch importieren, Zeitfenster pro Straße, Tagesroute, Nachrichten, Mieter bestätigen |
-| `/betreiber` | Sie als Betreiber | Kaminfeger und Bewohner prüfen, Dokumente ansehen (danach gelöscht), Protokoll, Bezirksverzeichnis importieren |
+| `/betreiber` | Sie als Betreiber | Kaminfeger und Bewohner prüfen, Dokumente ansehen (danach gelöscht), Protokoll, Bezirksverzeichnis importieren, Feedback lesen |
 | `/test` | nur im Testmodus | Alle drei Apps nebeneinander, Schritt-Anleitung, Test-Postfach für Codes und Links |
+
+**Feedback:** In allen drei angemeldeten Apps gibt es einen Feedback-Knopf (Sprechblase unten rechts, am Desktop in der Seitenleiste). Er macht ein Bild der aktuellen Ansicht, der Nutzer zieht einen Rahmen um die betroffene Stelle und schreibt etwas dazu. Alles landet beim Betreiber unter **Feedback**.
 
 **Am Desktop** (ab 1024 px Fensterbreite) zeigen Betreiber und Kaminfeger eine Seitenleiste, links die Liste (Prüfungen bzw. Straßen) und rechts die Details. In Chrome/Edge lässt sich die Seite über ⋮ → „App installieren“ als eigenes Fenster einrichten. Die Bewohner-App bleibt als Handy-Ansicht.
 
@@ -48,7 +50,7 @@ Dann **http://localhost:3000/test** öffnen. Es gibt **keine Beispieldaten**, Si
 „Alles löschen“ auf der Testseite setzt die Datenbank zurück.
 
 **Entwicklung mit Hot-Reload:** `npm run dev` (Web unter http://localhost:5173, API auf Port 3000).
-**Tests:** `npm test` spielt 23 Szenarien gegen eine temporäre Datenbank durch.
+**Tests:** `npm test` spielt 24 Szenarien gegen eine temporäre Datenbank durch.
 
 ## Online bringen (eigener Server)
 

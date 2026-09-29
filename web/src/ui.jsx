@@ -1,6 +1,7 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { sx, EMBED, useWide } from './lib/core.js';
+import { FeedbackButton } from './Feedback.jsx';
 
 export const GLOW = {
   sweep: 'radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-section-glow) 45%, transparent), transparent 70%)',
@@ -17,7 +18,7 @@ export const useIsWide = () => useContext(WideCtx);
  * Bildschirm-Hülle einer App. Auf dem Handy Vollbild mit Leiste unten (nav.tabs),
  * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
  */
-export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey }) {
+export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback }) {
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();
   const wide = isWide && !!nav;
@@ -39,6 +40,7 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
             </button>
           ))}
           <div style={sx('flex:1')} />
+          {feedback && <FeedbackButton variant="side" {...feedback} />}
           {nav.footer}
         </nav>
         {aside && <div ref={asideRef} style={sx('flex:none;width:400px;overflow-y:auto;position:relative;z-index:1;padding:14px 0 10px;box-shadow:inset -1px 0 0 var(--color-divider)')}>{aside}</div>}
@@ -60,10 +62,11 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
         {!EMBED && <div style={sx('height:max(10px, env(safe-area-inset-top));flex:none')} />}
         {top}
-        <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{aside}{children}</div>
+        <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{aside}{children}{feedback && <div aria-hidden="true" style={sx('height:52px')} />}</div>
         {bottom}
         {nav && nav.bar !== false && <TabBar tabs={nav.tabs} />}
         {!EMBED && <div style={sx('height:max(8px, env(safe-area-inset-bottom));flex:none')} />}
+        {feedback && <FeedbackButton {...feedback} />}
         {overlay}
       </div>
     </div>

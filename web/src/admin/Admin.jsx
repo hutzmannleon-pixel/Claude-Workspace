@@ -71,10 +71,11 @@ function AdminApp({ me, onLock }) {
   const det = useData(detailPath, { enabled: !!ui.sel && (scr === 'detail' || scr === 'result') });
   const log = useData('/api/admin/log', { enabled: scr === 'log' });
   const dir = useData('/api/admin/directory', { enabled: scr === 'dir' });
+  const fb = useData('/api/admin/feedback');
   const lock = async () => { await api('/api/admin/logout', { body: {} }).catch(() => {}); onLock(); };
 
   // Sperre bei 401 (Server-Timeout) und nach 5 Minuten ohne Eingabe
-  useEffect(() => { if ([q.error, det.error, log.error, dir.error].some(e => e?.status === 401)) onLock(); }, [q.error, det.error, log.error, dir.error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if ([q.error, det.error, log.error, dir.error, fb.error].some(e => e?.status === 401)) onLock(); }, [q.error, det.error, log.error, dir.error, fb.error]); // eslint-disable-line react-hooks/exhaustive-deps
   const idle = useRef(null);
   useEffect(() => {
     const reset = () => { clearTimeout(idle.current); idle.current = setTimeout(lock, 5 * 60000); };
@@ -126,8 +127,11 @@ function AdminApp({ me, onLock }) {
   const tabs = [
     { label: 'Prüfungen', icon: 'ph-seal-check', on: scr === 'queue', onClick: toQueue, badge: cnt('sweep') + cnt('res') },
     { label: 'Protokoll', icon: 'ph-list-checks', on: scr === 'log', onClick: () => set({ screen: 'log', toast: null }) },
-    { label: 'Verzeichnis', icon: 'ph-book-open', on: scr === 'dir', onClick: () => set({ screen: 'dir', toast: null, dir: null }) }
+    { label: 'Verzeichnis', icon: 'ph-book-open', on: scr === 'dir', onClick: () => set({ screen: 'dir', toast: null, dir: null }) },
+    { label: 'Feedback', icon: 'ph-chat-circle-dots', on: scr === 'feedback', onClick: () => set({ screen: 'feedback', toast: null }), badge: (fb.data?.items || []).filter(f => f.status === 'open').length }
   ];
+  const fbAct = (id, action) => act.run(async () => { await api(`/api/admin/feedback/${id}`, { body: { action } }); fb.reload(); });
+  const fbImg = (fb.data?.items || []).find(f => f.id === ui.fbId);
   const mailto = to => {
     const subject = `Bestätigung Kehrbezirk ${x.bez}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(ui.queryText)}`, '_blank');
@@ -148,6 +152,9 @@ function AdminApp({ me, onLock }) {
         <div style={sx('position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:color-mix(in srgb, var(--color-bg) 85%, transparent);color:var(--color-neutral-200);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;display:flex;gap:8px;align-items:center')}><Icon n="ph-eye" /><span>Nur zur Prüfung · {me.email} · {new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span></div>
       </div>
       <div style={sx('font-size:12px;color:var(--color-neutral-400);display:flex;gap:8px')}><Icon n="ph-trash-simple" style={sx('font-size:15px')} /><span style={sx('text-wrap:pretty')}>Wird nach deiner Entscheidung gelöscht. Bitte nicht herunterladen oder weitergeben.</span></div>
+    </div>}
+    {ui.overlay === 'fbimg' && fbImg && <div onClick={() => set({ overlay: null })} style={sx('position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 94%, transparent);display:grid;place-items:center;padding:16px;cursor:zoom-out')}>
+      <FbImage f={fbImg} big />
     </div>}
     {ui.overlay === 'query' && x && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Rückfrage stellen</div>
@@ -194,11 +201,11 @@ function AdminApp({ me, onLock }) {
         <div style={sx('margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-trash-simple" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Urkunden und Ausweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
   </>;
   const inQueue = ['queue', 'detail', 'result'].includes(scr);
-  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir'].includes(scr),
+  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir', 'feedback'].includes(scr),
     footer: <button className="btn btn-secondary" onClick={lock} style={sx('min-height:44px')}><Icon n="ph-lock-simple" />Sperren</button> };
 
   return (
-    <Shell glow={GLOW.admin} scrollKey={scr + (ui.sel?.id || '')} bottom={bottom} overlay={overlay} nav={nav} aside={wide && inQueue ? queueView : null} asideKey={ui.kind}>
+    <Shell glow={GLOW.admin} scrollKey={scr + (ui.sel?.id || '')} bottom={bottom} overlay={overlay} nav={nav} feedback={{ role: 'admin', where: scr }} aside={wide && inQueue ? queueView : null} asideKey={ui.kind}>
       {scr === 'queue' && (wide ? <EmptyPane icon="ph-seal-check" text="Wählen Sie links einen Eintrag zum Prüfen." /> : queueView)}
 
       {scr === 'detail' && (!x ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
@@ -285,6 +292,32 @@ function AdminApp({ me, onLock }) {
         </div>
       </>}
 
+      {scr === 'feedback' && <>
+        <div style={sx('padding:10px 22px 4px')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Feedback</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Rückmeldungen aus den Apps · erledigte werden nach 90 Tagen gelöscht</div></div>
+        {act.error && <div style={sx('padding:8px 22px 0')}><ErrorLine text={act.error} /></div>}
+        <div style={sx('display:flex;flex-direction:column;gap:10px;padding:12px 16px 20px')}>
+          {fb.data && !fb.data.items.length && <div style={sx('font-size:14px;color:var(--color-neutral-500);padding:10px 6px')}>Noch kein Feedback.</div>}
+          {(fb.data?.items || []).map(f => (
+            <div key={f.id} style={sx(`padding:14px;border-radius:var(--radius-lg);display:flex;flex-direction:column;gap:10px;background:${f.status === 'open' ? 'var(--color-surface)' : 'transparent'};box-shadow:${f.status === 'open' ? 'none' : 'var(--shadow-sm)'}`)}>
+              <div style={sx('display:flex;gap:8px;align-items:center;flex-wrap:wrap')}>
+                <span className={`tag ${f.status === 'open' ? 'tag-accent' : 'tag-neutral'}`}>{f.status === 'open' ? 'offen' : 'erledigt'}</span>
+                <span className="tag tag-neutral">{FB_ROLE[f.role] || f.role}</span>
+                <span style={sx('font-size:12px;color:var(--color-neutral-400);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{f.email} · {fmtAt(f.at)}</span>
+              </div>
+              <div style={sx(`font-size:14px;white-space:pre-wrap;text-wrap:pretty;color:${f.status === 'open' ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>{f.note}</div>
+              {f.hasImage && <button onClick={() => set({ overlay: 'fbimg', fbId: f.id })} aria-label="Bild vergrößern" style={sx('align-self:flex-start;padding:0;border:0;background:none;cursor:zoom-in;line-height:0')}><FbImage f={f} /></button>}
+              <div style={sx('font-size:11px;color:var(--color-neutral-500)')}>{f.page}{f.device ? ' · ' + f.device : ''}</div>
+              <div style={sx('display:flex;gap:8px')}>
+                {f.status === 'open'
+                  ? <button className="btn btn-secondary" disabled={act.busy} onClick={() => fbAct(f.id, 'done')} style={sx('min-height:40px')}><Icon n="ph-check" />Erledigt</button>
+                  : <button className="btn btn-ghost" disabled={act.busy} onClick={() => fbAct(f.id, 'reopen')} style={sx('min-height:40px;color:var(--color-neutral-400)')}><Icon n="ph-arrow-counter-clockwise" />Wieder öffnen</button>}
+                <button className="btn btn-ghost" disabled={act.busy} onClick={() => fbAct(f.id, 'delete')} style={sx('min-height:40px;color:var(--color-neutral-500)')}><Icon n="ph-trash" />Löschen</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>}
+
       {scr === 'dir' && <>
         <div style={sx('padding:10px 22px 4px')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Bezirksverzeichnis</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{dir.data ? `${dir.data.count} Kehrbezirke` : 'Lädt …'} · Grundlage für die Prüfung der Kaminfeger</div></div>
         <div style={sx('margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px')}>
@@ -304,5 +337,18 @@ function AdminApp({ me, onLock }) {
         </div>
       </>}
     </Shell>
+  );
+}
+
+const FB_ROLE = { customer: 'Bewohner', sweep: 'Kaminfeger', admin: 'Betreiber' };
+
+/** Feedback-Bild mit markiertem Bereich */
+function FbImage({ f, big }) {
+  const m = f.mark;
+  return (
+    <div style={sx('position:relative;display:inline-block;border-radius:var(--radius-md);overflow:hidden;box-shadow:0 0 0 1px var(--color-neutral-700);line-height:0')}>
+      <img src={`/api/admin/feedback/${f.id}/image`} alt="Bild der Ansicht" loading="lazy" style={sx(big ? 'display:block;max-width:100%;max-height:calc(100dvh - 48px)' : 'display:block;max-width:100%;max-height:260px')} />
+      {m && <div style={{ position: 'absolute', left: m.x * 100 + '%', top: m.y * 100 + '%', width: m.w * 100 + '%', height: m.h * 100 + '%', border: '2px solid var(--color-accent)', borderRadius: 4, boxShadow: '0 0 0 9999px color-mix(in srgb, #000 30%, transparent)' }} />}
+    </div>
   );
 }
