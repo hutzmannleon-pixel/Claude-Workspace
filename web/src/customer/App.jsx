@@ -114,11 +114,8 @@ export default function CustomerApp({ onLogout, onReaddress }) {
     </Sheet>}
   </>;
 
-  return (
-    <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
-      {scr === 'home' && <>
-        <AppHeader bell={unreadList.length} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
-        <Greeting hi={`Hallo Familie ${r.family},`} sub="Schön, dass Sie da sind." />
+  // Live-Anzeige am Termintag – auf Start und auf der Termin-Seite
+  const liveCard = <>
         {lv && <div style={sx(`${cardS};padding:18px 16px 16px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 40px color-mix(in srgb, var(--color-accent) 20%, transparent)`)}>
           <div style={sx('display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)')}>
             <span style={sx('position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-accent)')}><span style={sx('position:absolute;inset:0;border-radius:50%;background:var(--color-accent);animation:kfpulse 1.8s ease-out infinite')} /></span>
@@ -144,6 +141,14 @@ export default function CustomerApp({ onLogout, onReaddress }) {
           {b.visit === 'missed' && <button className="btn btn-primary" onClick={toPick} style={sx('width:100%;min-height:46px;margin-top:16px')}>Neue Zeit wählen<Icon n="ph-arrow-right" /></button>}
         </div>}
 
+  </>;
+
+  return (
+    <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
+      {scr === 'home' && <>
+        <AppHeader bell={unreadList.length} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
+        <Greeting hi={`Hallo Familie ${r.family},`} sub="Schön, dass Sie da sind." />
+        {liveCard}
         {r.status === 'moved' && <div style={sx(`${cardS};box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
           <span className="card-kicker">Umzug gemeldet</span>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>Zugang zu {addr} beendet</div>
@@ -193,6 +198,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
 
       {scr === 'termin' && <>
         <PageHead title="Ihr Termin" onBack={goHome} />
+        {liveCard}
         {c && s.houseStatus === 'open' && r.status !== 'moved' && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
           <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">Feuerstättenschau {year}</span><span className="tag tag-accent">Zeit wählen</span></div>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2;text-wrap:pretty')}>Ihr Kaminfeger kommt in die {c.street}</div>
