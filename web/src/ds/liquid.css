@@ -71,13 +71,13 @@ button:where([style*="var(--color-surface)"], [style*="cursor:pointer"], [style*
 .seg .liquid-pill { background: linear-gradient(180deg, #b5dbf8, #86bbe6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 6px 16px rgba(8, 18, 34, .35); }
 
 /* Dialoge wachsen aus dem Glas, Hintergrund blendet ein */
-.kf-backdrop { animation: kf-fade .32s var(--ease-out) both; }
+.kf-backdrop { animation: kf-dim .32s var(--ease-out) both; }
 .kf-sheet { animation: kf-sheet-in .6s var(--spring-soft) both; transform-origin: 50% 100%; }
 .kf-sheet.center { transform-origin: 50% 50%; }
-@keyframes kf-fade { from { opacity: 0; } }
+/* Kein opacity auf dem Hintergrund: sonst verliert der Dialog darin kurz seinen Glaseffekt */
+@keyframes kf-dim { from { background-color: transparent; -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
 @keyframes kf-sheet-in {
-  from { opacity: 0; transform: translateY(40px) scale(.9); filter: blur(8px); }
-  60% { opacity: 1; filter: blur(0); }
+  from { transform: translateY(60px) scale(.92); }
 }
 
 /* Nebel und Licht ziehen langsam */

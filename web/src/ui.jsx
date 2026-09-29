@@ -34,8 +34,9 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
     el.scrollTop = 0;
     // Seitenwechsel: Inhalt gleitet weich aus dem Glas
     if (el.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches)
-      el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.985)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
-        { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      // Nur Bewegung: Transparenz oder Unschärfe auf dem ganzen Bereich würde das Glas darin kurz abschalten (grau → blau)
+      el.animate([{ transform: 'translateY(22px) scale(.98)' }, { transform: 'none' }],
+        { duration: 520, easing: 'cubic-bezier(.3,1.3,.5,1)' });
   }, [scrollKey]);
   useEffect(() => { if (asideRef.current) asideRef.current.scrollTop = 0; }, [asideKey]);
   if (wide) return (
