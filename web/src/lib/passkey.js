@@ -33,6 +33,13 @@ export async function loginPasskey(role) {
   const { startAuthentication } = await import('@simplewebauthn/browser');
   const { options, challengeId } = await api('/api/passkey/login/options', { body: { role } });
   let response;
-  try { response = await startAuthentication({ optionsJSON: options }); } catch (e) { throw friendly(e); }
+  try { response = await startAuthentication({ optionsJSON: options }); }
+  catch (e) {
+    // Android/iOS melden „keine Passkeys verfügbar“ ebenfalls als NotAllowedError
+    if (e?.name === 'NotAllowedError') throw new Error(role === 'admin'
+      ? 'Kein Passkey gefunden. Beim ersten Mal bitte mit Code per E-Mail entsperren – danach wird der Passkey eingerichtet.'
+      : 'Kein Passkey gefunden (oder abgebrochen). Melden Sie sich einmal mit Code per E-Mail an und richten Sie den Passkey unter „Mehr“ ein.');
+    throw friendly(e);
+  }
   await api('/api/passkey/login/verify', { body: { role, challengeId, response } });
 }

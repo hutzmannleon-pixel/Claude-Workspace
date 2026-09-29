@@ -535,10 +535,11 @@ export function PasskeyPanel({ role, intro, onChange }) {
 }
 
 /** „Mit Passkey anmelden“ + Trenner zum E-Mail-Weg */
-export function PasskeyLogin({ onPasskey, busy, label = 'Mit Passkey anmelden' }) {
+export function PasskeyLogin({ onPasskey, busy, label = 'Mit Passkey anmelden', hint = 'Noch keinen Passkey? Einmal mit Code anmelden und unter „Mehr“ einrichten.' }) {
   if (!passkeySupported()) return null;
   return <>
     <button className="btn btn-primary" disabled={busy} onClick={onPasskey} style={sx('min-height:52px;font-size:15px')}><Icon n="ph-fingerprint" style={sx('font-size:20px')} />{label}</button>
+    {hint && <div style={sx('font-size:12px;color:var(--color-neutral-400);text-align:center;margin-top:-6px;text-wrap:pretty')}>{hint}</div>}
     <div style={sx('display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-400)')}><span style={sx('flex:1;height:1px;background:var(--color-divider)')} />oder mit Code per E-Mail<span style={sx('flex:1;height:1px;background:var(--color-divider)')} /></div>
   </>;
 }

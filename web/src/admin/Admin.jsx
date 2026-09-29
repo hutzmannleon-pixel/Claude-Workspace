@@ -43,7 +43,7 @@ function Lock({ onUnlock }) {
   return (
     <Shell glow={GLOW.admin} top={<HomeBack />} bottom={
       <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2;display:flex;flex-direction:column;gap:12px')}>
-        {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" />}
+        {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" hint="Beim ersten Mal mit Code per E-Mail entsperren – danach richten Sie den Passkey ein." />}
         {!sent && <Field label="Admin-E-Mail"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@betreiber.de" autoComplete="email" /></Field>}
         {sent && <CodeInput email={email} value={code} onChange={setCode} label="Entsperrcode" onResend={send} />}
         {act.error && <ErrorLine text={act.error} />}
