@@ -46,7 +46,8 @@ export default function Legal({ page }) {
           <P>Terminvereinbarung für die Feuerstättenschau, Anmeldung per E-Mail-Code, Prüfung, dass Bewohner bzw. Kaminfeger berechtigt sind, Erinnerungen und Mitteilungen zum Termin (Art. 6 Abs. 1 lit. b DSGVO). Server-Protokolle und Missbrauchsschutz (Art. 6 Abs. 1 lit. f DSGVO).</P>
           <H>4. Empfänger und Dienstleister</H>
           <ul style={sx('padding-left:20px;margin:0 0 10px')}>
-            <Li><b style={sx('font-weight:500')}>Amazon Web Services EMEA SARL</b> (Luxemburg): Hosting des Servers und E-Mail-Versand (Amazon SES) im Rechenzentrum Stockholm (EU). Grundlage: Auftragsverarbeitungsvertrag.</Li>
+            <Li><b style={sx('font-weight:500')}>Amazon Web Services EMEA SARL</b> (Luxemburg): Hosting des Servers im Rechenzentrum Stockholm (EU){cfg?.mailProvider === 'ses' ? ' und E-Mail-Versand (Amazon SES)' : ''}{cfg?.offsiteBackup ? ', verschlüsselte Sicherungskopien im Rechenzentrum Frankfurt (EU)' : ''}. Grundlage: Auftragsverarbeitungsvertrag.</Li>
+            {cfg?.mailProvider === 'brevo' && <Li><b style={sx('font-weight:500')}>Sendinblue SAS (Brevo)</b> (Paris, Frankreich): Versand der E-Mails (Anmeldecodes, Terminbestätigungen, Erinnerungen) über Server in der EU. Übermittelt werden E-Mail-Adresse und Inhalt der Nachricht. Grundlage: Auftragsverarbeitungsvertrag.</Li>}
             <Li><b style={sx('font-weight:500')}>Komoot GmbH</b> (Photon-Adresssuche): Während Sie eine Straße eintippen, wird der eingegebene Text an photon.komoot.io gesendet, um Vorschläge anzuzeigen.</Li>
             <Li><b style={sx('font-weight:500')}>Ihr Kaminfeger</b> sieht Name, Anschrift und gebuchten Termin der Haushalte seines Bezirks. Andere Bewohner sehen nur, welche Zeiten belegt sind, und am Termintag die Hausnummern der Route – keine Namen.</Li>
           </ul>

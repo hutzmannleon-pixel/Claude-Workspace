@@ -13,7 +13,9 @@
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "test-mode": "TEST_MODE=1 node --disable-warning=ExperimentalWarning server/index.js",
     "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js",
-    "reset-passkeys": "node --disable-warning=ExperimentalWarning server/reset-passkeys.js"
+    "reset-passkeys": "node --disable-warning=ExperimentalWarning server/reset-passkeys.js",
+    "launch-check": "node --disable-warning=ExperimentalWarning server/launch.js check",
+    "go-live": "node --disable-warning=ExperimentalWarning server/launch.js go-live"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

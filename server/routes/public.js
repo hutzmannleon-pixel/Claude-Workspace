@@ -10,7 +10,10 @@ import { HttpError, bad, notFound, nowIso, normEmail, limited } from '../util.js
 
 export default async function publicRoutes(app) {
   app.get('/api/health', async () => ({ ok: true }));
-  app.get('/api/config', async () => ({ testMode: config.testMode, restricted: config.allowedEmails.length > 0, operator: config.operator }));
+  // Für die Datenschutzerklärung: welcher Dienst die E-Mails verschickt und ob extern gesichert wird
+  const mailProvider = !config.smtp ? null : /brevo|sendinblue/i.test(config.smtp.host) ? 'brevo' : /amazonaws\.com$/.test(config.smtp.host) ? 'ses' : 'other';
+  app.get('/api/config', async () => ({ testMode: config.testMode, restricted: config.allowedEmails.length > 0, operator: config.operator,
+    mailProvider, offsiteBackup: !!process.env.BACKUP_S3_BUCKET }));
 
   // Android-App (Trusted Web Activity): Verknüpfung App ↔ Domain. Datei liegt in DATA_DIR/assetlinks.json
   app.get('/.well-known/assetlinks.json', async (req, reply) => {

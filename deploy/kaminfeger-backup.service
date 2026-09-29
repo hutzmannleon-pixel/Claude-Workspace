@@ -1,0 +1,6 @@
+[Unit]
+Description=Kaminfeger Verwaltung – Sicherung
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kaminfeger/app/deploy/backup.sh
