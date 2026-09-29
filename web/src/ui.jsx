@@ -28,7 +28,15 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();
   const wide = isWide && !!nav;
-  useEffect(() => { if (ref.current) ref.current.scrollTop = 0; }, [scrollKey]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTop = 0;
+    // Seitenwechsel: Inhalt gleitet weich aus dem Glas
+    if (el.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      el.animate([{ opacity: 0, transform: 'translateY(14px) scale(.985)', filter: 'blur(6px)' }, { opacity: 1, transform: 'none', filter: 'blur(0)' }],
+        { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  }, [scrollKey]);
   useEffect(() => { if (asideRef.current) asideRef.current.scrollTop = 0; }, [asideKey]);
   if (wide) return (
     <WideCtx.Provider value={true}>
@@ -40,12 +48,15 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
             <LogoMark size={40} title="Kaminfeger Verwaltung" />
             <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
           </div>
+          <div style={sx('position:relative;display:flex;flex-direction:column;gap:4px')}>
+          <LiquidPill index={nav.tabs.findIndex(t => t.on)} style={{ left: 0, right: 0, top: 0, height: 44, borderRadius: 14, transform: `translateY(${Math.max(0, nav.tabs.findIndex(t => t.on)) * 48}px)` }} />
           {nav.tabs.map(t => (
-            <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:var(--radius-md);border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:${t.on ? 'var(--color-surface)' : 'none'};box-shadow:${t.on ? 'var(--shadow-sm)' : 'none'};color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
+            <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:14px;border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:none;position:relative;z-index:1;color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
               <Icon n={t.icon} style={sx(`font-size:20px;color:${t.on ? 'var(--color-accent)' : 'inherit'}`)} /><span style={sx('flex:1')}>{t.label}</span>
               {!!t.badge && <span style={sx(`min-width:20px;height:20px;padding:0 6px;border-radius:10px;${BADGE};font-size:11px;font-weight:600;display:grid;place-items:center`)}>{t.badge}</span>}
             </button>
           ))}
+          </div>
           <div style={sx('flex:1')} />
           {feedback && <FeedbackButton variant="side" {...feedback} />}
           {nav.footer}
@@ -93,6 +104,18 @@ export function EmptyPane({ icon, text }) {
       </div>
     </div>
   );
+}
+
+/** Glas-Pille, die flüssig zum gewählten Eintrag gleitet (Reiter, Filter, Seitenleiste) */
+function LiquidPill({ index, style }) {
+  const ref = useRef(null), prev = useRef(index);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || prev.current === index) return;
+    prev.current = index;
+    el.classList.remove('moving'); void el.offsetWidth; el.classList.add('moving');
+  }, [index]);
+  return <div ref={ref} aria-hidden="true" className="liquid-pill" onAnimationEnd={e => e.currentTarget.classList.remove('moving')} style={{ ...style, opacity: index < 0 ? 0 : 1 }} />;
 }
 
 export const Icon = ({ n, w = 'ph', style }) => <i className={`${w} ${n}`} style={style} aria-hidden="true" />;
@@ -207,21 +230,25 @@ export function CheckRow({ on, label, onClick, disabled, strike, minH = '50px' }
 export function Sheet({ children, scroll }) {
   const wide = useIsWide();
   return (
-    <div style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
-      <div role="dialog" aria-modal="true" style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(62,86,116,0.96), rgba(38,55,78,0.97));box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
+    <div className="kf-backdrop" style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
+      <div role="dialog" aria-modal="true" className={`kf-sheet${wide ? ' center' : ''}`} style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(62,86,116,0.96), rgba(38,55,78,0.97));box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
     </div>
   );
 }
 
 export function TabBar({ tabs, padX = '24px' }) {
+  const idx = tabs.findIndex(t => t.on);
   return (
-    <div style={sx(`flex:none;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr);padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.45);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 var(--color-divider)`)}>
+    <div style={sx(`flex:none;padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.45);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 var(--color-divider)`)}>
+     <div style={sx(`position:relative;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr)`)}>
+      <LiquidPill index={idx} style={{ top: 0, bottom: 0, left: 0, width: `calc(100% / ${tabs.length} - 12px)`, borderRadius: 20, transform: `translateX(calc(${Math.max(0, idx)} * (100% + 12px) + 6px))` }} />
       {tabs.map(t => (
-        <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent)' : 'var(--color-neutral-500)'};position:relative`)}>
+        <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;justify-content:center;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent-200)' : 'var(--color-neutral-500)'};position:relative;z-index:1`)}>
           <Icon n={t.icon} style={sx('font-size:24px')} />{t.label}
           {!!t.badge && <span style={sx('position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:600;display:grid;place-items:center;' + BADGE)}>{t.badge}</span>}
         </button>
       ))}
+     </div>
     </div>
   );
 }
@@ -230,6 +257,7 @@ export function Seg({ options, value, onChange, minH = '40px', stacked }) {
   const name = useId();
   return (
     <div className="seg" style={sx('display:flex')}>
+      <LiquidPill index={options.findIndex(o => o.value === value)} style={{ top: 3, bottom: 3, left: 3, width: `calc((100% - 6px - ${options.length - 1} * 3px) / ${options.length})`, transform: `translateX(calc(${Math.max(0, options.findIndex(o => o.value === value))} * (100% + 3px)))` }} />
       {options.map(o => (
         <label key={o.value} className="seg-opt" style={sx(stacked ? `flex:1;justify-content:center;min-height:${minH};flex-direction:column;gap:0;padding:6px 4px;line-height:1.2` : `flex:1;justify-content:center;min-height:${minH}`)}>
           <input type="radio" name={name} checked={value === o.value} onChange={() => onChange(o.value)} /><span>{o.label}</span>

@@ -60,8 +60,7 @@ html { background: #1b2a3d; }
 body { background: var(--app-bg) fixed; }
 
 /* Buttons: Glas mit weichem Licht */
-.btn { border-radius: 16px; transition: background-color .15s, box-shadow .15s, transform .08s; }
-.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn { border-radius: 16px; }
 .btn-primary {
   color: #fff; border-color: rgba(226, 236, 248, 0.28);
   background: linear-gradient(180deg, rgba(130, 170, 214, 0.62), rgba(86, 124, 168, 0.58));
@@ -86,7 +85,7 @@ body { background: var(--app-bg) fixed; }
 .seg { border-radius: 999px; background: rgba(150, 180, 214, 0.08); border-color: var(--glass-border); padding: 3px; gap: 3px; }
 .seg-opt { border-radius: 999px; }
 .seg-opt + .seg-opt { border-left: 0; }
-.seg-opt:has(input:checked) { color: #10233a; background: linear-gradient(180deg, #a9d3f5, #86bbe6); box-shadow: 0 4px 14px rgba(8, 18, 34, 0.3); font-weight: 500; }
+.seg-opt:has(input:checked) { color: #10233a; box-shadow: none; font-weight: 500; }
 
 /* Tags: grün für „bestätigt / läuft / offen“ wie „Geplant / Aktiv“ */
 .tag { border-radius: 999px; font-weight: 500; }

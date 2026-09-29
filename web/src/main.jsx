@@ -9,6 +9,8 @@ import '@phosphor-icons/web/bold';
 import '@phosphor-icons/web/fill';
 import './ds/nocturne.css';
 import './ds/theme.css';
+import './ds/liquid.css';
+import './lib/liquid.js';
 import './app.css';
 import { Loading } from './ui.jsx';
 import Landing from './Landing.jsx';

@@ -1,0 +1,93 @@
+/* „Liquid Glass“ – Glasrand mit Lichtbrechung, Glanz der dem Finger/der Maus folgt, federnde Knöpfe,
+   weich einblendende Dialoge und langsam ziehender Nebel. Die Zeiger-Position setzt lib/liquid.js (--mx/--my).
+   Glasflächen werden über ihre Hintergrundfarbe erkannt (Inline-Style mit var(--color-surface)), dazu .btn und .glass. */
+
+:root {
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --spring-soft: cubic-bezier(.3, 1.3, .5, 1);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Welche Elemente Glas sind */
+:where(.btn-primary, .btn-secondary, .glass, [data-glass], [style*="var(--color-surface)"]) {
+  --mx: 50%; --my: 0%; --lit: 0;
+}
+:where(.btn-primary, .btn-secondary, .glass, [data-glass], [style*="var(--color-surface)"]):not([style*="position:"]):not([style*="position: "]) {
+  position: relative;
+}
+:where(.glass, [data-glass], [style*="var(--color-surface)"]) {
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+}
+
+/* Glasrand: helle Kante oben links, zweite Brechung unten rechts – wandert leicht mit dem Licht */
+:where(.btn-primary, .btn-secondary, .glass, [data-glass], [style*="var(--color-surface)"])::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  padding: 1px;
+  background:
+    radial-gradient(120% 80% at var(--mx) var(--my), rgba(255, 255, 255, calc(.35 + var(--lit) * .45)), transparent 55%),
+    linear-gradient(135deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .06) 32%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, .22));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+/* Glanz im Glas, folgt Finger/Maus */
+:where(.btn-primary, .btn-secondary, .glass, [data-glass], [style*="var(--color-surface)"])::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(140px circle at var(--mx) var(--my), rgba(255, 255, 255, .26), rgba(255, 255, 255, .06) 45%, transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 40%);
+  mix-blend-mode: screen;
+  opacity: calc(.35 + var(--lit) * .65);
+  transition: opacity .45s var(--ease-out);
+}
+.btn-secondary::after { opacity: calc(var(--lit) * .9); }
+
+/* Federnde Knöpfe und Karten */
+.btn, button:where([style*="var(--color-surface)"], [style*="cursor:pointer"], [style*="cursor: pointer"]) {
+  transition: transform .5s var(--spring), filter .3s var(--ease-out), background-color .2s, box-shadow .3s;
+  will-change: transform;
+}
+.btn:active:not(:disabled),
+button:where([style*="var(--color-surface)"], [style*="cursor:pointer"], [style*="cursor: pointer"]):active:not(:disabled) {
+  transform: scale(.955); filter: brightness(1.18) saturate(1.1);
+  transition-duration: .12s;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); }
+
+/* Fließende Glas-Pille (Reiter, Filter, Seitenleiste) */
+.liquid-pill {
+  position: absolute; pointer-events: none; z-index: 0; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -1px 0 rgba(255, 255, 255, .08), 0 6px 18px rgba(6, 14, 28, .35);
+  -webkit-backdrop-filter: blur(10px) saturate(180%); backdrop-filter: blur(10px) saturate(180%);
+  transition: transform .62s var(--spring-soft), width .62s var(--spring-soft), opacity .3s;
+}
+.liquid-pill.moving { animation: kf-squash .62s var(--ease-out); }
+@keyframes kf-squash { 0% { scale: 1 1; } 30% { scale: 1.12 .88; } 60% { scale: .97 1.04; } 100% { scale: 1 1; } }
+.seg { position: relative; isolation: isolate; }
+.seg-opt { position: relative; z-index: 1; transition: color .3s; }
+.seg .liquid-pill { background: linear-gradient(180deg, #b5dbf8, #86bbe6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 6px 16px rgba(8, 18, 34, .35); }
+
+/* Dialoge wachsen aus dem Glas, Hintergrund blendet ein */
+.kf-backdrop { animation: kf-fade .32s var(--ease-out) both; }
+.kf-sheet { animation: kf-sheet-in .6s var(--spring-soft) both; transform-origin: 50% 100%; }
+.kf-sheet.center { transform-origin: 50% 50%; }
+@keyframes kf-fade { from { opacity: 0; } }
+@keyframes kf-sheet-in {
+  from { opacity: 0; transform: translateY(40px) scale(.9); filter: blur(8px); }
+  60% { opacity: 1; filter: blur(0); }
+}
+
+/* Nebel und Licht ziehen langsam */
+.kf-drift { animation: kf-drift 22s ease-in-out infinite alternate; }
+.kf-drift.slow { animation-duration: 34s; animation-direction: alternate-reverse; }
+@keyframes kf-drift { from { transform: translateX(-22px); } to { transform: translateX(22px); } }
+.kf-breathe { animation: kf-breathe 9s ease-in-out infinite alternate; }
+@keyframes kf-breathe { from { opacity: .75; } to { opacity: 1; } }
+
+/* Wer „Bewegung reduzieren“ eingestellt hat, bekommt keine Animationen */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

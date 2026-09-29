@@ -62,9 +62,9 @@ export function Scenery({ style, wide = false, simple = false }) {
   const W = wide ? 1200 : 390, X0 = wide ? -405 : 0;
   const trees = [];
   for (let x = X0 - 4; x < X0 + W; x += 11) { const h = 10 + ((Math.abs(x) * 7) % 9); trees.push(`M${x} 232 l5 -${h} l5 ${h} Z`); }
-  const tiles = wide ? [-1, 0, 1] : [0];
-  const far = 'M0 196 L48 160 L92 182 L150 128 L204 170 L246 142 L300 172 L352 138 L390 158 V320 H0Z';
-  const mid = 'M0 222 L44 196 L104 214 L168 184 L236 212 L298 190 L352 206 L390 196 V320 H0Z';
+  const tiles = wide ? [-2, -1, 0, 1, 2] : [0];
+  const far = 'M0 158 L48 160 L92 182 L150 128 L204 170 L246 142 L300 172 L352 138 L390 158 V320 H0Z';
+  const mid = 'M0 196 L44 206 L104 214 L168 184 L236 212 L298 190 L352 206 L390 196 V320 H0Z';
   const sunX = wide ? 520 : 281;
   return (
     <svg viewBox={`${X0} 0 ${W} 320`} preserveAspectRatio="xMidYMax slice" aria-hidden="true" style={{ display: 'block', width: '100%', height: '100%', ...style }}>
@@ -82,16 +82,16 @@ export function Scenery({ style, wide = false, simple = false }) {
           <stop offset="0" stopColor="#2b394c" /><stop offset=".6" stopColor="#3d506a" /><stop offset="1" stopColor="#253245" />
         </linearGradient>
       </defs>
-      <rect x={X0} width={W} height="320" fill={`url(#sun${id})`} />
+      <rect className="kf-breathe" x={X0} width={W} height="320" fill={`url(#sun${id})`} />
       <circle cx={sunX} cy="148" r="9" fill="#fff4e2" opacity=".95" />
       {tiles.map(t => <path key={'f' + t} d={far} transform={`translate(${t * 390} 0)`} fill="#7d96b2" opacity=".55" />)}
-      <rect x={X0} y="150" width={W} height="70" fill={`url(#mist${id})`} />
+      <rect className="kf-drift" x={X0 - 30} y="150" width={W + 60} height="70" fill={`url(#mist${id})`} />
       {tiles.map(t => <path key={'m' + t} d={mid} transform={`translate(${t * 390} 0)`} fill="#56708f" opacity=".85" />)}
       <path d={trees.join(' ')} fill="#3a5069" opacity=".9" />
-      <rect x={X0} y="210" width={W} height="50" fill={`url(#mist${id})`} />
+      <rect className="kf-drift slow" x={X0 - 30} y="210" width={W + 60} height="50" fill={`url(#mist${id})`} />
       {!simple && <g transform={wide ? 'translate(330 40) scale(.88)' : undefined}>
         {/* Dach mit Ziegelreihen */}
-        <path d="M-20 330 L52 250 L262 206 L420 296 V330 Z" fill={`url(#roof${id})`} />
+        <path d="M-20 330 L52 250 L262 206 L480 330 Z" fill={`url(#roof${id})`} />
         <path d="M52 250 L262 206" stroke="#9fb4cb" strokeOpacity=".35" strokeWidth="1.5" />
         {[1, 2, 3, 4, 5, 6].map(i => <path key={i} d={`M${52 - i * 12} ${250 + i * 13} L${262 + i * 26} ${206 + i * 14}`} stroke="#0f1824" strokeOpacity=".45" strokeWidth="1" />)}
         {/* Kamin */}
@@ -104,7 +104,7 @@ export function Scenery({ style, wide = false, simple = false }) {
           {SPIKES.map((a, i) => <line key={i} x1={Math.cos(a) * 3} y1={Math.sin(a) * 3} x2={Math.cos(a) * (i % 2 ? 14 : 17)} y2={Math.sin(a) * (i % 2 ? 14 : 17)} />)}
         </g>
       </g>}
-      <rect x={X0} y="262" width={W} height="58" fill={`url(#mist${id})`} opacity=".7" />
+      <rect className="kf-drift" x={X0 - 30} y="262" width={W + 60} height="58" fill={`url(#mist${id})`} opacity=".7" />
     </svg>
   );
 }
