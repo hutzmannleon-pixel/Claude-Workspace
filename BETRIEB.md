@@ -76,7 +76,7 @@ Das bleibt erhalten:
 
 ## 5. E-Mail über Brevo einrichten
 
-Amazon SES verschickt im Sandbox-Modus nur an bestätigte Adressen. Brevo (Firma Sendinblue SAS, Paris) verschickt an alle Adressen. Die Server stehen in der EU, und es gibt einen AVV. Der kostenlose Tarif erlaubt 300 Mails pro Tag. Für den Start reicht das, bei mehr Nutzern braucht es den Starter-Tarif.
+Amazon SES verschickt im Sandbox-Modus nur an bestätigte Adressen. Brevo (für deutsche Kunden: Brevo GmbH, Berlin) verschickt an alle Adressen. Die Server stehen in der EU, und es gibt einen AVV. Der kostenlose Tarif erlaubt 300 Mails pro Tag. Für den Start reicht das, bei mehr Nutzern braucht es den Starter-Tarif.
 
 1. **Konto anlegen** auf brevo.com.
    - Firmen- bzw. Betreiberangaben eintragen.
@@ -107,7 +107,7 @@ Amazon SES verschickt im Sandbox-Modus nur an bestätigte Adressen. Brevo (Firma
    SMTP_PASS=<aus dem Parameter-Store>
    ```
    Danach schickt er eine Testmail an eine fremde Adresse. Die Datenschutzerklärung nennt Brevo dann automatisch als Dienstleister.
-7. **AVV** mit Brevo abschließen: im Brevo-Konto unter **Settings → Legal / DPA**. In der Regel ist der AVV Teil der AGB. Einmal herunterladen und ablegen.
+7. **AVV:** Er ist Teil der Brevo-Nutzungsbedingungen (**Anhang 3 „Datenschutzvereinbarung (DSV)“**, TOM in Anhang 4) und gilt mit der Registrierung. Die Seite https://www.brevo.com/de/legal/termsofuse/ als PDF speichern und ablegen.
 
 ## 6. Updates einspielen
 
