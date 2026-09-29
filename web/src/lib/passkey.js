@@ -43,3 +43,11 @@ export async function loginPasskey(role) {
   }
   await api('/api/passkey/login/verify', { body: { role, challengeId, response } });
 }
+
+// Nach Anmeldung/Registrierung per E-Mail-Code einmal anbieten, einen Passkey einzurichten
+const OFFER = 'kf-passkey-offer', NO = 'kf-passkey-no-';
+const store = (s, fn) => { try { return fn(s()); } catch { return null; } };
+export const markPasskeyOffer = role => store(() => sessionStorage, s => s.setItem(OFFER, role));
+export const takePasskeyOffer = role => store(() => sessionStorage, s => { const on = s.getItem(OFFER) === role; if (on) s.removeItem(OFFER); return on; });
+export const passkeyDeclined = role => store(() => localStorage, s => s.getItem(NO + role) === '1');
+export const declinePasskey = role => store(() => localStorage, s => s.setItem(NO + role, '1'));

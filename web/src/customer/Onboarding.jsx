@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { loginPasskey } from '../lib/passkey.js';
+import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
 import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
@@ -93,6 +93,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     const body = qr ? { email: st.email.trim(), code: st.code, invite: st.token, person: st.person.trim() }
       : { email: st.email.trim(), code: st.code, street: st.street.trim(), nr: st.nr.trim(), plz: st.plz.trim(), ort: st.ort.trim(), name: st.name.trim() };
     const r = await api('/api/customer/register', { body });
+    markPasskeyOffer('customer');
     set({ reg: { ...r, method: qr ? 'invite' : null }, screen: r.next === 'verify' ? 'verify' : 'done' });
   });
   const saveAddress = () => act.run(async () => {
@@ -115,7 +116,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     if (s.resident.status === 'needs_verify') set({ ...fromState(s), screen: 'verify' });
     else onDone();
   };
-  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } }); await afterLogin(); });
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } }); markPasskeyOffer('customer'); await afterLogin(); });
   const passkeyLogin = () => act.run(async () => { await loginPasskey('customer'); await afterLogin(); });
 
   let cta = null, alt = null;

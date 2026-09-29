@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, PasskeyOffer, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -138,6 +138,7 @@ export default function SweepApp({ onLogout }) {
   const calW = scr === 'setup' && ui.calWin != null ? draftWins[ui.calWin] : null;
   const custH = ui.custId && cust.data ? cust.data.customers.find(c => c.id === ui.custId) : null;
   const overlay = <>
+    <PasskeyOffer role="sweep" />
     {ui.sheet === 'passkeys' && <Sheet scroll>
       <div style={sx('font-size:20px;font-weight:600')}>Anmeldung mit Passkey</div>
       <PasskeyPanel role="sweep" intro="Melden Sie sich per Fingerabdruck, Gesicht oder Geräte-PIN an – ohne Code per E-Mail. Freiwillig; der E-Mail-Code funktioniert weiterhin." />

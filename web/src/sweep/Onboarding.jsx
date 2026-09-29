@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { loginPasskey } from '../lib/passkey.js';
+import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
 import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
@@ -52,6 +52,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   };
   const sendCode = (email, purpose, after) => act.run(async () => { await api('/api/auth/code', { body: { email: email.trim(), role: 'sweep', purpose } }); set(after); });
   const register = () => act.run(async () => {
+    markPasskeyOffer('sweep');
     await api('/api/sweep/register', { body: { first: st.first.trim(), last: st.last.trim(), bstreet: st.bstreet.trim(), bplz: st.bplz, bort: st.bort.trim(), phone: st.phone.trim(), email: st.email.trim(), code: st.code } });
     await me.reload(); set({ screen: 'district' });
   });
@@ -60,7 +61,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     if (x.status === 'active') return onDone();
     set({ screen: x.status === 'draft' ? (x.district ? 'proof' : 'district') : 'pending' });
   };
-  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } }); await afterLogin(); });
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } }); markPasskeyOffer('sweep'); await afterLogin(); });
   const passkeyLogin = () => act.run(async () => { await loginPasskey('sweep'); await afterLogin(); });
   const uploadDoc = (kind, file) => act.run(async () => { set({ uploading: kind }); try { await upload(`/api/sweep/documents/${kind}`, file); await me.reload(); } finally { set({ uploading: null }); } });
   const removeDoc = kind => act.run(async () => { await api(`/api/sweep/documents/${kind}`, { method: 'DELETE' }); await me.reload(); });

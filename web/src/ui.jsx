@@ -1,7 +1,7 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { sx, api, EMBED, useWide, useData, useAction, parseDate, isoDate, dayLabel } from './lib/core.js';
-import { passkeySupported, addPasskey } from './lib/passkey.js';
+import { passkeySupported, addPasskey, takePasskeyOffer, passkeyDeclined, declinePasskey } from './lib/passkey.js';
 import { FeedbackButton } from './Feedback.jsx';
 import { LogoMark, Scenery } from './brand.jsx';
 
@@ -542,4 +542,36 @@ export function PasskeyLogin({ onPasskey, busy, label = 'Mit Passkey anmelden', 
     {hint && <div style={sx('font-size:12px;color:var(--color-neutral-400);text-align:center;margin-top:-6px;text-wrap:pretty')}>{hint}</div>}
     <div style={sx('display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-400)')}><span style={sx('flex:1;height:1px;background:var(--color-divider)')} />oder mit Code per E-Mail<span style={sx('flex:1;height:1px;background:var(--color-divider)')} /></div>
   </>;
+}
+
+/** Angebot direkt nach der Code-Anmeldung: „Beim nächsten Mal schneller anmelden?“ */
+export function PasskeyOffer({ role }) {
+  const [show, setShow] = useState(false);
+  const [done, setDone] = useState(false);
+  const act = useAction();
+  useEffect(() => {
+    if (!takePasskeyOffer(role) || !passkeySupported() || passkeyDeclined(role)) return;
+    api(`/api/auth/me?role=${role}`).then(r => { if (r.user && !r.user.passkeys) setShow(true); }).catch(() => {});
+  }, [role]);
+  if (!show) return null;
+  const later = () => { declinePasskey(role); setShow(false); };
+  return (
+    <Sheet>
+      {done ? <>
+        <div style={sx('display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:8px 0')}>
+          <Icon w="ph-bold" n="ph-check-circle" style={sx('font-size:44px;color:var(--color-ok)')} />
+          <div style={sx('font-size:19px;font-weight:600')}>Passkey eingerichtet</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Beim nächsten Mal tippen Sie einfach auf „Mit Passkey anmelden“.</div>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShow(false)} style={sx('min-height:48px')}>Weiter</button>
+      </> : <>
+        <div style={sx('width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.12);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon n="ph-fingerprint" style={sx('font-size:30px;color:var(--color-accent-300)')} /></div>
+        <div style={sx('font-size:20px;font-weight:600')}>Beim nächsten Mal schneller anmelden?</div>
+        <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Mit einem Passkey melden Sie sich per Fingerabdruck, Gesicht oder Displaysperre an – ohne auf einen Code per E-Mail zu warten.</div>
+        {act.error && <ErrorLine text={act.error} />}
+        <button className="btn btn-primary" disabled={act.busy} onClick={() => act.run(async () => { await addPasskey(role); setDone(true); })} style={sx('min-height:50px;font-size:15px')}><Icon n="ph-fingerprint" style={sx('font-size:20px')} />{act.busy ? 'Bitte am Gerät bestätigen …' : 'Passkey einrichten'}</button>
+        <button className="btn btn-ghost" disabled={act.busy} onClick={later} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Später</button>
+      </>}
+    </Sheet>
+  );
 }
