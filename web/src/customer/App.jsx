@@ -1,7 +1,8 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DIV_BOTTOM } from '../ui.jsx';
+import { Scenery } from '../brand.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
 const cardS = 'margin:16px 16px 0;padding:18px 16px 16px;border-radius:var(--radius-lg)';
@@ -65,11 +66,13 @@ export default function CustomerApp({ onLogout, onReaddress }) {
     </div>
   ));
 
-  const showTabs = ['home', 'msgs', 'profile'].includes(scr);
+  const showTabs = ['home', 'termin', 'msgs', 'profile'].includes(scr);
+  const toTermin = () => { act.setError(null); set({ screen: 'termin', overlay: null }); };
   const tabs = [
-    { label: 'Termin', icon: 'ph-calendar-check', on: scr === 'home', onClick: goHome },
+    { label: 'Start', icon: 'ph-house', on: scr === 'home', onClick: goHome },
+    { label: 'Termin', icon: 'ph-calendar-blank', on: scr === 'termin', onClick: toTermin },
     { label: 'Nachrichten', icon: 'ph-chat-circle-text', on: scr === 'msgs', onClick: openMsgs, badge: unreadList.length },
-    { label: 'Profil', icon: 'ph-house-line', on: scr === 'profile', onClick: () => set({ screen: 'profile' }) }
+    { label: 'Mehr', icon: 'ph-dots-three-outline', on: scr === 'profile', onClick: () => set({ screen: 'profile' }) }
   ];
   const btn = (label, onClick, extra = {}) => (
     <div style={sx(`flex:none;padding:10px 16px 6px;position:relative;z-index:2${extra.fade ? ';background:linear-gradient(to top, var(--color-bg) 70%, transparent)' : ''}`)}>
@@ -83,6 +86,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   if (scr === 'pick') bottom = btn(hasSel ? `Weiter · ${short(w.label).day} ${ui.selT}–${endOf(ui.selT, len)}` : 'Bitte eine Zeit wählen', () => hasSel && set({ screen: 'confirm' }), { disabled: !hasSel, fade: true });
   if (scr === 'confirm') bottom = btn('Termin verbindlich bestätigen', doConfirm, { icon: 'ph-check-circle', glow: true, disabled: !verified, hint: verified ? null : 'Buchen ist möglich, sobald Ihr Wohnsitz bestätigt ist. Sie bekommen dann eine E-Mail.' });
   if (scr === 'done') bottom = btn('Fertig', goHome, { secondary: true });
+  if (scr === 'info') bottom = b ? btn('Termin ansehen', toTermin, { icon: 'ph-calendar-blank' }) : c && s.houseStatus !== 'booked' && r.status !== 'moved' ? btn(verified ? 'Zeit wählen' : 'Zeiten ansehen', toPick, { icon: 'ph-calendar-plus' }) : null;
 
   const overlay = <>
     {ui.overlay === 'cancel' && <Sheet>
@@ -113,22 +117,8 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   return (
     <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
       {scr === 'home' && <>
-        <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-          <div>
-            <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{addr} · {r.ort}</div>
-            <div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>Guten Tag, Familie {r.family}</div>
-          </div>
-          <Avatar accent ini={('F' + (r.family[0] || '')).toUpperCase()} />
-        </div>
-
-        {unreadList.length > 0 && <button onClick={openMsgs} style={sx('margin:16px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-800);color:inherit;font:inherit;cursor:pointer')}>
-          <Icon n="ph-chat-circle-text" style={sx('font-size:20px;color:var(--color-accent);margin-top:1px')} />
-          <div style={sx('flex:1;min-width:0')}>
-            <div style={sx('font-size:12px;color:var(--color-accent-300)')}>Neue Nachricht · {sweepName}</div>
-            <div style={sx('font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden')}>{unreadList[unreadList.length - 1].text}</div>
-          </div>
-        </button>}
-
+        <AppHeader bell={unreadList.length} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
+        <Greeting hi={`Hallo Familie ${r.family},`} sub="Schön, dass Sie da sind." />
         {lv && <div style={sx(`${cardS};padding:18px 16px 16px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 40px color-mix(in srgb, var(--color-accent) 20%, transparent)`)}>
           <div style={sx('display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-accent)')}>
             <span style={sx('position:relative;width:8px;height:8px;border-radius:50%;background:var(--color-accent)')}><span style={sx('position:absolute;inset:0;border-radius:50%;background:var(--color-accent);animation:kfpulse 1.8s ease-out infinite')} /></span>
@@ -183,6 +173,26 @@ export default function CustomerApp({ onLogout, onReaddress }) {
           <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street} freigibt, bekommen Sie eine E-Mail und wählen hier Ihre Zeit.</div>
         </div>}
 
+        {b && !lv && <NextCard kicker="Nächster Termin" title={myDate} lines={['Feuerstättenschau', `${myTime} Uhr`]} tag="Geplant" onClick={toTermin} />}
+        {!b && c && s.houseStatus === 'open' && r.status !== 'moved' && <NextCard icon="ph-calendar-plus" kicker={`Feuerstättenschau ${year}`} title="Bitte Zeit wählen" lines={[`${c.windows.length === 1 ? '1 Zeitfenster' : c.windows.length + ' Zeitfenster'} in der ${c.street}`, `Bis ${c.deadlineLabel} wählen`]} tag="Offen" tagCls="tag-outline" onClick={toTermin} />}
+        {!b && s.houseStatus === 'cancelled' && r.status !== 'moved' && <NextCard icon="ph-calendar-x" kicker={`Feuerstättenschau ${year}`} title="Termin abgesagt" lines={['Bitte wählen Sie eine neue Zeit.']} tag="Neu wählen" tagCls="tag-outline" onClick={toPick} />}
+        <Tiles items={[
+          { label: 'Termin', icon: 'ph-calendar-blank', onClick: toTermin },
+          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: openMsgs, badge: unreadList.length },
+          { label: 'Leistungen', icon: 'ph-flame', onClick: () => set({ screen: 'info' }) },
+          { label: 'Profil', icon: 'ph-user', onClick: () => set({ screen: 'profile' }) }
+        ]} />
+        <InfoCard title="Sicher. Sauber. Zukunft." sub="Ihr Kaminfeger sorgt für mehr Sicherheit im Bezirk." onClick={() => set({ screen: 'info' })} />
+        {sweep && <div style={sx('margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px')}>
+          <Avatar ini={sweep.ini} />
+          <div style={sx('flex:1')}><div style={sx('font-size:14px')}>{sweep.name}</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Ihr Kaminfeger · Kehrbezirk {d.no}</div></div>
+          {sweep.phone && <a className="btn btn-secondary btn-icon" href={`tel:${sweep.phone.replace(/[^\d+]/g, '')}`} style={sx('width:44px;height:44px')} aria-label={`${sweep.name} anrufen`}><Icon n="ph-phone" style={sx('font-size:18px')} /></a>}
+        </div>}
+        {!sweep && <div style={sx('height:20px')} />}
+      </>}
+
+      {scr === 'termin' && <>
+        <PageHead title="Ihr Termin" onBack={goHome} />
         {c && s.houseStatus === 'open' && r.status !== 'moved' && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
           <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">Feuerstättenschau {year}</span><span className="tag tag-accent">Zeit wählen</span></div>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2;text-wrap:pretty')}>Ihr Kaminfeger kommt in die {c.street}</div>
@@ -232,12 +242,32 @@ export default function CustomerApp({ onLogout, onReaddress }) {
           <button className="btn btn-primary" onClick={toPick} style={sx('min-height:48px;font-size:15px')}>Neue Zeit wählen<Icon n="ph-arrow-right" /></button>
         </div>}
 
-        {sweep && <div style={sx('margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px')}>
-          <Avatar ini={sweep.ini} />
-          <div style={sx('flex:1')}><div style={sx('font-size:14px')}>{sweep.name}</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Ihr Kaminfeger · Kehrbezirk {d.no}</div></div>
-          {sweep.phone && <a className="btn btn-secondary btn-icon" href={`tel:${sweep.phone.replace(/[^\d+]/g, '')}`} style={sx('width:44px;height:44px')} aria-label={`${sweep.name} anrufen`}><Icon n="ph-phone" style={sx('font-size:18px')} /></a>}
+        {!b && !(c && s.houseStatus === 'open') && s.houseStatus !== 'cancelled' && <div className="glass" style={sx(`${cardS};display:flex;flex-direction:column;gap:8px`)}>
+          <span className="card-kicker">Feuerstättenschau</span>
+          <div style={sx('font-size:20px;font-weight:600;line-height:1.2')}>Noch kein Termin</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street || 'Ihre Straße'} freigibt, wählen Sie hier Ihre Zeit. Sie bekommen dann eine E-Mail.</div>
         </div>}
-        {!sweep && <div style={sx('height:20px')} />}
+        <div style={sx('height:20px')} />
+      </>}
+
+      {scr === 'info' && <>
+        <PageHead title="Leistungen" onBack={goHome} />
+        <div className="glass" style={sx('margin:8px 16px 20px;border-radius:26px;overflow:hidden')}>
+          <div aria-hidden="true" style={sx('height:170px;position:relative;-webkit-mask-image:linear-gradient(to bottom, #000 60%, transparent);mask-image:linear-gradient(to bottom, #000 60%, transparent)')}><Scenery /></div>
+          <div style={sx('padding:0 20px 22px;margin-top:-54px;position:relative;display:flex;flex-direction:column;gap:6px')}>
+            <div style={sx('width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 60%, rgba(255,170,80,0.55), rgba(40,56,80,0.85) 72%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 24px rgba(8,16,30,0.4);margin-bottom:10px')}><Icon w="ph-fill" n="ph-flame" style={sx('font-size:34px;color:#f7a54a')} /></div>
+            <div style={sx('font-size:26px;font-weight:700;letter-spacing:-0.02em')}>Feuerstättenschau</div>
+            <div style={sx('font-size:16px;color:var(--color-neutral-200)')}>Sicherheit für Ihr Zuhause</div>
+            <div style={sx('font-size:14px;color:var(--color-neutral-300);line-height:1.55;margin-top:10px;text-wrap:pretty')}>Die Feuerstättenschau ist gesetzlich vorgeschrieben und findet zweimal in sieben Jahren statt. Ihr Bezirkskaminfeger prüft dabei, ob Ihre Feuerstätten sicher und effizient betrieben werden können.</div>
+            <div className="hr" style={sx('margin:14px 0 6px')} />
+            {['Überprüfung der Feuerstätte', 'Sicherheitskontrolle von Abgasweg und Aufstellraum', 'Dokumentation im Protokoll', 'Dauer ca. ' + len + ' Minuten'].map(t => (
+              <div key={t} style={sx('display:flex;gap:12px;align-items:center;min-height:40px;font-size:14px')}>
+                <span style={sx('width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.14);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon w="ph-bold" n="ph-check" style={sx('font-size:14px')} /></span>{t}
+              </div>
+            ))}
+            <div style={sx('font-size:12px;color:var(--color-neutral-400);margin-top:10px;text-wrap:pretty')}>Tipp: Halten Sie den Zugang zu Heizraum und Dachboden frei und heizen Sie den Kaminofen ab dem Vorabend nicht mehr.</div>
+          </div>
+        </div>
       </>}
 
       {scr === 'pick' && c && w && <>

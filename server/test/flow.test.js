@@ -480,3 +480,14 @@ test('Kaminfeger: Termin verschieben, absagen, Tag absagen (mit Ersatztag)', asy
   await ok('s', 'POST', `/api/sweep/windows/${w4.id}/cancel`, { date: early });
   assert.ok(get('SELECT deadline FROM campaigns WHERE id = ?', c.id).deadline < early);
 });
+
+test('Kaminfeger: Kundenliste mit Status und Glocke mit Absagen', async () => {
+  const { customers } = await ok('s', 'GET', '/api/sweep/customers');
+  assert.ok(customers.length >= 5);
+  const one = customers.find(c => c.street === 'Lindenstraße' && c.nr === '1');
+  assert.ok(['booked', 'done', 'missed', 'open', 'cancelled', 'moved', 'none'].includes(one.status));
+  assert.ok(customers.every(c => 'line' in c && 'campaignId' in c));
+  const ov = await ok('s', 'GET', '/api/sweep/overview');
+  assert.ok(Array.isArray(ov.alerts));
+  await fails(401, 'niemand', 'GET', '/api/sweep/customers');
+});

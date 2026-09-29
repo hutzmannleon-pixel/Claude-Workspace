@@ -49,10 +49,10 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
             <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
           </div>
           <div style={sx('position:relative;display:flex;flex-direction:column;gap:4px')}>
-          <LiquidPill index={nav.tabs.findIndex(t => t.on)} style={{ left: 0, right: 0, top: 0, height: 44, borderRadius: 14, transform: `translateY(${Math.max(0, nav.tabs.findIndex(t => t.on)) * 48}px)` }} />
-          {nav.tabs.map(t => (
+          <LiquidPill index={(nav.side || nav.tabs).findIndex(t => t.on)} style={{ left: 0, right: 0, top: 0, height: 44, borderRadius: 14, transform: `translateY(${Math.max(0, (nav.side || nav.tabs).findIndex(t => t.on)) * 48}px)` }} />
+          {(nav.side || nav.tabs).map(t => (
             <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:14px;border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:none;position:relative;z-index:1;color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
-              <Icon n={t.icon} style={sx(`font-size:20px;color:${t.on ? 'var(--color-accent)' : 'inherit'}`)} /><span style={sx('flex:1')}>{t.label}</span>
+              <Icon w={t.on ? 'ph-fill' : 'ph'} n={t.icon} style={sx(`font-size:20px;color:${t.on ? 'var(--color-accent)' : 'inherit'}`)} /><span style={sx('flex:1')}>{t.label}</span>
               {!!t.badge && <span style={sx(`min-width:20px;height:20px;padding:0 6px;border-radius:10px;${BADGE};font-size:11px;font-weight:600;display:grid;place-items:center`)}>{t.badge}</span>}
             </button>
           ))}
@@ -244,7 +244,7 @@ export function TabBar({ tabs, padX = '24px' }) {
       <LiquidPill index={idx} style={{ top: 0, bottom: 0, left: 0, width: `calc(100% / ${tabs.length} - 12px)`, borderRadius: 20, transform: `translateX(calc(${Math.max(0, idx)} * (100% + 12px) + 6px))` }} />
       {tabs.map(t => (
         <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;justify-content:center;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent-200)' : 'var(--color-neutral-500)'};position:relative;z-index:1`)}>
-          <Icon n={t.icon} style={sx('font-size:24px')} />{t.label}
+          <Icon w={t.on ? 'ph-fill' : 'ph'} n={t.icon} style={sx('font-size:24px')} />{t.label}
           {!!t.badge && <span style={sx('position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:600;display:grid;place-items:center;' + BADGE)}>{t.badge}</span>}
         </button>
       ))}
@@ -378,5 +378,118 @@ export function DatePicker({ value, min, max, disabled = () => false, onPick, on
       </div>
       <button className="btn btn-ghost" onClick={onClose} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
     </Sheet>
+  );
+}
+
+// ---------- Startseiten-Bausteine (nach der Vorlage: Kopf, Begrüßung, Nächster Termin, Kacheln, Info, Listenkarten) ----------
+
+/** Kopf: Logo mit Schriftzug links, Glocke (mit Zahl) und Profil rechts */
+export function AppHeader({ bell, onBell, onProfile, ini }) {
+  const wide = useIsWide();
+  const round = 'width:44px;height:44px;border-radius:50%;display:grid;place-items:center;position:relative;cursor:pointer;color:var(--color-text);font:inherit';
+  return (
+    <div style={sx('display:flex;align-items:center;gap:10px;padding:6px 18px 0 20px')}>
+      <div style={sx('flex:1;min-width:0;display:flex;align-items:center;gap:10px')}>
+        {!wide && <><LogoMark size={38} />
+        <div style={sx('font-size:15px;font-weight:600;line-height:1.1')}>Kaminfeger<br />Verwaltung</div></>}
+      </div>
+      {onBell && <button className="glass" onClick={onBell} aria-label={bell ? `Benachrichtigungen, ${bell} neu` : 'Benachrichtigungen'} style={sx(`${round};border:0`)}>
+        <Icon n="ph-bell" style={sx('font-size:21px')} />
+        {!!bell && <span style={sx(`position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;font-size:11px;font-weight:600;display:grid;place-items:center;${BADGE}`)}>{bell}</span>}
+      </button>}
+      {onProfile && <button className="glass" onClick={onProfile} aria-label="Profil und Konto" style={sx(`${round};border:0;font-size:13px;font-weight:600`)}>
+        {ini || <Icon n="ph-user" w="ph-fill" style={sx('font-size:20px')} />}
+      </button>}
+    </div>
+  );
+}
+
+export function Greeting({ hi, sub }) {
+  return (
+    <div style={sx('padding:22px 22px 0')}>
+      <div style={sx('font-size:26px;font-weight:700;letter-spacing:-0.02em;line-height:1.15')}>{hi}</div>
+      {sub && <div style={sx('font-size:15px;color:var(--color-neutral-300);margin-top:2px')}>{sub}</div>}
+    </div>
+  );
+}
+
+/** Karte „Nächster Termin“: Kalender-Symbol, Datum, Zeile(n), grüner Status, Pfeil */
+export function NextCard({ icon = 'ph-calendar-dots', kicker, title, lines = [], tag, tagCls = 'tag-accent', onClick }) {
+  return (
+    <button className="glass" onClick={onClick} style={sx('margin:18px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:14px;align-items:flex-start;padding:18px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+      <div style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)')}><Icon n={icon} style={sx('font-size:24px')} /></div>
+      <div style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+        {kicker && <div style={sx('font-size:13px;color:var(--color-neutral-300)')}>{kicker}</div>}
+        <div style={sx('font-size:18px;font-weight:600;letter-spacing:-0.01em')}>{title}</div>
+        {lines.map((l, i) => <div key={i} style={sx(`font-size:14px;color:${i ? 'var(--color-neutral-300)' : 'var(--color-neutral-100)'};${i === 0 ? 'margin-top:8px' : ''}`)}>{l}</div>)}
+      </div>
+      <div style={sx('display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;align-self:stretch;gap:8px')}>
+        <Icon n="ph-caret-right" style={sx('font-size:18px;color:var(--color-neutral-300)')} />
+        {tag && <span className={`tag ${tagCls}`}>{tag}</span>}
+      </div>
+    </button>
+  );
+}
+
+/** 2×2-Kacheln mit Symbol, Beschriftung und roter Zahl */
+export function Tiles({ items }) {
+  return (
+    <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 16px 0')}>
+      {items.map(t => (
+        <button key={t.label} className="glass" onClick={t.onClick} style={sx('position:relative;text-align:left;display:flex;flex-direction:column;gap:14px;padding:18px 16px 16px;min-height:104px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+          <div style={sx('width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)')}><Icon n={t.icon} style={sx('font-size:22px')} /></div>
+          <div style={sx('font-size:16px;font-weight:500')}>{t.label}</div>
+          {!!t.badge && <span style={sx(`position:absolute;top:10px;right:10px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;font-weight:600;display:grid;place-items:center;${BADGE}`)}>{t.badge}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Info-Karte mit Flamme („Sicher. Sauber. Zukunft.“) */
+export function InfoCard({ title, sub, onClick }) {
+  return (
+    <button className="glass" onClick={onClick} disabled={!onClick} style={sx(`margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:14px;align-items:center;padding:16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:${onClick ? 'pointer' : 'default'}`)}>
+      <div style={sx('width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:none;background:radial-gradient(circle at 50% 60%, rgba(255,170,80,0.45), rgba(255,170,80,0.08) 70%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)')}><Icon w="ph-fill" n="ph-flame" style={sx('font-size:26px;color:#f7a54a')} /></div>
+      <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:16px;font-weight:600')}>{title}</div>{sub && <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>{sub}</div>}</div>
+      {onClick && <Icon n="ph-caret-right" style={sx('font-size:18px;color:var(--color-neutral-300)')} />}
+    </button>
+  );
+}
+
+/** Listenkarte wie „Kunden“: Haus-Symbol im Kreis, Name, Adresse, Status, Pfeil */
+export function ListCard({ icon = 'ph-house', title, lines = [], tag, tagCls = 'tag-accent', onClick }) {
+  return (
+    <button className="glass" onClick={onClick} style={sx('width:100%;text-align:left;display:flex;gap:14px;align-items:center;padding:14px 14px 14px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+      <div style={sx('width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.12);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon n={icon} style={sx('font-size:24px')} /></div>
+      <div style={sx('flex:1;min-width:0')}>
+        <div style={sx('font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{title}</div>
+        {lines.map((l, i) => <div key={i} style={sx('font-size:13px;color:var(--color-neutral-300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{l}</div>)}
+      </div>
+      {tag && <span className={`tag ${tagCls}`} style={sx('flex:none')}>{tag}</span>}
+      <Icon n="ph-caret-right" style={sx('font-size:18px;color:var(--color-neutral-300);flex:none')} />
+    </button>
+  );
+}
+
+/** Suchfeld als Glas-Pille */
+export function SearchField({ value, onChange, placeholder }) {
+  return (
+    <label className="glass" style={sx('display:flex;align-items:center;gap:10px;margin:0 16px;padding:0 16px;min-height:48px;border-radius:999px;cursor:text')}>
+      <Icon n="ph-magnifying-glass" style={sx('font-size:19px;color:var(--color-neutral-300)')} />
+      <input type="search" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} aria-label={placeholder}
+        style={sx('flex:1;min-width:0;background:none;border:0;outline:none;color:var(--color-text);font:inherit;font-size:15px')} />
+    </label>
+  );
+}
+
+/** Kopf für Unterseiten wie „Kunden“ / „Leistungen“: Zurück-Pfeil und Titel */
+export function PageHead({ title, onBack, right }) {
+  return (
+    <div style={sx('display:flex;align-items:center;gap:6px;padding:6px 16px 0 10px;min-height:52px')}>
+      {onBack && <button className="btn btn-icon" onClick={onBack} aria-label="Zurück" style={sx('width:44px;height:44px')}><Icon n="ph-arrow-left" style={sx('font-size:22px')} /></button>}
+      <div style={sx(`flex:1;font-size:19px;font-weight:600;${onBack ? '' : 'padding-left:12px'}`)}>{title}</div>
+      {right}
+    </div>
   );
 }

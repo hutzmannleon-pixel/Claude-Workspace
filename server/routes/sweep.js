@@ -214,12 +214,45 @@ export default async function sweepRoutes(app) {
     const tenants = all(`SELECT r.id, r.family_name, h.street, h.nr, h.owner_name FROM residents r JOIN households h ON h.id = r.household_id
       WHERE h.district_id = ? AND r.status = 'asked' ORDER BY r.id`, s.district_id).map(t => ({ id: t.id, name: t.family_name, street: t.street, nr: t.nr, owner: t.owner_name }));
     const hh = get('SELECT COUNT(*) n FROM households WHERE district_id = ?', s.district_id).n;
+    // Für die Glocke: Absagen der Bewohner der letzten 14 Tage (Bewohner-Anfragen kommen über tenants)
+    const alerts = all(`SELECT b.id, b.updated_at, b.time, w.date, h.id hid, h.street, h.nr, h.owner_name, c.id cid FROM bookings b
+      JOIN campaigns c ON c.id = b.campaign_id JOIN windows w ON w.id = b.window_id JOIN households h ON h.id = b.household_id
+      WHERE c.district_id = ? AND b.status = 'cancelled' AND b.updated_at > datetime('now','-14 days') ORDER BY b.updated_at DESC LIMIT 30`, s.district_id)
+      .map(a => ({ id: 'c' + a.id, at: a.updated_at.replace(' ', 'T') + 'Z', campaignId: a.cid,
+        text: `Familie ${householdName({ id: a.hid, owner_name: a.owner_name })}, ${a.street} ${a.nr} hat den Termin am ${dayLabel(a.date)}, ${a.time} Uhr abgesagt.` }));
     return {
       name: sweepName(s), first: s.first, ini: initials(sweepName(s)), bez: s.bez, kreis: s.kreis,
       today: { date, label: dayLabel(date), isToday: date === today(), count: route.length, from: route[0]?.t || null, to: route[route.length - 1]?.end || null,
         streets: [...new Set(route.map(r => r.street))] },
-      streets, tenants, households: hh
+      streets, tenants, households: hh, alerts
     };
+  });
+
+  // Alle Haushalte des Bezirks mit Terminstatus (Kundenliste mit Suche)
+  app.get('/api/sweep/customers', async req => {
+    const s = activeSweep(req);
+    const byStreet = new Map();
+    for (const c of campaignsOfDistrict(s.district_id)) {
+      const k = c.street_key + '|' + c.plz;
+      if (byStreet.has(k)) continue;
+      const wins = new Map(windowsOf(c.id).map(w => [w.id, w]));
+      byStreet.set(k, { c, rows: new Map(houseRows(c).map(r => [r.id, r])), wins });
+    }
+    const hs = all('SELECT * FROM households WHERE district_id = ? ORDER BY street, CAST(nr AS INTEGER), nr', s.district_id);
+    return { customers: hs.map(h => {
+      const g = byStreet.get(h.street_key + '|' + h.plz), r = g?.rows.get(h.id);
+      let status = 'none', line = 'Noch keine Zeitfenster';
+      if (h.moved_at) { status = 'moved'; line = 'Ausgezogen'; }
+      else if (r) {
+        const w = r.booking && g.wins.get(r.booking.windowId);
+        if (r.booking?.visit === 'done') { status = 'done'; line = 'Feuerstättenschau erledigt'; }
+        else if (r.booking?.visit === 'missed') { status = 'missed'; line = 'Nicht angetroffen'; }
+        else if (r.status === 'booked') { status = 'booked'; line = `${w ? w.label : ''} · ${r.booking.t} Uhr`; }
+        else if (r.status === 'cancelled') { status = 'cancelled'; line = 'Hat abgesagt'; }
+        else { status = 'open'; line = 'Keine Rückmeldung'; }
+      }
+      return { id: h.id, name: householdName(h), street: h.street, nr: h.nr, plz: h.plz, ort: h.ort, phone: h.phone || '', status, line, campaignId: g?.c.id || null };
+    }) };
   });
 
   app.get('/api/sweep/campaigns/:id', async req => {

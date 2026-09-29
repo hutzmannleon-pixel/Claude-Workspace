@@ -1,14 +1,14 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
 const nextWorkday = iso => { let d = iso; while (parseDate(d).getDay() === 0) d = addDays(d, 1); return d; };
 
 export default function SweepApp({ onLogout }) {
-  const [ui, setUi] = useState({ screen: 'streets', campaignId: null, target: null, draft: null, toast: null, filter: 'all', callId: null, tenantId: null,
+  const [ui, setUi] = useState({ screen: 'home', q: '', cf: 'all', custId: null, campaignId: null, target: null, draft: null, toast: null, filter: 'all', callId: null, tenantId: null,
     sheet: null, routeDate: null, rcpt: 'all', msgCampaign: null, text: '', kb: null });
   const set = p => setUi(u => ({ ...u, ...p }));
   const act = useAction();
@@ -18,6 +18,8 @@ export default function SweepApp({ onLogout }) {
   const camp = useData(ui.campaignId ? `/api/sweep/campaigns/${ui.campaignId}` : null, { enabled: !!ui.campaignId && (scr === 'street' || scr === 'setup') });
   const route = useData(`/api/sweep/route${ui.routeDate ? '?date=' + ui.routeDate : ''}`, { enabled: scr === 'route' });
   const msgs = useData('/api/sweep/messages', { enabled: scr === 'notify' });
+  const cust = useData('/api/sweep/customers', { enabled: scr === 'customers' });
+  const [seen, setSeen] = useState(() => { try { return localStorage.getItem('kf-sweep-seen') || ''; } catch { return ''; } });
   useEffect(() => { if ([ov.error, camp.error, route.error, msgs.error].some(e => e?.status === 401)) onLogout(); }, [ov.error, camp.error, route.error, msgs.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const o = ov.data;
@@ -111,9 +113,17 @@ export default function SweepApp({ onLogout }) {
     { label: 'Zugang freihalten', text: 'Bitte halten Sie den Zugang zu Heizraum und Dachboden frei. Vielen Dank!' }
   ] : [];
 
-  const tabOf = { streets: 0, street: 0, setup: 0, route: 1, notify: 2 }[scr];
-  const tabs = [['Straßen', 'ph-map-trifold', 'streets'], ['Route', 'ph-path', 'route'], ['Nachrichten', 'ph-paper-plane-tilt', 'notify']]
-    .map((t, i) => ({ label: t[0], icon: t[1], on: tabOf === i, onClick: go(t[2]) }));
+  // Leiste unten wie in der Vorlage: Start, Termine, Kunden, Mehr – am Desktop mehr Punkte in der Seitenleiste
+  const tabOf = { home: 'home', streets: 'home', street: 'home', setup: 'home', route: 'route', customers: 'customers', notify: 'more', more: 'more' }[scr];
+  const toRoute = () => { act.setError(null); set({ screen: 'route', routeDate: o.today.date, callId: null, toast: null }); };
+  const tabs = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Kunden', 'ph-users', 'customers'], ['Mehr', 'ph-dots-three-outline', 'more']]
+    .map(t => ({ label: t[0], icon: t[1], on: tabOf === t[2], onClick: t[2] === 'route' ? toRoute : go(t[2]) }));
+  const sideOf = { streets: 'streets', street: 'streets', setup: 'streets', notify: 'notify' }[scr] || tabOf;
+  const side = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Straßen', 'ph-map-trifold', 'streets'], ['Kunden', 'ph-users', 'customers'], ['Nachrichten', 'ph-chat-circle-text', 'notify']]
+    .map(t => ({ label: t[0], icon: t[1], on: sideOf === t[2], onClick: t[2] === 'route' ? toRoute : go(t[2]) }));
+  const newAlerts = o.alerts.filter(a => a.at > seen);
+  const bellCount = o.tenants.length + newAlerts.length;
+  const openBell = () => { set({ sheet: 'bell' }); const now = new Date().toISOString(); setSeen(now); try { localStorage.setItem('kf-sweep-seen', now); } catch { /* egal */ } };
   const tenant = ui.tenantId ? o.tenants.find(t => t.id === ui.tenantId) : null;
   const answerTenant = answer => act.run(async () => { const r = await api(`/api/sweep/tenant/${tenant.id}`, { body: { answer } }); set({ tenantId: null, toast: r.toast }); ov.reload(); });
   const importKb = file => act.run(async () => { const r = await upload('/api/sweep/kehrbuch', file); set({ kb: r }); ov.reload(); });
@@ -126,7 +136,37 @@ export default function SweepApp({ onLogout }) {
   </>;
 
   const calW = scr === 'setup' && ui.calWin != null ? draftWins[ui.calWin] : null;
+  const custH = ui.custId && cust.data ? cust.data.customers.find(c => c.id === ui.custId) : null;
   const overlay = <>
+    {ui.sheet === 'bell' && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:600')}>Benachrichtigungen</div>
+      {!o.tenants.length && !o.alerts.length && <div style={sx('font-size:14px;color:var(--color-neutral-300)')}>Alles erledigt – nichts Neues.</div>}
+      {o.tenants.map(t => (
+        <button key={'t' + t.id} className="glass" onClick={() => set({ sheet: null, tenantId: t.id })} style={sx('text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+          <Icon n="ph-user-check" style={sx('font-size:20px;color:var(--color-accent-300)')} /><span style={sx('flex:1;font-size:14px')}>Bewohner-Anfrage: Wohnt {t.name} in der {t.street} {t.nr}?</span><Icon n="ph-caret-right" />
+        </button>
+      ))}
+      {o.alerts.map(a => (
+        <button key={a.id} className="glass" onClick={() => set({ sheet: null, screen: 'street', campaignId: a.campaignId, filter: 'all', toast: null })} style={sx('text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+          <Icon n="ph-calendar-x" style={sx('font-size:20px;color:#f5a3a5')} />
+          <span style={sx('flex:1;display:flex;flex-direction:column')}><span style={sx('font-size:14px;text-wrap:pretty')}>{a.text}</span><span style={sx('font-size:11px;color:var(--color-neutral-400)')}>{fmtAt(a.at)}</span></span>
+        </button>
+      ))}
+      <button className="btn btn-ghost" onClick={() => set({ sheet: null })} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Schließen</button>
+    </Sheet>}
+    {custH && <Sheet>
+      <div style={sx('display:flex;align-items:center;gap:12px')}>
+        <div style={sx('width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.12)')}><Icon n="ph-house" style={sx('font-size:24px')} /></div>
+        <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:18px;font-weight:600')}>{custH.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-300)')}>{custH.street} {custH.nr}, {custH.plz} {custH.ort}</div></div>
+        <span className={`tag ${CUST_TAG[custH.status][1]}`}>{CUST_TAG[custH.status][0]}</span>
+      </div>
+      <div style={sx('font-size:14px;color:var(--color-neutral-200)')}>{custH.line}</div>
+      {custH.phone && <a className="btn btn-secondary" href={`tel:${custH.phone.replace(/[^\d+]/g, '')}`} style={sx('min-height:46px')}><Icon n="ph-phone" />Anrufen · {custH.phone}</a>}
+      {custH.campaignId
+        ? <button className="btn btn-primary" onClick={() => set({ custId: null, screen: 'street', campaignId: custH.campaignId, filter: 'all', toast: null })} style={sx('min-height:48px')}><Icon n="ph-map-trifold" />Zur Straße {custH.street}</button>
+        : <button className="btn btn-primary" onClick={() => { set({ custId: null }); openSetup({ street: custH.street, plz: custH.plz, households: o.streets.find(x => x.street === custH.street && x.plz === custH.plz)?.households || 1 }); }} style={sx('min-height:48px')}><Icon n="ph-calendar-plus" />Zeitfenster für {custH.street} anlegen</button>}
+      <button className="btn btn-ghost" onClick={() => set({ custId: null })} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Schließen</button>
+    </Sheet>}
     {calW && <DatePicker title={`Fenster ${calW.n} · Datum`} value={calW.date} min={calW.date < tomorrow ? calW.date : tomorrow} max={addDays(tomorrow, 365)}
       disabled={x => parseDate(x).getDay() === 0 || calW.used.includes(x)}
       onPick={x => { patchWin(ui.calWin, { date: x, label: dayLabel(x) }); set({ calWin: null }); }} onClose={() => set({ calWin: null })} />}
@@ -247,27 +287,8 @@ export default function SweepApp({ onLogout }) {
   </>;
 
   const streetsView = <>
-        <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
-          <div>
-            <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Kehrbezirk {o.bez} · {o.kreis}</div>
-            <div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>{greeting()}, {o.first}</div>
-          </div>
-          <button onClick={() => set({ sheet: 'account' })} aria-label="Konto" style={sx('width:40px;height:40px;border-radius:50%;background:var(--color-neutral-800);display:grid;place-items:center;font-size:14px;font-weight:500;flex:none;border:0;color:inherit;font-family:inherit;cursor:pointer')}>{o.ini}</button>
-        </div>
-        {o.today.count > 0 && <div style={sx('margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:4px')}>
-          <span className="card-kicker">{o.today.isToday ? 'Heute' : 'Nächster Termintag'} · {o.today.label}</span>
-          <div style={sx('font-size:20px;font-weight:500;letter-spacing:-0.015em')}>Route {o.today.streets.join(', ')}</div>
-          <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.today.count, 'Termin', 'Termine')} · {o.today.from}–{o.today.to}</div>
-          <button className="btn btn-primary" onClick={() => set({ screen: 'route', routeDate: o.today.date, toast: null })} style={sx('min-height:44px;margin-top:10px')}><Icon n="ph-path" />Route öffnen</button>
-        </div>}
+        {wide ? <PageHead title="Straßen" /> : <PageHead title="Straßen" onBack={go('home')} />}
         <Toast text={wide && scr !== 'streets' ? null : ui.toast} icon="ph-paper-plane-tilt" />
-        {o.tenants.map(t => (
-          <button key={t.id} onClick={() => { act.setError(null); set({ tenantId: t.id }); }} style={sx('margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-700);color:inherit;font:inherit;cursor:pointer')}>
-            <Icon n="ph-user-check" style={sx('font-size:22px;color:var(--color-accent)')} />
-            <div style={sx('flex:1')}><div style={sx('font-size:12px;color:var(--color-accent-300)')}>Bewohner-Anfrage</div><div style={sx('font-size:14px')}>Wohnt {t.name} in der {t.street} {t.nr}?</div></div>
-            <Icon n="ph-caret-right" style={sx('color:var(--color-neutral-500)')} />
-          </button>
-        ))}
         {!o.streets.length && <div style={sx('margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:6px')}>
           <span className="card-kicker">Erster Schritt</span>
           <div style={sx('font-size:18px;font-weight:500')}>Kehrbuch importieren</div>
@@ -302,11 +323,65 @@ export default function SweepApp({ onLogout }) {
           {o.streets.length > 0 && <button className="btn btn-ghost" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:44px;color:var(--color-neutral-400);align-self:flex-start;padding-inline:6px')}><Icon n="ph-upload-simple" />Kehrbuch aktualisieren</button>}
         </div>
   </>;
-  const nav = { title: o.name, sub: `Kehrbezirk ${o.bez} · ${o.kreis}`, tabs, bar: scr !== 'setup',
+  const nav = { title: o.name, sub: `Kehrbezirk ${o.bez} · ${o.kreis}`, tabs, side, bar: scr !== 'setup',
     footer: <button className="btn btn-secondary" onClick={() => set({ sheet: 'account' })} style={sx('min-height:44px')}><Icon n="ph-user-circle" />Konto</button> };
 
   return (
     <Shell glow={GLOW.sweep} scrollKey={scr + (ui.campaignId || '')} bottom={bottom} overlay={overlay} nav={nav} feedback={{ role: 'sweep', where: scr }} aside={wide && ['streets', 'street', 'setup'].includes(scr) ? streetsView : null}>
+      {scr === 'home' && <>
+        <AppHeader bell={bellCount} onBell={openBell} onProfile={() => set({ sheet: 'account' })} ini={o.ini} />
+        <Greeting hi={`Hallo ${o.first},`} sub="Schön, dass Sie da sind." />
+        <Toast text={ui.toast} icon="ph-paper-plane-tilt" />
+        {o.today.count > 0
+          ? <NextCard kicker={o.today.isToday ? 'Heute' : 'Nächster Termin'} title={o.today.label} lines={[`Route ${o.today.streets.join(', ')}`, `${o.today.from} – ${o.today.to} Uhr · ${plural(o.today.count, 'Termin', 'Termine')}`]} tag={o.today.isToday ? 'Heute' : 'Geplant'} onClick={toRoute} />
+          : !o.streets.length
+            ? <NextCard icon="ph-upload-simple" kicker="Erster Schritt" title="Kehrbuch importieren" lines={['Liegenschaften als CSV hochladen, danach Zeitfenster pro Straße anlegen.']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
+            : <NextCard kicker="Nächster Termin" title="Noch keine Termine" lines={['Legen Sie Zeitfenster für Ihre Straßen an.']} tag="Offen" tagCls="tag-neutral" onClick={go('streets')} />}
+        {o.tenants.map(t => (
+          <button key={t.id} className="glass" onClick={() => { act.setError(null); set({ tenantId: t.id }); }} style={sx('margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+            <Icon n="ph-user-check" style={sx('font-size:22px;color:var(--color-accent-300)')} />
+            <div style={sx('flex:1')}><div style={sx('font-size:12px;color:var(--color-accent-300)')}>Bewohner-Anfrage</div><div style={sx('font-size:14px')}>Wohnt {t.name} in der {t.street} {t.nr}?</div></div>
+            <Icon n="ph-caret-right" style={sx('color:var(--color-neutral-300)')} />
+          </button>
+        ))}
+        <Tiles items={[
+          { label: 'Termine', icon: 'ph-calendar-blank', onClick: toRoute },
+          { label: 'Kunden', icon: 'ph-users', onClick: go('customers') },
+          { label: 'Straßen', icon: 'ph-map-trifold', onClick: go('streets'), badge: o.streets.filter(x => !x.campaign).length },
+          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: go('notify') }
+        ]} />
+        <InfoCard title="Sicher. Sauber. Zukunft." sub={`Kehrbezirk ${o.bez} · ${plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch`} onClick={go('streets')} />
+        <div style={sx('height:20px')} />
+      </>}
+
+      {scr === 'customers' && <>
+        <PageHead title="Kunden" onBack={wide ? null : go('home')} />
+        <div style={sx('padding-top:8px')}><SearchField value={ui.q} onChange={q => set({ q })} placeholder="Nach Name oder Adresse suchen …" /></div>
+        <div style={sx('padding:12px 16px 0')}><Seg value={ui.cf} onChange={cf => set({ cf })} options={[{ value: 'all', label: 'Alle' }, { value: 'booked', label: 'Geplant' }, { value: 'open', label: 'Offen' }, { value: 'done', label: 'Erledigt' }]} /></div>
+        <div style={sx('display:flex;flex-direction:column;gap:10px;padding:14px 16px 20px')}>
+          {!cust.data && <div style={sx('padding:20px 6px;font-size:13px;color:var(--color-neutral-400)')}>Lädt …</div>}
+          {cust.data && (() => {
+            const q = ui.q.trim().toLowerCase();
+            const want = { all: () => true, booked: c => c.status === 'booked', open: c => ['open', 'cancelled', 'missed', 'none'].includes(c.status), done: c => c.status === 'done' }[ui.cf];
+            const list = cust.data.customers.filter(c => want(c) && (!q || `${c.name} ${c.street} ${c.nr} ${c.ort}`.toLowerCase().includes(q)));
+            if (!list.length) return <div style={sx('padding:20px 6px;font-size:14px;color:var(--color-neutral-400)')}>{cust.data.customers.length ? 'Keine Treffer.' : 'Noch kein Kehrbuch importiert.'}</div>;
+            return list.map(c => { const t = CUST_TAG[c.status]; return (
+              <ListCard key={c.id} title={c.name} lines={[`${c.street} ${c.nr}`, `${c.plz} ${c.ort}`]} tag={t[0]} tagCls={t[1]} onClick={() => set({ custId: c.id })} />
+            ); });
+          })()}
+        </div>
+      </>}
+
+      {scr === 'more' && <>
+        <PageHead title="Mehr" />
+        <div style={sx('display:flex;flex-direction:column;gap:10px;padding:10px 16px 20px')}>
+          <ListCard icon="ph-map-trifold" title="Straßen & Zeitfenster" lines={[plural(o.streets.length, 'Straße', 'Straßen') + ' im Kehrbuch']} onClick={go('streets')} />
+          <ListCard icon="ph-chat-circle-text" title="Nachrichten" lines={['An Haushalte einer Straße schreiben']} onClick={go('notify')} />
+          <ListCard icon="ph-upload-simple" title="Kehrbuch importieren" lines={['CSV-Datei hochladen oder aktualisieren']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
+          <ListCard icon="ph-user-circle" title="Konto" lines={[o.name, `Kehrbezirk ${o.bez} · ${o.kreis}`]} onClick={() => set({ sheet: 'account' })} />
+        </div>
+      </>}
+
       {scr === 'streets' && (wide ? <EmptyPane icon="ph-map-trifold" text="Wählen Sie links eine Straße." /> : streetsView)}
 
       {scr === 'street' && (!c ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
@@ -518,3 +593,8 @@ function ReasonPick({ value, text, onChange }) {
     </div>
   );
 }
+
+const CUST_TAG = {
+  booked: ['Geplant', 'tag-accent'], done: ['Erledigt', 'tag-neutral'], open: ['Offen', 'tag-outline'], cancelled: ['Abgesagt', 'tag-outline'],
+  missed: ['Nicht da', 'tag-outline'], none: ['Kein Termin', 'tag-neutral'], moved: ['Umzug', 'tag-neutral']
+};
