@@ -45,6 +45,7 @@ export default async function publicRoutes(app) {
       user = get('SELECT * FROM users WHERE email = ? AND role = ?', e, role);
     }
     if (!user) throw bad('Zu dieser E-Mail gibt es kein Konto.');
+    if (role === 'admin' && get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', user.id).n > 0) throw bad('Bitte mit Passkey entsperren.', 'passkey_required');
     startSession(reply, user.id, role);
     return { ok: true };
   });
@@ -56,7 +57,7 @@ export default async function publicRoutes(app) {
 
   app.get('/api/auth/me', async req => {
     const u = currentUser(req, req.query.role);
-    return { user: u ? { email: u.email, role: u.role } : null };
+    return { user: u ? { email: u.email, role: u.role, passkeys: get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', u.id).n, passkeyRequired: u.role === 'admin' && config.adminPasskeyRequired } : null };
   });
 
   // ---------- Bezirksverzeichnis (Auswahllisten) ----------

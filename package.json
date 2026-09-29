@@ -12,12 +12,15 @@
     "build": "vite build web",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "test-mode": "TEST_MODE=1 node --disable-warning=ExperimentalWarning server/index.js",
-    "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js"
+    "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js",
+    "reset-passkeys": "node --disable-warning=ExperimentalWarning server/reset-passkeys.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
     "@fastify/multipart": "^10.1.2",
     "@fastify/static": "^10.1.5",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.3",
     "fastify": "^5.12.5",
     "html-to-image": "^1.11.13",
     "nodemailer": "^10.0.12"

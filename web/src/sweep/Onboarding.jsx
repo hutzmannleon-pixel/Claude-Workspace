@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
+import { loginPasskey } from '../lib/passkey.js';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
 
@@ -54,12 +55,13 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     await api('/api/sweep/register', { body: { first: st.first.trim(), last: st.last.trim(), bstreet: st.bstreet.trim(), bplz: st.bplz, bort: st.bort.trim(), phone: st.phone.trim(), email: st.email.trim(), code: st.code } });
     await me.reload(); set({ screen: 'district' });
   });
-  const login = () => act.run(async () => {
-    await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } });
+  const afterLogin = async () => {
     const x = await api('/api/sweep/me');
     if (x.status === 'active') return onDone();
     set({ screen: x.status === 'draft' ? (x.district ? 'proof' : 'district') : 'pending' });
-  });
+  };
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } }); await afterLogin(); });
+  const passkeyLogin = () => act.run(async () => { await loginPasskey('sweep'); await afterLogin(); });
   const uploadDoc = (kind, file) => act.run(async () => { set({ uploading: kind }); try { await upload(`/api/sweep/documents/${kind}`, file); await me.reload(); } finally { set({ uploading: null }); } });
   const removeDoc = kind => act.run(async () => { await api(`/api/sweep/documents/${kind}`, { method: 'DELETE' }); await me.reload(); });
   const submit = () => act.run(async () => { await api('/api/sweep/submit', { body: { assure: true } }); await me.reload(); set({ screen: 'pending' }); });
@@ -118,8 +120,9 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
 
       {scr === 'login' && <>
         <div style={sx('display:flex;align-items:center;padding:4px 12px 0')}><button className="btn btn-icon" onClick={() => go('welcome')} style={sx('width:44px;height:44px')} aria-label="Zurück"><Icon n="ph-caret-left" style={sx('font-size:22px')} /></button></div>
-        <Title pad="10px 22px 0" title="Anmelden" sub="Mit Ihrer geschäftlichen E-Mail-Adresse." />
+        <Title pad="10px 22px 0" title="Anmelden" sub="Mit Passkey oder Ihrer geschäftlichen E-Mail-Adresse." />
         <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
+          {!st.lSent && <PasskeyLogin onPasskey={passkeyLogin} busy={act.busy} />}
           <Field label="E-Mail-Adresse"><Input type="email" value={st.lEmail} onChange={e => set({ lEmail: e.target.value, lSent: false, lCode: '' })} placeholder="name@beispiel.de" autoComplete="email" /></Field>
         </div>
         {st.lSent && <div style={sx('padding:22px 16px 0')}><CodeInput email={st.lEmail} value={st.lCode} onChange={v => set({ lCode: v })} label="Anmeldecode" onResend={() => sendCode(st.lEmail, 'login', { lCode: '' })} /></div>}

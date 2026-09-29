@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -138,6 +138,11 @@ export default function SweepApp({ onLogout }) {
   const calW = scr === 'setup' && ui.calWin != null ? draftWins[ui.calWin] : null;
   const custH = ui.custId && cust.data ? cust.data.customers.find(c => c.id === ui.custId) : null;
   const overlay = <>
+    {ui.sheet === 'passkeys' && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:600')}>Anmeldung mit Passkey</div>
+      <PasskeyPanel role="sweep" intro="Melden Sie sich per Fingerabdruck, Gesicht oder Geräte-PIN an – ohne Code per E-Mail. Freiwillig; der E-Mail-Code funktioniert weiterhin." />
+      <button className="btn btn-ghost" onClick={() => set({ sheet: null })} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Schließen</button>
+    </Sheet>}
     {ui.sheet === 'bell' && <Sheet scroll>
       <div style={sx('font-size:20px;font-weight:600')}>Benachrichtigungen</div>
       {!o.tenants.length && !o.alerts.length && <div style={sx('font-size:14px;color:var(--color-neutral-300)')}>Alles erledigt – nichts Neues.</div>}
@@ -262,6 +267,7 @@ export default function SweepApp({ onLogout }) {
       </div>
       <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch</div>
       <button className="btn btn-secondary" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:46px;margin-top:4px')}><Icon n="ph-upload-simple" />Kehrbuch importieren</button>
+      <button className="btn btn-secondary" onClick={() => set({ sheet: 'passkeys' })} style={sx('min-height:46px')}><Icon n="ph-fingerprint" />Anmeldung mit Passkey</button>
       <button className="btn btn-secondary" onClick={async () => { await api('/api/sweep/logout', { body: {} }).catch(() => {}); onLogout(); }} style={sx('min-height:46px')}><Icon n="ph-sign-out" />Abmelden</button>
       <button className="btn btn-ghost" onClick={() => { act.setError(null); set({ sheet: 'delete' }); }} style={sx('min-height:40px;color:var(--color-neutral-500)')}><Icon n="ph-trash" />Konto löschen</button>
       <div style={sx('display:flex;justify-content:center;gap:18px;font-size:12px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></div>
@@ -378,6 +384,7 @@ export default function SweepApp({ onLogout }) {
           <ListCard icon="ph-map-trifold" title="Straßen & Zeitfenster" lines={[plural(o.streets.length, 'Straße', 'Straßen') + ' im Kehrbuch']} onClick={go('streets')} />
           <ListCard icon="ph-chat-circle-text" title="Nachrichten" lines={['An Haushalte einer Straße schreiben']} onClick={go('notify')} />
           <ListCard icon="ph-upload-simple" title="Kehrbuch importieren" lines={['CSV-Datei hochladen oder aktualisieren']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
+          <ListCard icon="ph-fingerprint" title="Anmeldung mit Passkey" lines={['Per Fingerabdruck oder Gesicht anmelden']} onClick={() => set({ sheet: 'passkeys' })} />
           <ListCard icon="ph-user-circle" title="Konto" lines={[o.name, `Kehrbezirk ${o.bez} · ${o.kreis}`]} onClick={() => set({ sheet: 'account' })} />
         </div>
       </>}

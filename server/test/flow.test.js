@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-test-'));
-Object.assign(process.env, { DATA_DIR: dir, TEST_MODE: '1', ADMIN_EMAILS: 'admin@test.de', BASE_URL: 'http://localhost:3000', APP_SECRET: 'test' });
+Object.assign(process.env, { DATA_DIR: dir, TEST_MODE: '1', ADMIN_EMAILS: 'admin@test.de', BASE_URL: 'http://localhost:3000', APP_SECRET: 'test', ADMIN_PASSKEY: 'optional' });
 
 const { build } = await import('../index.js');
 const { get, all, run } = await import('../db.js');
@@ -490,4 +490,34 @@ test('Kaminfeger: Kundenliste mit Status und Glocke mit Absagen', async () => {
   const ov = await ok('s', 'GET', '/api/sweep/overview');
   assert.ok(Array.isArray(ov.alerts));
   await fails(401, 'niemand', 'GET', '/api/sweep/customers');
+});
+
+test('Passkeys: Betreiber-Pflicht, danach kein E-Mail-Code mehr; Einrichten nur angemeldet', async () => {
+  const { config } = await import('../config.js');
+  await login('admin', 'admin@test.de');
+  config.adminPasskeyRequired = true;
+  try {
+    await fails(403, 'admin', 'GET', '/api/admin/queue');
+    const me = await ok('admin', 'GET', '/api/auth/me?role=admin');
+    assert.equal(me.user.passkeys, 0);
+    const reg = await ok('admin', 'POST', '/api/passkey/register/options', { role: 'admin' });
+    assert.ok(reg.options.challenge && reg.challengeId);
+    assert.equal(reg.options.authenticatorSelection.residentKey, 'required');
+    await fails(401, 'niemand', 'POST', '/api/passkey/register/options', { role: 'sweep' });
+    await fails(400, 'admin', 'POST', '/api/passkey/register/verify', { role: 'admin', challengeId: 'falsch', response: {} });
+    // Passkey vorhanden (hier direkt eingetragen) → Bereich offen, E-Mail-Code gesperrt
+    const u = get(`SELECT id FROM users WHERE email = 'admin@test.de' AND role = 'admin'`);
+    run(`INSERT INTO passkeys (user_id, cred_id, public_key, name) VALUES (?, 'test-cred', x'00', 'Test')`, u.id);
+    await ok('admin', 'GET', '/api/admin/queue');
+    const r = await fails(400, 'x', 'POST', '/api/auth/code', { email: 'admin@test.de', role: 'admin', purpose: 'login' });
+    assert.equal(r.code, 'passkey_required');
+    const list = await ok('admin', 'GET', '/api/passkey/list?role=admin');
+    assert.equal(list.passkeys.length, 1);
+    await fails(400, 'admin', 'POST', '/api/passkey/delete', { role: 'admin', id: list.passkeys[0].id });
+    // Anmelde-Optionen ohne Konto (Passkey bringt das Konto mit), unbekannter Passkey wird abgewiesen
+    const lo = await ok('x', 'POST', '/api/passkey/login/options', { role: 'sweep' });
+    const bad = await fails(400, 'x', 'POST', '/api/passkey/login/verify', { role: 'sweep', challengeId: lo.challengeId, response: { id: 'test-cred' } });
+    assert.equal(bad.code, 'passkey_unknown');
+    run(`DELETE FROM passkeys WHERE cred_id = 'test-cred'`);
+  } finally { config.adminPasskeyRequired = false; }
 });

@@ -16,6 +16,7 @@ const kreisShort = k => String(k || '').split(' ')[0];
 function admin(req) {
   const u = requireUser(req, 'admin');
   if (!config.adminEmails.includes(u.email)) throw forbidden();
+  if (config.adminPasskeyRequired && !get('SELECT 1 x FROM passkeys WHERE user_id = ?', u.id)) throw forbidden('Bitte zuerst einen Passkey einrichten.');
   return u;
 }
 

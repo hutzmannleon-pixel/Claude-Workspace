@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
+import { loginPasskey } from '../lib/passkey.js';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
 
@@ -109,12 +110,13 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     const i = await api(`/api/customer/invite/${encodeURIComponent(token)}`);
     set({ screen: 'scanned', inv: i, token, email: i.email || st.email });
   });
-  const login = () => act.run(async () => {
-    await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } });
+  const afterLogin = async () => {
     const s = await api('/api/customer/state');
     if (s.resident.status === 'needs_verify') set({ ...fromState(s), screen: 'verify' });
     else onDone();
-  });
+  };
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } }); await afterLogin(); });
+  const passkeyLogin = () => act.run(async () => { await loginPasskey('customer'); await afterLogin(); });
 
   let cta = null, alt = null;
   if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => set({ screen: 'address', qr: false }) }; alt = { label: 'Ich habe schon ein Konto', onClick: () => set({ screen: 'login', lSent: false, lCode: '' }) }; }
@@ -185,8 +187,9 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
 
       {scr === 'login' && <>
         <div style={sx('display:flex;align-items:center;padding:4px 12px 0')}><button className="btn btn-icon" onClick={() => go('welcome')} style={sx('width:44px;height:44px')} aria-label="Zurück"><Icon n="ph-caret-left" style={sx('font-size:22px')} /></button></div>
-        <Title pad="10px 22px 0" title="Anmelden" sub="Mit der E-Mail-Adresse, mit der Sie sich registriert haben." />
+        <Title pad="10px 22px 0" title="Anmelden" sub="Mit Passkey oder der E-Mail-Adresse, mit der Sie sich registriert haben." />
         <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
+          {!st.lSent && <PasskeyLogin onPasskey={passkeyLogin} busy={act.busy} />}
           <Field label="E-Mail-Adresse"><Input type="email" value={st.lEmail} onChange={e => set({ lEmail: e.target.value, lSent: false, lCode: '' })} placeholder="name@beispiel.de" autoComplete="email" /></Field>
         </div>
         {st.lSent && <div style={sx('padding:22px 16px 0')}>

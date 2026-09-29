@@ -19,6 +19,8 @@ export const config = {
   production: env.NODE_ENV === 'production',
   // Testmodus: Testseite /test mit Postfach, Route auch an künftigen Tagen startbar. Nie in Produktion aktivieren.
   testMode: env.TEST_MODE === '1' || env.TEST_MODE === 'true',
+  // Betreiber muss einen Passkey haben (ADMIN_PASSKEY=optional nur für lokale Tests)
+  adminPasskeyRequired: env.ADMIN_PASSKEY !== 'optional',
   adminEmails: list(env.ADMIN_EMAILS),
   // Testbetrieb: nur diese Adressen (oder „@domain.de“) dürfen Codes anfordern und E-Mails bekommen. Leer = alle.
   allowedEmails: list(env.ALLOWED_EMAILS),

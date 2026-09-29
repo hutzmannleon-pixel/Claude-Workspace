@@ -1,6 +1,7 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
-import { sx, EMBED, useWide, parseDate, isoDate, dayLabel } from './lib/core.js';
+import { sx, api, EMBED, useWide, useData, useAction, parseDate, isoDate, dayLabel } from './lib/core.js';
+import { passkeySupported, addPasskey } from './lib/passkey.js';
 import { FeedbackButton } from './Feedback.jsx';
 import { LogoMark, Scenery } from './brand.jsx';
 
@@ -503,4 +504,41 @@ export function HomeBack({ onBack }) {
       <button className="btn btn-icon" onClick={onBack || (() => { location.href = '/'; })} aria-label="Zurück zur Startseite" style={sx('width:44px;height:44px')}><Icon n="ph-arrow-left" style={sx('font-size:22px')} /></button>
     </div>
   );
+}
+
+/** Passkeys verwalten: Liste, neu einrichten, entfernen (Profil / Konto / Betreiber) */
+export function PasskeyPanel({ role, intro, onChange }) {
+  const list = useData(`/api/passkey/list?role=${role}`);
+  const act = useAction();
+  const [msg, setMsg] = useState(null);
+  const supported = passkeySupported();
+  const add = () => act.run(async () => { setMsg(null); await addPasskey(role); await list.reload(); setMsg('Passkey eingerichtet. Ab jetzt können Sie sich damit anmelden.'); onChange && onChange(); });
+  const remove = id => act.run(async () => { setMsg(null); await api('/api/passkey/delete', { body: { role, id } }); await list.reload(); });
+  const items = list.data?.passkeys || [];
+  return (
+    <div style={sx('display:flex;flex-direction:column;gap:8px')}>
+      {intro && <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>{intro}</div>}
+      {items.map(p => (
+        <div key={p.id} className="glass" style={sx('display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px')}>
+          <Icon n="ph-fingerprint" style={sx('font-size:22px;color:var(--color-accent-300)')} />
+          <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:14px')}>{p.name}</div><div style={sx('font-size:11px;color:var(--color-neutral-400)')}>eingerichtet {new Date(p.created).toLocaleDateString('de-DE')}{p.lastUsed ? ' · zuletzt genutzt ' + new Date(p.lastUsed).toLocaleDateString('de-DE') : ''}</div></div>
+          <button className="btn btn-ghost btn-icon" disabled={act.busy} onClick={() => remove(p.id)} aria-label={`Passkey ${p.name} entfernen`} style={sx('width:40px;height:40px;color:var(--color-neutral-400)')}><Icon n="ph-trash" /></button>
+        </div>
+      ))}
+      {supported
+        ? <button className="btn btn-secondary" disabled={act.busy} onClick={add} style={sx('min-height:46px')}><Icon n="ph-fingerprint" />{act.busy ? 'Bitte am Gerät bestätigen …' : items.length ? 'Weiteren Passkey einrichten' : 'Passkey einrichten'}</button>
+        : <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>Dieser Browser unterstützt keine Passkeys.</div>}
+      {msg && <div style={sx('font-size:13px;color:var(--color-ok);display:flex;gap:6px;align-items:center')}><Icon n="ph-check-circle" />{msg}</div>}
+      {act.error && <ErrorLine text={act.error} />}
+    </div>
+  );
+}
+
+/** „Mit Passkey anmelden“ + Trenner zum E-Mail-Weg */
+export function PasskeyLogin({ onPasskey, busy, label = 'Mit Passkey anmelden' }) {
+  if (!passkeySupported()) return null;
+  return <>
+    <button className="btn btn-primary" disabled={busy} onClick={onPasskey} style={sx('min-height:52px;font-size:15px')}><Icon n="ph-fingerprint" style={sx('font-size:20px')} />{label}</button>
+    <div style={sx('display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-400)')}><span style={sx('flex:1;height:1px;background:var(--color-divider)')} />oder mit Code per E-Mail<span style={sx('flex:1;height:1px;background:var(--color-divider)')} /></div>
+  </>;
 }

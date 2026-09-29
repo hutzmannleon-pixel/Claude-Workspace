@@ -1,7 +1,7 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DIV_BOTTOM } from '../ui.jsx';
 import { Scenery } from '../brand.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
@@ -388,6 +388,10 @@ function Profile({ s, ui, set, call, act }) {
       </div>
       <div style={sx('padding:6px 22px 0;font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Eingeladene sehen den Termin und bekommen Erinnerungen – ohne eigene Adressprüfung.</div>
     </>}
+    <SectionLabel>Anmeldung</SectionLabel>
+    <div className="glass" style={sx('margin:0 16px;border-radius:var(--radius-lg);padding:14px 16px')}>
+      <PasskeyPanel role="customer" intro="Mit einem Passkey melden Sie sich per Fingerabdruck oder Gesicht an – ohne auf einen Code per E-Mail zu warten. Freiwillig; der E-Mail-Code funktioniert weiterhin." />
+    </div>
     <SectionLabel>Benachrichtigungen</SectionLabel>
     <div style={sx('margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px')}>
       <div style={sx('display:flex;align-items:center;gap:12px;min-height:56px')}>

@@ -15,6 +15,7 @@ const ANON_PER_HOUR = 10;
 function admin(req) {
   const u = requireUser(req, 'admin');
   if (!config.adminEmails.includes(u.email)) throw forbidden();
+  if (config.adminPasskeyRequired && !get('SELECT 1 x FROM passkeys WHERE user_id = ?', u.id)) throw forbidden('Bitte zuerst einen Passkey einrichten.');
   return u;
 }
 

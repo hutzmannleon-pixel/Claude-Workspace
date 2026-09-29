@@ -50,7 +50,7 @@ Dann **http://localhost:3000/test** öffnen. Es gibt **keine Beispieldaten**, Si
 „Alles löschen“ auf der Testseite setzt die Datenbank zurück.
 
 **Entwicklung mit Hot-Reload:** `npm run dev` (Web unter http://localhost:5173, API auf Port 3000).
-**Tests:** `npm test` spielt 24 Szenarien gegen eine temporäre Datenbank durch.
+**Tests:** `npm test` spielt 27 Szenarien gegen eine temporäre Datenbank durch.
 
 ## Online bringen (eigener Server)
 
@@ -88,6 +88,7 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `OPERATOR_EMAIL` | Angaben für Impressum und Datenschutzerklärung (`/impressum`, `/datenschutz`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | E-Mail-Versand. Ohne SMTP werden Mails nur ins Server-Log geschrieben |
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
+| `ADMIN_PASSKEY=optional` | Nur für lokale Tests: Betreiber ohne Passkey zulassen. Standard ist Passkey-Pflicht |
 | `TEST_MODE=1` | Testseite `/test` und Test-Postfach; Route auch vor dem Termintag startbar. **Nie in Produktion** |
 
 **E-Mail-Zustellung:** Nutzen Sie einen Anbieter mit Servern in der EU (Brevo, Mailjet, Amazon SES Frankfurt) und richten Sie für Ihre Absender-Domain **SPF, DKIM und DMARC** ein, sonst landen die Codes im Spam.
@@ -113,12 +114,12 @@ Ein erneuter Import aktualisiert vorhandene Einträge.
 - **E-Mail:** 6-stelliger Code, gespeichert nur als Hash, 10 Minuten gültig, höchstens 5 Versuche, höchstens 6 Codes pro Stunde. Kein Passwort.
 - **Kaminfeger:** Name und Bezirksnummer werden mit dem Bezirksverzeichnis abgeglichen. Der Betreiber sieht Urkunde und Ausweis (nur ansehen, mit Wasserzeichen) und hakt 4 Punkte ab. Nach der Entscheidung, spätestens nach 14 Tagen, werden die Dokumente gelöscht. Der Freischaltlink (48 h gültig) geht an die Verzeichnis-Adresse.
 - **Bewohner:** entweder über die Kundennummer aus dem Kehrbuch, über den Einladungslink des Kaminfegers oder über eine Bestätigung durch den Kaminfeger. Kann er nicht bestätigen, wird der Eigentümer per E-Mail gefragt, sonst entscheidet der Betreiber. Bei dreimal falscher Kundennummer landet der Fall beim Betreiber.
+- **Passkeys:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN (WebAuthn). Für den Betreiber Pflicht: nach dem ersten Entsperren per E-Mail-Code muss ein Passkey eingerichtet werden, danach wird kein E-Mail-Code mehr angenommen. Für Kaminfeger und Bewohner freiwillig (Profil bzw. Konto), der E-Mail-Code bleibt dort als Ausweg. Notfall (Gerät verloren): auf dem Server `npm run reset-passkeys -- name@example.de admin`.
 - **Betreiber:** Login nur für `ADMIN_EMAILS`. Er wird nach 5 Minuten Inaktivität gesperrt. Das Protokoll hält fest, wer was entschieden hat, aber keine Dokumente.
 
 ## Noch nicht enthalten
 
 - **Push-Mitteilungen** aufs Handy. Erinnerungen und Nachrichten kommen per E-Mail und live in der App.
-- **Passkey / Face ID** für den Betreiber. Aktuell entsperrt ein E-Mail-Code.
 - **Adresssuche:** Straßenvorschläge kommen vom öffentlichen OpenStreetMap-Dienst Photon (komoot). Für den Echtbetrieb eigenen Dienst oder Vertrag nutzen.
 - **Rechtliches:** `/impressum` und `/datenschutz` sind als Vorlage enthalten – Betreiberangaben über `OPERATOR_*` setzen und vor einem echten Betrieb rechtlich prüfen lassen. Verträge zur Auftragsverarbeitung mit den Kaminfegern (Kehrbuch-Daten) fehlen noch.
 - Screenshots von Dokumenten lassen sich im Browser technisch nicht verhindern. Die App zeigt nur einen Hinweis und ein Wasserzeichen.

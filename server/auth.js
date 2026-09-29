@@ -25,6 +25,8 @@ export async function requestCode(emailRaw, role, purpose) {
     run('INSERT INTO codes (email, role, purpose, code_hash, expires_at, used) VALUES (?,?,?,?,?,1)', email, role, purpose, 'x', nowIso());
     return;
   }
+  if (role === 'admin' && user && get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', user.id).n > 0)
+    throw bad('Für diesen Zugang ist ein Passkey eingerichtet. Bitte mit Passkey entsperren.', 'passkey_required');
   if (purpose === 'login' && !user && role !== 'admin') {
     run('INSERT INTO codes (email, role, purpose, code_hash, expires_at, used) VALUES (?,?,?,?,?,1)', email, role, purpose, 'x', nowIso());
     await sendMail({ to: email, subject: 'Anmeldung nicht möglich',

@@ -2,7 +2,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { Shell, GLOW, Icon, HomeBack, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
+import { loginPasskey, passkeySupported } from '../lib/passkey.js';
+import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
@@ -20,7 +21,10 @@ export default function Admin() {
   const [me, setMe] = useState(undefined);
   useEffect(() => { api('/api/auth/me?role=admin').then(r => setMe(r.user)).catch(() => setMe(null)); }, []);
   if (me === undefined) return <Loading />;
-  return me ? <AdminApp me={me} onLock={() => setMe(null)} /> : <Lock onUnlock={setMe} />;
+  if (!me) return <Lock onUnlock={setMe} />;
+  // Pflicht: ohne Passkey geht es nach dem ersten Entsperren nicht weiter
+  if (me.passkeyRequired && !me.passkeys) return <PasskeySetup me={me} onDone={async () => setMe((await api('/api/auth/me?role=admin')).user)} onLock={() => setMe(null)} />;
+  return <AdminApp me={me} onLock={() => setMe(null)} />;
 }
 
 function Lock({ onUnlock }) {
@@ -29,16 +33,17 @@ function Lock({ onUnlock }) {
   const [code, setCode] = useState('');
   const act = useAction();
   const send = () => act.run(async () => { await api('/api/auth/code', { body: { email: email.trim(), role: 'admin', purpose: 'login' } }); setSent(true); setCode(''); });
-  const unlock = () => act.run(async () => {
-    await api('/api/auth/login', { body: { email: email.trim(), role: 'admin', code } });
-    lsSet(email.trim());
+  const finish = async () => {
     const u = (await api('/api/auth/me?role=admin')).user;
     if (!u) throw new Error('Anmeldung nicht gespeichert – bitte Cookies erlauben und über https:// aufrufen.');
     onUnlock(u);
-  });
+  };
+  const unlock = () => act.run(async () => { await api('/api/auth/login', { body: { email: email.trim(), role: 'admin', code } }); lsSet(email.trim()); await finish(); });
+  const passkeyUnlock = () => act.run(async () => { await loginPasskey('admin'); await finish(); });
   return (
     <Shell glow={GLOW.admin} top={<HomeBack />} bottom={
       <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2;display:flex;flex-direction:column;gap:12px')}>
+        {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" />}
         {!sent && <Field label="Admin-E-Mail"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@betreiber.de" autoComplete="email" /></Field>}
         {sent && <CodeInput email={email} value={code} onChange={setCode} label="Entsperrcode" onResend={send} />}
         {act.error && <ErrorLine text={act.error} />}
@@ -54,7 +59,7 @@ function Lock({ onUnlock }) {
         <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Nur für freigeschaltete Admins. Jede Entscheidung wird mit deinem Namen protokolliert.</div>
       </div>
       <div style={sx('display:flex;flex-direction:column;gap:12px;padding:36px 26px 20px;font-size:13px;color:var(--color-neutral-400)')}>
-        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-key" style={sx('font-size:18px;color:var(--color-accent)')} />Einmal-Code per E-Mail, nur für hinterlegte Admins</div>
+        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-key" style={sx('font-size:18px;color:var(--color-accent)')} />Entsperren per Passkey – beim ersten Mal mit Code per E-Mail</div>
         <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-timer" style={sx('font-size:18px;color:var(--color-accent)')} />Sperrt nach 5 Minuten Inaktivität</div>
         <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-eye" style={sx('font-size:18px;color:var(--color-accent)')} />Dokumente nur ansehen, kein Download</div>
       </div>
@@ -158,6 +163,11 @@ function AdminApp({ me, onLock }) {
     {ui.overlay === 'fbimg' && fbImg && <div onClick={() => set({ overlay: null })} style={sx('position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 94%, transparent);display:grid;place-items:center;padding:16px;cursor:zoom-out')}>
       <FbImage f={fbImg} big />
     </div>}
+    {ui.overlay === 'passkeys' && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:600')}>Passkeys</div>
+      <PasskeyPanel role="admin" intro="Der Betreiber-Zugang wird nur per Passkey entsperrt. Richten Sie am besten zwei Geräte ein, damit Sie bei Verlust nicht ausgesperrt sind." />
+      <button className="btn btn-ghost" onClick={() => set({ overlay: null })} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Schließen</button>
+    </Sheet>}
     {ui.overlay === 'query' && x && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Rückfrage stellen</div>
       <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Zuständig für Kehrbezirk {x.bez}: die Schornsteinfeger-Aufsicht der Stadt bzw. des Landkreises – oder die Innung. Die E-Mail öffnet sich in deinem Mailprogramm.</div>
@@ -183,7 +193,10 @@ function AdminApp({ me, onLock }) {
   const queueView = <>
         <div style={sx('padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;gap:12px')}>
           <div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Betreiber · {me.email}</div><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>Prüfungen</div></div>
-          <button className="btn btn-secondary btn-icon" onClick={lock} style={sx('width:44px;height:44px')} aria-label="Sperren"><Icon n="ph-lock-simple" style={sx('font-size:18px')} /></button>
+          <div style={sx('display:flex;gap:8px')}>
+            <button className="btn btn-secondary btn-icon" onClick={() => set({ overlay: 'passkeys' })} style={sx('width:44px;height:44px')} aria-label="Passkeys verwalten"><Icon n="ph-fingerprint" style={sx('font-size:19px')} /></button>
+            <button className="btn btn-secondary btn-icon" onClick={lock} style={sx('width:44px;height:44px')} aria-label="Sperren"><Icon n="ph-lock-simple" style={sx('font-size:18px')} /></button>
+          </div>
         </div>
         <Toast text={ui.toast} />
         <div style={sx('padding:14px 16px 0')}><Seg value={ui.kind} onChange={k => set({ kind: k })} options={[{ value: 'sweep', label: `Kaminfeger · ${cnt('sweep')}` }, { value: 'res', label: `Bewohner · ${cnt('res')}` }]} /></div>
@@ -352,5 +365,22 @@ function FbImage({ f, big }) {
       <img src={`/api/admin/feedback/${f.id}/image`} alt="Bild der Ansicht" loading="lazy" style={sx(big ? 'display:block;max-width:100%;max-height:calc(100dvh - 48px)' : 'display:block;max-width:100%;max-height:260px')} />
       {m && <div style={{ position: 'absolute', left: m.x * 100 + '%', top: m.y * 100 + '%', width: m.w * 100 + '%', height: m.h * 100 + '%', border: '2px solid var(--color-accent)', borderRadius: 4, boxShadow: '0 0 0 9999px color-mix(in srgb, #000 30%, transparent)' }} />}
     </div>
+  );
+}
+
+/** Pflicht-Einrichtung für den Betreiber nach dem ersten Entsperren per E-Mail-Code */
+function PasskeySetup({ me, onDone, onLock }) {
+  const lock = async () => { await api('/api/admin/logout', { body: {} }).catch(() => {}); onLock(); };
+  return (
+    <Shell glow={GLOW.admin} top={<HomeBack onBack={lock} />}>
+      <div style={sx('padding:40px 22px 24px;display:flex;flex-direction:column;gap:14px;max-width:520px')}>
+        <div style={sx('width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon n="ph-fingerprint" style={sx('font-size:34px;color:var(--color-accent-300)')} /></div>
+        <div style={sx('font-size:28px;font-weight:700;letter-spacing:-0.02em;line-height:1.15')}>Passkey einrichten</div>
+        <div style={sx('font-size:15px;color:var(--color-neutral-300);text-wrap:pretty')}>Der Betreiber-Zugang ist nur mit Passkey möglich: Sie entsperren künftig per Fingerabdruck, Gesicht oder Geräte-PIN. Ein E-Mail-Code reicht dann nicht mehr – so kommt niemand hinein, der nur Ihr Postfach kennt.</div>
+        <div style={sx('font-size:13px;color:var(--color-neutral-400);text-wrap:pretty')}>Tipp: Richten Sie zusätzlich einen Passkey auf einem zweiten Gerät ein (z. B. Handy und PC), damit Sie bei Verlust nicht ausgesperrt sind.</div>
+        <PasskeyPanel role="admin" onChange={onDone} />
+        <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Angemeldet als {me.email}</div>
+      </div>
+    </Shell>
   );
 }
