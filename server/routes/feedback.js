@@ -3,13 +3,14 @@
 import { config } from '../config.js';
 import { get, all, run } from '../db.js';
 import { live } from '../live.js';
-import { requireUser } from '../auth.js';
+import { currentUser, requireUser } from '../auth.js';
 import { adminLog } from '../domain.js';
-import { bad, forbidden, notFound, clean } from '../util.js';
+import { bad, forbidden, notFound, clean, hmac, normEmail, EMAIL_RE } from '../util.js';
 
 const ROLES = ['customer', 'sweep', 'admin'];
 const MAX_IMAGE = 3 * 1024 * 1024;
 const PER_DAY = 30;
+const ANON_PER_HOUR = 10;
 
 function admin(req) {
   const u = requireUser(req, 'admin');
@@ -37,24 +38,28 @@ function parseImage(dataUrl) {
 export default async function feedbackRoutes(app) {
   app.post('/api/feedback', { bodyLimit: 5 * 1024 * 1024 }, async req => {
     const b = req.body || {};
-    if (!ROLES.includes(b.role)) throw bad('Unbekannter Bereich.');
-    const u = requireUser(req, b.role);
+    // Angemeldet → dem Konto zugeordnet; sonst (Startseite, Registrierung, Anmeldung) anonym mit optionaler E-Mail
+    const u = ROLES.includes(b.role) ? currentUser(req, b.role) : null;
     const note = clean(b.note, 2000);
     if (note.length < 3) throw bad('Bitte beschreiben Sie kurz, was Ihnen aufgefallen ist.');
-    const n = get(`SELECT COUNT(*) n FROM feedback WHERE user_id = ? AND created_at > datetime('now','-1 day')`, u.id).n;
-    if (n >= PER_DAY) throw bad('Heute sind schon viele Rückmeldungen eingegangen – vielen Dank! Bitte morgen weiter.');
+    const ipHash = hmac('fb:' + req.ip);
+    const n = u ? get(`SELECT COUNT(*) n FROM feedback WHERE user_id = ? AND created_at > datetime('now','-1 day')`, u.id).n
+      : get(`SELECT COUNT(*) n FROM feedback WHERE user_id IS NULL AND ip_hash = ? AND created_at > datetime('now','-1 hour')`, ipHash).n;
+    if (n >= (u ? PER_DAY : ANON_PER_HOUR)) throw bad('Es sind gerade schon viele Rückmeldungen eingegangen – vielen Dank! Bitte später weiter.');
+    let contact = null;
+    if (!u && b.contact) { contact = normEmail(b.contact); if (!EMAIL_RE.test(contact) || contact.length > 200) throw bad('Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen.'); }
     const image = parseImage(b.image), mark = parseMark(b.mark);
-    run('INSERT INTO feedback (user_id, role, page, note, mark, image, device) VALUES (?,?,?,?,?,?,?)',
-      u.id, b.role, clean(b.page, 120), note, mark ? JSON.stringify(mark) : null, image, clean(b.device, 200));
+    run('INSERT INTO feedback (user_id, role, contact, ip_hash, page, note, mark, image, device) VALUES (?,?,?,?,?,?,?,?,?)',
+      u ? u.id : null, u ? b.role : 'public', contact, u ? null : ipHash, clean(b.page, 120), note, mark ? JSON.stringify(mark) : null, image, clean(b.device, 200));
     live.bump();
     return { ok: true };
   });
 
   app.get('/api/admin/feedback', async req => {
     admin(req);
-    const rows = all(`SELECT f.id, f.role, f.page, f.note, f.mark, f.device, f.status, f.created_at, u.email, f.image IS NOT NULL hasImage
-      FROM feedback f JOIN users u ON u.id = f.user_id ORDER BY f.status = 'done', f.id DESC LIMIT 300`);
-    return { items: rows.map(r => ({ ...r, mark: r.mark ? JSON.parse(r.mark) : null, hasImage: !!r.hasImage, at: r.created_at.replace(' ', 'T') + 'Z' })) };
+    const rows = all(`SELECT f.id, f.role, f.page, f.note, f.mark, f.device, f.status, f.created_at, COALESCE(u.email, f.contact) email, f.image IS NOT NULL hasImage
+      FROM feedback f LEFT JOIN users u ON u.id = f.user_id ORDER BY f.status = 'done', f.id DESC LIMIT 300`);
+    return { items: rows.map(r => ({ ...r, email: r.email || 'ohne Anmeldung', mark: r.mark ? JSON.parse(r.mark) : null, hasImage: !!r.hasImage, at: r.created_at.replace(' ', 'T') + 'Z' })) };
   });
 
   app.get('/api/admin/feedback/:id/image', async (req, reply) => {

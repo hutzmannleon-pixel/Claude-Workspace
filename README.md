@@ -11,7 +11,7 @@ Die App besteht aus drei Teilen, die über einen gemeinsamen Server live verbund
 | `/betreiber` | Sie als Betreiber | Kaminfeger und Bewohner prüfen, Dokumente ansehen (danach gelöscht), Protokoll, Bezirksverzeichnis importieren, Feedback lesen |
 | `/test` | nur im Testmodus | Alle drei Apps nebeneinander, Schritt-Anleitung, Test-Postfach für Codes und Links |
 
-**Feedback:** In allen drei angemeldeten Apps gibt es einen Feedback-Knopf (Sprechblase unten rechts, am Desktop in der Seitenleiste). Er macht ein Bild der aktuellen Ansicht, der Nutzer zieht einen Rahmen um die betroffene Stelle und schreibt etwas dazu. Alles landet beim Betreiber unter **Feedback**.
+**Feedback:** Auf allen Seiten gibt es einen Feedback-Knopf, auch ohne Anmeldung (dann mit freiwilliger E-Mail für Rückfragen) (Sprechblase unten rechts, am Desktop in der Seitenleiste). Er macht ein Bild der aktuellen Ansicht, der Nutzer zieht einen Rahmen um die betroffene Stelle und schreibt etwas dazu. Alles landet beim Betreiber unter **Feedback**.
 
 **Am Desktop** (ab 1024 px Fensterbreite) zeigen Betreiber und Kaminfeger eine Seitenleiste, links die Liste (Prüfungen bzw. Straßen) und rechts die Details. In Chrome/Edge lässt sich die Seite über ⋮ → „App installieren“ als eigenes Fenster einrichten. Die Bewohner-App bleibt als Handy-Ansicht.
 

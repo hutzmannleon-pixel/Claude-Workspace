@@ -340,7 +340,7 @@ function AdminApp({ me, onLock }) {
   );
 }
 
-const FB_ROLE = { customer: 'Bewohner', sweep: 'Kaminfeger', admin: 'Betreiber' };
+const FB_ROLE = { customer: 'Bewohner', sweep: 'Kaminfeger', admin: 'Betreiber', public: 'Ohne Anmeldung' };
 
 /** Feedback-Bild mit markiertem Bereich */
 function FbImage({ f, big }) {

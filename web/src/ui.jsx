@@ -18,7 +18,7 @@ export const useIsWide = () => useContext(WideCtx);
  * Bildschirm-Hülle einer App. Auf dem Handy Vollbild mit Leiste unten (nav.tabs),
  * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
  */
-export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback }) {
+export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' } }) {
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();
   const wide = isWide && !!nav;
@@ -62,11 +62,13 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
         {!EMBED && <div style={sx('height:max(10px, env(safe-area-inset-top));flex:none')} />}
         {top}
-        <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{aside}{children}{feedback && <div aria-hidden="true" style={sx('height:52px')} />}</div>
+        <div style={sx('flex:1;min-height:0;position:relative;display:flex;flex-direction:column')}>
+          <div ref={ref} style={sx('flex:1;overflow-y:auto;position:relative;z-index:1;scrollbar-width:none')}>{aside}{children}{feedback && <div aria-hidden="true" style={sx('height:52px')} />}</div>
+          {feedback && <FeedbackButton {...feedback} />}
+        </div>
         {bottom}
         {nav && nav.bar !== false && <TabBar tabs={nav.tabs} />}
         {!EMBED && <div style={sx('height:max(8px, env(safe-area-inset-bottom));flex:none')} />}
-        {feedback && <FeedbackButton {...feedback} />}
         {overlay}
       </div>
     </div>

@@ -37,10 +37,11 @@ async function capture() {
 const device = () => `${window.innerWidth}×${window.innerHeight} · ${/Android/.test(navigator.userAgent) ? 'Android' : /iPhone|iPad/.test(navigator.userAgent) ? 'iOS' : /Windows/.test(navigator.userAgent) ? 'Windows' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'Sonstiges'}${matchMedia('(display-mode: standalone)').matches ? ' · installiert' : ''}`;
 
 /**
- * Knopf + Editor. variant 'float' (schwebend unten rechts in der App-Hülle) oder 'side' (Seitenleiste am Desktop).
+ * Knopf + Editor. variant 'float' (schwebend unten rechts in der App-Hülle), 'fixed' (unten rechts im Fenster) oder 'side' (Seitenleiste am Desktop).
+ * role 'public' = ohne Anmeldung, dann gibt es ein optionales E-Mail-Feld für Rückfragen.
  * role = welche App (customer/sweep/admin), where = aktuelle Ansicht zur Einordnung beim Betreiber.
  */
-export function FeedbackButton({ role, where, variant = 'float' }) {
+export function FeedbackButton({ role = 'public', where, variant = 'float' }) {
   const [state, setState] = useState(null); // null | 'capturing' | { image }
   const open = async () => {
     setState('capturing');
@@ -53,7 +54,7 @@ export function FeedbackButton({ role, where, variant = 'float' }) {
         <Icon n="ph-chat-circle-dots" style={sx('font-size:20px')} />{state === 'capturing' ? 'Bild wird erstellt …' : 'Feedback geben'}
       </button>
     : <button data-feedback-ignore onClick={open} disabled={state === 'capturing'} aria-label="Feedback geben" title="Feedback geben"
-        style={sx('position:absolute;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:4;width:42px;height:42px;border-radius:50%;border:1px solid var(--color-neutral-700);background:color-mix(in srgb, var(--color-surface) 92%, transparent);color:var(--color-accent);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow-sm)')}>
+        style={sx(`${variant === 'fixed' ? 'position:fixed;right:24px;bottom:24px;z-index:50' : 'position:absolute;right:12px;bottom:10px;z-index:4'};width:42px;height:42px;border-radius:50%;border:1px solid var(--color-neutral-700);background:color-mix(in srgb, var(--color-surface) 92%, transparent);color:var(--color-accent);display:grid;place-items:center;cursor:pointer;box-shadow:var(--shadow-sm)`)}>
         <Icon n={state === 'capturing' ? 'ph-circle-notch' : 'ph-chat-circle-dots'} style={sx('font-size:21px')} />
       </button>;
   return <>
@@ -66,6 +67,7 @@ function Editor({ role, image, page, onClose }) {
   const [mark, setMark] = useState(null);
   const [withImage, setWithImage] = useState(!!image);
   const [note, setNote] = useState('');
+  const [contact, setContact] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [sent, setSent] = useState(false);
@@ -82,7 +84,7 @@ function Editor({ role, image, page, onClose }) {
   const send = async () => {
     setBusy(true); setErr(null);
     try {
-      await api('/api/feedback', { body: { role, page, note, device: device(), image: withImage ? image : null, mark: withImage ? mark : null } });
+      await api('/api/feedback', { body: { role, page, note, contact: role === 'public' ? contact.trim() : undefined, device: device(), image: withImage ? image : null, mark: withImage ? mark : null } });
       setSent(true); setTimeout(onClose, 1600);
     } catch (e) { setErr(e.message); } finally { setBusy(false); }
   };
@@ -112,6 +114,8 @@ function Editor({ role, image, page, onClose }) {
           {!image && <div style={sx('font-size:13px;color:var(--color-neutral-400);padding:10px 12px;border-radius:var(--radius-md);background:var(--color-surface)')}>Das Bild der Ansicht konnte auf diesem Gerät nicht erstellt werden. Beschreiben Sie die Stelle bitte kurz im Text.</div>}
           <div className="field"><label htmlFor="fb-note">Was ist Ihnen aufgefallen?</label>
             <textarea id="fb-note" className="input" autoFocus value={note} onChange={e => setNote(e.target.value)} maxLength={2000} placeholder="z. B. Der Knopf reagiert nicht, Text ist unklar, hier fehlt etwas …" style={sx('min-height:96px;font-size:15px')} /></div>
+          {role === 'public' && <div className="field"><label htmlFor="fb-contact">E-Mail für Rückfragen (freiwillig)</label>
+            <input id="fb-contact" className="input" type="email" inputMode="email" autoComplete="email" value={contact} onChange={e => setContact(e.target.value)} placeholder="name@beispiel.de" style={sx('min-height:44px')} /></div>}
           {image && <label className="checkbox" style={sx('display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-neutral-300);cursor:pointer')}>
             <input type="checkbox" checked={withImage} onChange={e => setWithImage(e.target.checked)} />Bild der Ansicht mitsenden (kann persönliche Angaben enthalten)</label>}
           {err && <ErrorLine text={err} />}

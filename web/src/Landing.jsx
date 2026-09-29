@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sx, api, useWide } from './lib/core.js';
 import { Shell, GLOW, Icon } from './ui.jsx';
+import { FeedbackButton } from './Feedback.jsx';
 
 export default function Landing() {
   const go = p => () => { location.href = p; };
@@ -67,6 +68,7 @@ function Desktop({ cfg, go }) {
           ))}
         </div>
       </main>
+      <FeedbackButton variant="fixed" where="Start" />
       <footer style={sx('display:flex;justify-content:center;gap:22px;font-size:12px;padding:0 0 22px')}><a href="/impressum" style={sx('color:var(--color-neutral-500)')}>Impressum</a><a href="/datenschutz" style={sx('color:var(--color-neutral-500)')}>Datenschutz</a></footer>
     </div>
   );

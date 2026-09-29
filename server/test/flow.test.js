@@ -414,7 +414,10 @@ test('Konfiguration für die App: Testbetrieb und Betreiberangaben', async () =>
 test('Feedback: mit Bild und Markierung, beim Betreiber sichtbar, verschwindet mit dem Konto', async () => {
   await registerCustomer('fbk', 'feedback@test.de', { street: 'Lindenstraße', nr: '6', plz: '79102', ort: 'Freiburg', name: 'Rückmeldung' });
   const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]).toString('base64');
-  await fails(401, 'niemand', 'POST', '/api/feedback', { role: 'customer', note: 'Hallo Welt' });
+  // Ohne Anmeldung (Startseite, Registrierung): anonym, E-Mail optional
+  await ok('niemand', 'POST', '/api/feedback', { role: 'public', note: 'Startseite lädt langsam', page: '/' });
+  await ok('niemand', 'POST', '/api/feedback', { role: 'customer', note: 'Registrierung unklar', contact: 'Frage@Test.de' });
+  await fails(400, 'niemand', 'POST', '/api/feedback', { role: 'public', note: 'Hallo Welt', contact: 'keine-mail' });
   await fails(400, 'fbk', 'POST', '/api/feedback', { role: 'customer', note: 'x' });
   await fails(400, 'fbk', 'POST', '/api/feedback', { role: 'customer', note: 'Kein JPEG', image: 'data:image/png;base64,AAAA' });
   await ok('fbk', 'POST', '/api/feedback', { role: 'customer', note: 'Knopf reagiert nicht', page: '/kunde · home', image: jpeg, mark: { x: 0.1, y: 0.2, w: 0.3, h: 0.1 }, device: '390×844' });
@@ -425,6 +428,8 @@ test('Feedback: mit Bild und Markierung, beim Betreiber sichtbar, verschwindet m
   assert.equal(f.note, 'Knopf reagiert nicht');
   assert.deepEqual(f.mark, { x: 0.1, y: 0.2, w: 0.3, h: 0.1 });
   assert.equal(f.status, 'open');
+  assert.ok(items.some(i => i.note === 'Startseite lädt langsam' && i.email === 'ohne Anmeldung' && i.role === 'public'));
+  assert.ok(items.some(i => i.note === 'Registrierung unklar' && i.email === 'frage@test.de'));
   const img = await call('admin', 'GET', `/api/admin/feedback/${f.id}/image`);
   assert.equal(img.res.headers['content-type'], 'image/jpeg');
   await ok('admin', 'POST', `/api/admin/feedback/${f.id}`, { action: 'done' });

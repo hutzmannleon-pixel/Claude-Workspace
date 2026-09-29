@@ -182,8 +182,10 @@ CREATE TABLE IF NOT EXISTS message_reads (
 );
 CREATE TABLE IF NOT EXISTS feedback (
   id INTEGER PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   role TEXT NOT NULL,
+  contact TEXT,
+  ip_hash TEXT,
   page TEXT,
   note TEXT NOT NULL,
   mark TEXT,
@@ -209,6 +211,16 @@ CREATE TABLE IF NOT EXISTS outbox (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
+// Feedback war anfangs nur für angemeldete Nutzer (user_id NOT NULL) – Tabelle umbauen, Einträge behalten
+{
+  const cols = db.prepare('PRAGMA table_info(feedback)').all();
+  if (cols.length && !cols.some(c => c.name === 'contact')) {
+    db.exec(`ALTER TABLE feedback RENAME TO feedback_old`);
+    db.exec(SCHEMA);
+    db.exec(`INSERT INTO feedback (id, user_id, role, page, note, mark, image, device, status, created_at)
+      SELECT id, user_id, role, page, note, mark, image, device, status, created_at FROM feedback_old; DROP TABLE feedback_old;`);
+  }
+}
 db.exec(SCHEMA);
 
 const norm = params => params.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
