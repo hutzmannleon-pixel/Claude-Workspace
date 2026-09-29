@@ -437,3 +437,46 @@ test('Feedback: mit Bild und Markierung, beim Betreiber sichtbar, verschwindet m
   await ok('fbk', 'POST', '/api/customer/delete', { confirm: 'LÖSCHEN' });
   assert.equal(get('SELECT COUNT(*) n FROM feedback WHERE id = ?', f.id).n, 0, 'Feedback mit Konto gelöscht');
 });
+
+test('Kaminfeger: Termin verschieben, absagen, Tag absagen (mit Ersatztag)', async () => {
+  const D3 = iso(20), D4 = iso(21), D5 = iso(25);
+  const c = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Ahornweg', plz: '79102', slotLen: 30, deadline: iso(15),
+    windows: [{ date: D3, start: '08:00', end: '10:00' }, { date: D4, start: '13:00', end: '15:00' }] });
+  const st = await ok('k1', 'GET', '/api/customer/state');
+  const [w3, w4] = st.campaign.windows;
+  await ok('k1', 'POST', '/api/customer/book', { windowId: w3.id, time: '08:30' });
+  const bookingId = () => get(`SELECT id FROM bookings WHERE campaign_id = ? AND status = 'booked'`, c.id).id;
+  // Verschieben: freie Zeit, Haushalt informiert
+  await fails(400, 's', 'POST', `/api/sweep/bookings/${bookingId()}/move`, { windowId: w3.id, time: '08:30' });
+  await fails(400, 's', 'POST', `/api/sweep/bookings/${bookingId()}/move`, { windowId: w4.id, time: '13:15' });
+  const mv = await ok('s', 'POST', `/api/sweep/bookings/${bookingId()}/move`, { windowId: w4.id, time: '14:00', reason: 'Terminkonflikt' });
+  assert.ok(mv.toast.includes('14:00'));
+  let me = await ok('k1', 'GET', '/api/customer/state');
+  assert.deepEqual([me.booking.windowId, me.booking.t], [w4.id, '14:00']);
+  assert.ok(lastMail('berger@test.de').subject.startsWith('Termin verschoben'));
+  assert.ok(lastMail('berger@test.de').text.includes('Grund: Terminkonflikt'));
+  // Absagen: Haushalt ist wieder offen und kann neu buchen
+  await ok('s', 'POST', `/api/sweep/bookings/${bookingId()}/cancel`, { reason: 'Krankheit' });
+  me = await ok('k1', 'GET', '/api/customer/state');
+  assert.equal(me.booking, null);
+  assert.ok(lastMail('berger@test.de').subject.startsWith('Termin abgesagt'));
+  await ok('k1', 'POST', '/api/customer/book', { windowId: w3.id, time: '09:00' });
+  // Tag absagen: Termine darin freigegeben, Fenster entfällt
+  await ok('s', 'POST', `/api/sweep/windows/${w3.id}/cancel`, { reason: 'Wetter' });
+  me = await ok('k1', 'GET', '/api/customer/state');
+  assert.equal(me.booking, null);
+  assert.deepEqual(me.campaign.windows.map(w => w.id), [w4.id]);
+  assert.ok(lastMail('berger@test.de').text.includes('Grund: Wetter'));
+  // Letzter Tag: nur mit Ersatztag (nicht Sonntag, nicht Vergangenheit)
+  await fails(400, 's', 'POST', `/api/sweep/windows/${w4.id}/cancel`, {});
+  await fails(400, 's', 'POST', `/api/sweep/windows/${w4.id}/cancel`, { date: iso(-3) });
+  await ok('k1', 'POST', '/api/customer/book', { windowId: w4.id, time: '13:00' });
+  const r = await ok('s', 'POST', `/api/sweep/windows/${w4.id}/cancel`, { date: D5 });
+  assert.equal(r.affected, 1);
+  me = await ok('k1', 'GET', '/api/customer/state');
+  assert.deepEqual([me.booking, me.campaign.windows[0].date], [null, D5]);
+  // Ersatztag vor der Antwortfrist → Frist rückt auf den Vortag
+  const early = iso(3);
+  await ok('s', 'POST', `/api/sweep/windows/${w4.id}/cancel`, { date: early });
+  assert.ok(get('SELECT deadline FROM campaigns WHERE id = ?', c.id).deadline < early);
+});

@@ -314,6 +314,88 @@ export default async function sweepRoutes(app) {
     return { ok: true };
   });
 
+  // ---------- Termine absagen / verschieben (durch den Kaminfeger) ----------
+  const reasonText = r => { const t = clean(r, 300); return t ? ` Grund: ${t}.` : ''; };
+  function notify(s, c, householdIds, subject, text, linkLabel = 'In der App ansehen') {
+    postMessage(s.id, c.id, text, householdIds);
+    for (const h of new Set(householdIds)) for (const to of householdEmails(h))
+      queueMail({ to, subject, text: `${text}\n\nIhr Kaminfeger ${sweepName(s)}`, link: `${config.baseUrl}/kunde`, linkLabel });
+  }
+  function ownBooking(s, id) {
+    const b = get(`SELECT b.*, w.date, h.street, h.nr FROM bookings b JOIN windows w ON w.id = b.window_id JOIN households h ON h.id = b.household_id WHERE b.id = ? AND b.status = 'booked'`, Number(id));
+    if (!b) throw notFound('Termin nicht gefunden.');
+    const c = ownCampaign(s, b.campaign_id);
+    if (b.visit) throw bad('Dieser Termin ist schon erledigt.');
+    return { b, c };
+  }
+
+  // Einzelnen Termin auf einen anderen freien Slot legen – der Haushalt wird informiert und kann selbst wieder ändern
+  app.post('/api/sweep/bookings/:id/move', async req => {
+    const s = activeSweep(req), { b, c } = ownBooking(s, req.params.id), body = req.body || {};
+    const w = get('SELECT * FROM windows WHERE id = ? AND campaign_id = ?', Number(body.windowId), c.id);
+    if (!w || !slotsOf(w, c.slot_len).includes(body.time)) throw bad('Ungültige Zeit.');
+    if (w.id === b.window_id && body.time === b.time) throw bad('Das ist bereits die gebuchte Zeit.');
+    try {
+      tx(() => {
+        run(`UPDATE bookings SET status = 'replaced', updated_at = ? WHERE id = ?`, nowIso(), b.id);
+        run(`INSERT INTO bookings (campaign_id, household_id, window_id, time, key_note, source) VALUES (?,?,?,?,?,?)`, c.id, b.household_id, w.id, body.time, b.key_note, b.source);
+      });
+    } catch (e) {
+      if (String(e.message).includes('UNIQUE')) throw bad('Diese Zeit ist schon vergeben.');
+      throw e;
+    }
+    notify(s, c, [b.household_id], `Termin verschoben: ${dayLabel(w.date)}, ${body.time} Uhr`,
+      `Ich muss Ihren Termin verschieben: statt ${dayLabel(b.date)}, ${b.time} Uhr komme ich am ${dayLabel(w.date)} um ${body.time} Uhr in die ${b.street} ${b.nr}.${reasonText(body.reason)} Passt das nicht, wählen Sie in der App eine andere Zeit.`);
+    live.bump();
+    return { ok: true, toast: `Termin auf ${dayLabel(w.date)}, ${body.time} verschoben – Haushalt informiert.` };
+  });
+
+  // Einzelnen Termin absagen – der Haushalt wählt neu
+  app.post('/api/sweep/bookings/:id/cancel', async req => {
+    const s = activeSweep(req), { b, c } = ownBooking(s, req.params.id);
+    run(`UPDATE bookings SET status = 'dropped', updated_at = ? WHERE id = ?`, nowIso(), b.id);
+    notify(s, c, [b.household_id], 'Termin abgesagt – bitte neue Zeit wählen',
+      `Leider muss ich Ihren Termin am ${dayLabel(b.date)} um ${b.time} Uhr absagen.${reasonText(req.body?.reason)} Bitte wählen Sie in der App eine neue Zeit.`, 'Neue Zeit wählen');
+    live.bump();
+    return { ok: true, toast: 'Termin abgesagt – der Haushalt wählt neu.' };
+  });
+
+  // Einen Tag (Zeitfenster) absagen. Alle Termine darin werden freigegeben.
+  // Ist es der einzige Tag der Straße, muss ein Ersatztag angegeben werden (das Fenster wandert dorthin).
+  app.post('/api/sweep/windows/:id/cancel', async req => {
+    const s = activeSweep(req), body = req.body || {};
+    const w = get('SELECT * FROM windows WHERE id = ?', Number(req.params.id));
+    if (!w) throw notFound('Zeitfenster nicht gefunden.');
+    const c = ownCampaign(s, w.campaign_id);
+    if (get(`SELECT 1 x FROM bookings WHERE window_id = ? AND visit IS NOT NULL`, w.id)) throw bad('An diesem Tag wurden schon Häuser besucht – er kann nicht mehr abgesagt werden.');
+    const others = get('SELECT COUNT(*) n FROM windows WHERE campaign_id = ? AND id != ?', c.id, w.id).n;
+    const date = body.date ? clean(body.date, 10) : null;
+    if (date) {
+      if (!DATE_RE.test(date) || date <= today()) throw bad('Bitte einen Ersatztag in der Zukunft wählen.');
+      if (new Date(date + 'T12:00:00').getDay() === 0) throw bad('Sonntags sind keine Termine möglich.');
+      if (get('SELECT 1 x FROM windows WHERE campaign_id = ? AND date = ? AND id != ?', c.id, date, w.id)) throw bad('An diesem Tag gibt es schon ein Zeitfenster.');
+    } else if (!others) throw bad('Das ist der einzige Tag dieser Straße – bitte einen Ersatztag wählen.');
+    const hit = all(`SELECT household_id FROM bookings WHERE window_id = ? AND status = 'booked'`, w.id).map(r => r.household_id);
+    tx(() => {
+      run(`UPDATE bookings SET status = 'dropped', updated_at = ? WHERE window_id = ? AND status = 'booked'`, nowIso(), w.id);
+      if (date) {
+        run('UPDATE windows SET date = ? WHERE id = ?', date, w.id);
+        // Antwortfrist darf nicht nach dem ersten Termintag liegen
+        const firstDay = get('SELECT MIN(date) d FROM windows WHERE campaign_id = ?', c.id).d;
+        if (c.deadline >= firstDay) { const d = new Date(firstDay + 'T12:00:00'); d.setDate(d.getDate() - 1); run('UPDATE campaigns SET deadline = ? WHERE id = ?', d.toISOString().slice(0, 10), c.id); }
+      }
+      else run('DELETE FROM windows WHERE id = ?', w.id);
+    });
+    const alt = windowsOf(c.id).map(x => `${x.label} ${x.start}–${x.end}`).join(', ');
+    if (hit.length) notify(s, c, hit, `Termin am ${dayLabel(w.date)} abgesagt – bitte neue Zeit wählen`,
+      `Leider muss ich den ${dayLabel(w.date)} in der ${c.street} absagen, Ihr Termin an diesem Tag entfällt.${reasonText(body.reason)} Bitte wählen Sie in der App eine neue Zeit – möglich sind: ${alt}.`, 'Neue Zeit wählen');
+    // Wer noch nicht gebucht hat, erfährt nur von der Änderung der Auswahl
+    const open = streetHouseholds(c).map(h => h.id).filter(id => !hit.includes(id) && !get(`SELECT 1 x FROM bookings WHERE campaign_id = ? AND household_id = ? AND status = 'booked'`, c.id, id));
+    if (open.length) postMessage(s.id, c.id, `Der ${dayLabel(w.date)} fällt aus.${reasonText(body.reason)} Wählbar sind jetzt: ${alt}.`, open);
+    live.bump();
+    return { ok: true, affected: hit.length, toast: `${dayLabel(w.date)} abgesagt${date ? ', Ersatztag ' + dayLabel(date) : ''} – ${hit.length === 1 ? '1 Haushalt' : hit.length + ' Haushalte'} informiert.` };
+  });
+
   // ---------- Tagesroute ----------
   app.get('/api/sweep/route', async req => {
     const s = activeSweep(req);

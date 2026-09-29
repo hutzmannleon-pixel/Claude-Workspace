@@ -72,7 +72,8 @@ export default function SweepApp({ onLogout }) {
     } else if (h.moved) { line = 'Bewohner ausgezogen · neu verifizieren lassen'; tag = 'Umzug'; }
     else if (h.status === 'cancelled') { line = 'Hat abgesagt'; lineFg = 'var(--color-accent-300)'; showCall = true; }
     else showCall = true;
-    return { ...h, line, lineFg, tag, tagCls, showCall, missed, isOpen: h.status !== 'booked' || missed, key: h.status === 'booked' && h.booking.key };
+    const canChange = h.status === 'booked' && !h.booking.visit;
+    return { ...h, line, lineFg, tag, tagCls, showCall, missed, canChange, isOpen: h.status !== 'booked' || missed, key: h.status === 'booked' && h.booking.key };
   }) : [];
   const counts = c ? { booked: c.houses.filter(h => h.status === 'booked').length, cancelled: c.houses.filter(h => h.status === 'cancelled').length } : null;
   const bar = (booked_, open, canc, total) => (
@@ -83,6 +84,13 @@ export default function SweepApp({ onLogout }) {
     </div>
   );
   const callH = ui.callId && c ? rows.find(h => h.id === ui.callId) : null;
+  const bookH = ui.bookId && c ? rows.find(h => h.id === ui.bookId && h.status === 'booked') : null;
+  const bookWins = bookH ? c.windows.map(w => ({ ...w, slots: slotsOf(w, c.slotLen).filter(t => !c.houses.some(x => x.booking && x.booking.windowId === w.id && x.booking.t === t)) })).filter(x => x.slots.length) : [];
+  const dayW = ui.dayId && c ? c.windows.find(w => w.id === ui.dayId) : null;
+  const dayHit = dayW ? c.houses.filter(h => h.status === 'booked' && h.booking.windowId === dayW.id).length : 0;
+  const reasonOf = () => ui.reason === 'other' ? (ui.reasonText || '').trim() : ui.reason || '';
+  const closeChange = () => { act.setError(null); set({ bookId: null, dayId: null, mode: null, moveTo: null, reason: null, reasonText: '', subDate: null, subPick: false }); };
+  const afterChange = r => { closeChange(); set({ toast: r.toast }); camp.reload(); ov.reload(); };
   const callWhy = h => h.status === 'cancelled' ? 'hat abgesagt' : h.missed ? 'nicht angetroffen' : 'keine Rückmeldung';
   const callWins = callH ? c.windows.map(w => ({ ...w, slots: slotsOf(w, c.slotLen).filter(t => !c.houses.some(x => x.id !== callH.id && x.booking && x.booking.windowId === w.id && x.booking.t === t)) })).filter(x => x.slots.length) : [];
 
@@ -135,6 +143,59 @@ export default function SweepApp({ onLogout }) {
       <button className="btn btn-secondary" disabled={act.busy} onClick={() => answerTenant('no')} style={sx('min-height:46px')}>Weiß ich nicht – Eigentümer fragen</button>
       <button className="btn btn-ghost" onClick={() => set({ tenantId: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Später</button>
     </Sheet>}
+    {bookH && !ui.mode && <Sheet>
+      <div style={sx('display:flex;align-items:center;gap:12px')}>
+        <div style={sx('width:44px;height:44px;border-radius:var(--radius-md);background:var(--color-bg);display:grid;place-items:center;font-size:16px;font-weight:500')}>{bookH.nr}</div>
+        <div style={sx('flex:1')}><div style={sx('font-size:18px;font-weight:500')}>Familie {bookH.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{bookH.line}</div></div>
+      </div>
+      {bookH.phone && <a className="btn btn-secondary" href={`tel:${bookH.phone.replace(/[^\d+]/g, '')}`} style={sx('min-height:46px')}><Icon n="ph-phone" />Anrufen · {bookH.phone}</a>}
+      <button className="btn btn-primary" onClick={() => set({ mode: 'move' })} style={sx('min-height:48px')}><Icon n="ph-calendar-dots" />Termin verschieben</button>
+      <button className="btn btn-secondary" onClick={() => set({ mode: 'cancel' })} style={sx('min-height:46px')}><Icon n="ph-x-circle" />Termin absagen</button>
+      <button className="btn btn-ghost" onClick={closeChange} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Schließen</button>
+    </Sheet>}
+    {bookH && ui.mode === 'move' && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:500')}>Termin verschieben</div>
+      <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>Familie {bookH.name} · bisher {bookH.line}. Der Haushalt wird per App und E-Mail informiert und kann selbst wieder ändern.</div>
+      {!bookWins.length && <div style={sx('font-size:14px;color:var(--color-neutral-400)')}>Keine freie Zeit mehr. Legen Sie über „Bearbeiten“ ein weiteres Fenster an.</div>}
+      {bookWins.map(cw => (
+        <div key={cw.id} style={sx('display:flex;flex-direction:column;gap:6px')}>
+          <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{cw.label} · {cw.start}–{cw.end}</div>
+          <div style={sx('display:flex;flex-wrap:wrap;gap:6px')}>
+            {cw.slots.map(t => { const on = ui.moveTo && ui.moveTo.windowId === cw.id && ui.moveTo.time === t; return (
+              <button key={t} className={`btn ${on ? 'btn-primary' : 'btn-secondary'}`} aria-pressed={on} onClick={() => set({ moveTo: { windowId: cw.id, time: t, label: cw.label } })} style={sx('min-height:38px;min-width:62px;font-variant-numeric:tabular-nums')}>{t}</button>
+            ); })}
+          </div>
+        </div>
+      ))}
+      <ReasonPick value={ui.reason} text={ui.reasonText} onChange={p => set(p)} />
+      {act.error && <ErrorLine text={act.error} />}
+      <button className="btn btn-primary" disabled={!ui.moveTo || act.busy} onClick={() => act.run(async () => afterChange(await api(`/api/sweep/bookings/${bookH.booking.id}/move`, { body: { windowId: ui.moveTo.windowId, time: ui.moveTo.time, reason: reasonOf() } })))} style={sx('min-height:48px')}>
+        <Icon n="ph-paper-plane-tilt" />{ui.moveTo ? `Auf ${short(ui.moveTo.label).day} ${short(ui.moveTo.label).date}, ${ui.moveTo.time} verschieben` : 'Bitte neue Zeit wählen'}</button>
+      <button className="btn btn-ghost" onClick={() => set({ mode: null, moveTo: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Zurück</button>
+    </Sheet>}
+    {bookH && ui.mode === 'cancel' && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:500')}>Termin absagen</div>
+      <div style={sx('font-size:13px;color:var(--color-neutral-400);text-wrap:pretty')}>Familie {bookH.name} · {bookH.line}. Der Haushalt wird informiert und wählt in der App eine neue Zeit.</div>
+      <ReasonPick value={ui.reason} text={ui.reasonText} onChange={p => set(p)} />
+      {act.error && <ErrorLine text={act.error} />}
+      <button className="btn btn-primary" disabled={act.busy} onClick={() => act.run(async () => afterChange(await api(`/api/sweep/bookings/${bookH.booking.id}/cancel`, { body: { reason: reasonOf() } })))} style={sx('min-height:48px')}><Icon n="ph-x-circle" />Absagen &amp; informieren</button>
+      <button className="btn btn-ghost" onClick={() => set({ mode: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Zurück</button>
+    </Sheet>}
+    {dayW && !ui.subPick && <Sheet scroll>
+      <div style={sx('font-size:20px;font-weight:500')}>{dayW.label} absagen</div>
+      <div style={sx('font-size:13px;color:var(--color-neutral-400);text-wrap:pretty')}>{dayW.start}–{dayW.end} in der {c.street}. {dayHit ? `${dayHit === 1 ? '1 Termin wird' : dayHit + ' Termine werden'} abgesagt, die Haushalte werden informiert und wählen neu.` : 'An diesem Tag ist noch nichts gebucht.'}</div>
+      {c.windows.length === 1 ? <>
+        <div style={sx('font-size:13px;padding:10px 12px;border-radius:var(--radius-md);background:var(--color-bg);display:flex;gap:8px')}><Icon n="ph-info" style={sx('color:var(--color-accent);font-size:17px;flex:none;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Das ist der einzige Tag dieser Straße. Bitte wählen Sie einen Ersatztag – gleiche Uhrzeit, alle Haushalte wählen dort neu.</span></div>
+        <button className="btn btn-secondary" onClick={() => set({ subPick: true })} style={sx('min-height:46px')}><Icon n="ph-calendar-dots" />{ui.subDate ? `Ersatztag: ${dayLabel(ui.subDate)}` : 'Ersatztag wählen'}</button>
+      </> : <button className="btn btn-ghost" onClick={() => set({ subPick: true })} style={sx('min-height:40px;align-self:flex-start;padding-inline:6px;font-size:13px;color:var(--color-neutral-400)')}><Icon n="ph-calendar-dots" />{ui.subDate ? `Ersatztag: ${dayLabel(ui.subDate)}` : 'Optional: auf einen Ersatztag verlegen'}</button>}
+      <ReasonPick value={ui.reason} text={ui.reasonText} onChange={p => set(p)} />
+      {act.error && <ErrorLine text={act.error} />}
+      <button className="btn btn-primary" disabled={act.busy || (c.windows.length === 1 && !ui.subDate)} onClick={() => act.run(async () => afterChange(await api(`/api/sweep/windows/${dayW.id}/cancel`, { body: { reason: reasonOf(), date: ui.subDate || undefined } })))} style={sx('min-height:48px')}><Icon n="ph-x-circle" />{ui.subDate ? 'Verlegen & informieren' : 'Tag absagen & informieren'}</button>
+      <button className="btn btn-ghost" onClick={closeChange} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
+    </Sheet>}
+    {dayW && ui.subPick && <DatePicker title="Ersatztag wählen" value={ui.subDate || undefined} min={addDays(todayIso(), 1)} max={addDays(todayIso(), 365)}
+      disabled={x => parseDate(x).getDay() === 0 || c.windows.some(w => w.id !== dayW.id && w.date === x) || x === dayW.date}
+      onPick={x => set({ subDate: x, subPick: false })} onClose={() => set({ subPick: false })} />}
     {callH && <Sheet scroll>
       <div style={sx('display:flex;align-items:center;gap:12px')}>
         <div style={sx('width:44px;height:44px;border-radius:var(--radius-md);background:var(--color-bg);display:grid;place-items:center;font-size:16px;font-weight:500')}>{callH.nr}</div>
@@ -199,7 +260,7 @@ export default function SweepApp({ onLogout }) {
           <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.today.count, 'Termin', 'Termine')} · {o.today.from}–{o.today.to}</div>
           <button className="btn btn-primary" onClick={() => set({ screen: 'route', routeDate: o.today.date, toast: null })} style={sx('min-height:44px;margin-top:10px')}><Icon n="ph-path" />Route öffnen</button>
         </div>}
-        <Toast text={ui.toast} icon="ph-paper-plane-tilt" />
+        <Toast text={wide && scr !== 'streets' ? null : ui.toast} icon="ph-paper-plane-tilt" />
         {o.tenants.map(t => (
           <button key={t.id} onClick={() => { act.setError(null); set({ tenantId: t.id }); }} style={sx('margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--radius-lg);background:var(--color-surface);border:1px solid var(--color-accent-700);color:inherit;font:inherit;cursor:pointer')}>
             <Icon n="ph-user-check" style={sx('font-size:22px;color:var(--color-accent)')} />
@@ -258,6 +319,7 @@ export default function SweepApp({ onLogout }) {
               <span style={sx('font-size:12px;color:var(--color-neutral-500)')}>{w.label}</span>
               <span style={sx('font-size:13px')}>{w.start}–{w.end}</span>
               <span style={sx('font-size:11px;color:var(--color-accent-300);margin-top:4px')}>{w.booked} / {w.total} gebucht</span>
+              {w.date >= todayIso() && <button onClick={() => { closeChange(); set({ dayId: w.id }); }} style={sx('align-self:flex-start;margin-top:6px;padding:0;border:0;background:none;font:inherit;font-size:12px;color:var(--color-neutral-400);text-decoration:underline;text-underline-offset:2px;cursor:pointer')}>Tag absagen</button>}
             </div>
           ))}
         </div>
@@ -278,6 +340,7 @@ export default function SweepApp({ onLogout }) {
               </div>
               {r.showCall && <button className="btn btn-secondary" onClick={() => { act.setError(null); set({ callId: r.id }); }} style={sx('min-height:40px')}><Icon n="ph-phone" />Anrufen</button>}
               {r.tag && <span className={`tag ${r.tagCls}`}>{r.tag}</span>}
+              {r.canChange && <button className="btn btn-secondary btn-icon" onClick={() => { closeChange(); set({ bookId: r.id }); }} aria-label={`Termin von ${r.name} ändern`} title="Verschieben oder absagen" style={sx('width:40px;height:40px')}><Icon n="ph-pencil-simple" /></button>}
             </div>
           ))}
         </div>
@@ -436,6 +499,22 @@ function DayStrip({ days: list, value, onPick }) {
           <span style={sx('font-size:11px;opacity:.75')}>{newMonth ? x.m : x.wd}</span><span style={sx('font-size:16px;font-weight:500;font-variant-numeric:tabular-nums')}>{x.d}</span>
         </button>
       ); })}
+    </div>
+  );
+}
+
+const REASONS = ['Krankheit', 'Wetter', 'Terminkonflikt', 'Notfall'];
+/** Grund fürs Absagen/Verschieben – optional, landet in der Nachricht an die Haushalte */
+function ReasonPick({ value, text, onChange }) {
+  return (
+    <div style={sx('display:flex;flex-direction:column;gap:8px;margin-top:4px')}>
+      <div style={sx('font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-500)')}>Grund (freiwillig)</div>
+      <div style={sx('display:flex;flex-wrap:wrap;gap:6px')}>
+        {REASONS.concat(['other']).map(r => { const ch = chip(value === r); return (
+          <button key={r} aria-pressed={value === r} onClick={() => onChange({ reason: value === r ? null : r })} style={sx(`min-height:34px;padding:0 12px;border-radius:17px;border:1px solid ${ch.bd};background:${ch.bg};color:${ch.fg};font:inherit;font-size:13px;cursor:pointer`)}>{r === 'other' ? 'Anderer Grund' : r}</button>
+        ); })}
+      </div>
+      {value === 'other' && <input className="input" autoFocus maxLength={300} value={text || ''} onChange={e => onChange({ reasonText: e.target.value })} placeholder="z. B. Fahrzeugpanne" style={sx('min-height:44px')} />}
     </div>
   );
 }
