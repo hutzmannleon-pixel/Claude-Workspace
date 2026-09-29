@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { Shell, GLOW, Icon, StepsBar, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
 
@@ -149,7 +149,8 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
       : { t: 'Wohnsitz wird später bestätigt', s: 'Sobald Ihr Kaminfeger die App nutzt – wir melden uns per E-Mail', icon: 'ph-hourglass-medium' }
   ];
 
-  const top = (stepNo > 0 || scr === 'scan') && <StepsBar onBack={() => back ? go(back) : onCancel && onCancel()} stepNo={stepNo} total={stepTotal} />;
+  const top = (stepNo > 0 || scr === 'scan') ? <StepsBar onBack={() => back ? go(back) : onCancel && onCancel()} stepNo={stepNo} total={stepTotal} />
+    : scr === 'welcome' ? <HomeBack onBack={readdress ? onCancel : undefined} /> : null;
   const bottom = cta && <Cta {...cta} busy={act.busy} alt={alt} error={['email', 'verify', 'login', 'scan', 'address', 'scanned'].includes(scr) ? act.error : null} />;
 
   return (

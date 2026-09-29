@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
-import { Shell, GLOW, Icon, StepsBar, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
 
@@ -95,7 +95,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
       reviewed ? 'Geprüft und bestätigt' : rejected ? m.rejectReason : query ? 'Rückfrage bei der Behörde läuft' : 'Prüfung durch den Betreiber · 1–2 Werktage'),
     T(reviewed ? (status === 'active' ? 'done' : 'now') : 'todo', 'Freischaltlink per E-Mail', 'An die E-Mail-Adresse aus dem Bezirksverzeichnis – so bestätigen wir, dass Sie es wirklich sind')
   ];
-  const top = stepNo > 0 && <StepsBar onBack={goBack} stepNo={stepNo} total={3} />;
+  const top = stepNo > 0 ? <StepsBar onBack={goBack} stepNo={stepNo} total={3} /> : scr === 'welcome' ? <HomeBack /> : null;
   const bottom = cta && <Cta {...cta} busy={act.busy} alt={alt} error={act.error} />;
   const kreisShort = (check?.info?.kreis || st.kreis).split(' ')[0];
 

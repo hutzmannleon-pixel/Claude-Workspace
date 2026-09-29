@@ -493,3 +493,13 @@ export function PageHead({ title, onBack, right }) {
     </div>
   );
 }
+
+/** Zurück zur Startseite (Willkommens- und Entsperrseiten). In der eingebetteten Testseite ausgeblendet. */
+export function HomeBack({ onBack }) {
+  if (EMBED) return null;
+  return (
+    <div style={sx('flex:none;display:flex;align-items:center;padding:4px 12px 0;position:relative;z-index:2')}>
+      <button className="btn btn-icon" onClick={onBack || (() => { location.href = '/'; })} aria-label="Zurück zur Startseite" style={sx('width:44px;height:44px')}><Icon n="ph-arrow-left" style={sx('font-size:22px')} /></button>
+    </div>
+  );
+}
