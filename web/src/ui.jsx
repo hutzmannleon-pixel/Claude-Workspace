@@ -1,7 +1,7 @@
 // Gemeinsame Bausteine – Styles 1:1 aus den Claude-Design-Prototypen (Nocturne).
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { sx, api, EMBED, useWide, useData, useAction, parseDate, isoDate, dayLabel } from './lib/core.js';
-import { passkeySupported, addPasskey, takePasskeyOffer, passkeyDeclined, declinePasskey } from './lib/passkey.js';
+import { passkeySupported, addPasskey, takePasskeyOffer, passkeyDeclined, declinePasskey, syncPasskeys } from './lib/passkey.js';
 import { FeedbackButton } from './Feedback.jsx';
 import { LogoMark, Scenery } from './brand.jsx';
 
@@ -513,7 +513,14 @@ export function PasskeyPanel({ role, intro, onChange }) {
   const [msg, setMsg] = useState(null);
   const supported = passkeySupported();
   const add = () => act.run(async () => { setMsg(null); await addPasskey(role); await list.reload(); setMsg('Passkey eingerichtet. Ab jetzt können Sie sich damit anmelden.'); onChange && onChange(); });
-  const remove = id => act.run(async () => { setMsg(null); await api('/api/passkey/delete', { body: { role, id } }); await list.reload(); });
+  const [confirm, setConfirm] = useState(null);
+  const remove = id => act.run(async () => {
+    setMsg(null); setConfirm(null);
+    await api('/api/passkey/delete', { body: { role, id } });
+    syncPasskeys(await api(`/api/passkey/list?role=${role}`));
+    await list.reload();
+    setMsg('Passkey entfernt.');
+  });
   const items = list.data?.passkeys || [];
   return (
     <div style={sx('display:flex;flex-direction:column;gap:8px')}>
@@ -522,9 +529,17 @@ export function PasskeyPanel({ role, intro, onChange }) {
         <div key={p.id} className="glass" style={sx('display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px')}>
           <Icon n="ph-fingerprint" style={sx('font-size:22px;color:var(--color-accent-300)')} />
           <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:14px')}>{p.name}</div><div style={sx('font-size:11px;color:var(--color-neutral-400)')}>eingerichtet {new Date(p.created).toLocaleDateString('de-DE')}{p.lastUsed ? ' · zuletzt genutzt ' + new Date(p.lastUsed).toLocaleDateString('de-DE') : ''}</div></div>
-          <button className="btn btn-ghost btn-icon" disabled={act.busy} onClick={() => remove(p.id)} aria-label={`Passkey ${p.name} entfernen`} style={sx('width:40px;height:40px;color:var(--color-neutral-400)')}><Icon n="ph-trash" /></button>
+          <button className="btn btn-ghost btn-icon" disabled={act.busy} onClick={() => setConfirm(p.id)} aria-label={`Passkey ${p.name} entfernen`} style={sx('width:40px;height:40px;color:var(--color-neutral-400)')}><Icon n="ph-trash" /></button>
         </div>
       ))}
+      {confirm && <div className="glass" role="alertdialog" style={sx('padding:12px 14px;border-radius:16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 0 0 1px rgba(245,163,165,0.5)')}>
+        <div style={sx('font-size:14px;font-weight:600')}>Passkey wirklich entfernen?</div>
+        <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>Mit diesem Passkey können Sie sich danach nicht mehr anmelden. {role === 'admin' ? 'Entfernen Sie nie den Passkey des Geräts, das Sie gerade benutzen, wenn Sie keinen zweiten haben – der Betreiber-Zugang ist nur per Passkey möglich.' : 'Die Anmeldung per Code per E-Mail bleibt möglich.'}</div>
+        <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
+          <button className="btn btn-secondary" onClick={() => setConfirm(null)} style={sx('min-height:42px')}>Behalten</button>
+          <button className="btn btn-secondary" disabled={act.busy} onClick={() => remove(confirm)} style={sx('min-height:42px;color:#f5a3a5')}><Icon n="ph-trash" />Entfernen</button>
+        </div>
+      </div>}
       {supported
         ? <button className="btn btn-secondary" disabled={act.busy} onClick={add} style={sx('min-height:46px')}><Icon n="ph-fingerprint" />{act.busy ? 'Bitte am Gerät bestätigen …' : items.length ? 'Weiteren Passkey einrichten' : 'Passkey einrichten'}</button>
         : <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>Dieser Browser unterstützt keine Passkeys.</div>}

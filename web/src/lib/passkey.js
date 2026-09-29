@@ -41,7 +41,19 @@ export async function loginPasskey(role) {
       : 'Kein Passkey gefunden (oder abgebrochen). Melden Sie sich einmal mit Code per E-Mail an und richten Sie den Passkey unter „Mehr“ ein.');
     throw friendly(e);
   }
-  await api('/api/passkey/login/verify', { body: { role, challengeId, response } });
+  try { await api('/api/passkey/login/verify', { body: { role, challengeId, response } }); }
+  catch (e) {
+    // Passkey liegt noch auf dem Gerät, ist auf dem Server aber gelöscht → Gerät soll ihn vergessen
+    if (e.code === 'passkey_unknown' && window.PublicKeyCredential?.signalUnknownCredential)
+      window.PublicKeyCredential.signalUnknownCredential({ rpId: options.rpId, credentialId: response.id }).catch(() => {});
+    throw e;
+  }
+}
+
+/** Nach dem Entfernen: dem Passwortmanager des Geräts mitteilen, welche Passkeys noch gelten */
+export function syncPasskeys(list) {
+  if (!list?.userId || !window.PublicKeyCredential?.signalAllAcceptedCredentials) return;
+  window.PublicKeyCredential.signalAllAcceptedCredentials({ rpId: list.rpId, userId: list.userId, allAcceptedCredentialIds: list.accepted }).catch(() => {});
 }
 
 // Nach Anmeldung/Registrierung per E-Mail-Code einmal anbieten, einen Passkey einzurichten

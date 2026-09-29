@@ -78,8 +78,10 @@ export default async function passkeyRoutes(app) {
   // Verwalten
   app.get('/api/passkey/list', async req => {
     const role = roleOf(req.query.role), u = requireUser(req, role);
-    return { passkeys: all('SELECT id, name, created_at, last_used FROM passkeys WHERE user_id = ? ORDER BY id', u.id)
-      .map(p => ({ id: p.id, name: p.name, created: p.created_at.replace(' ', 'T') + 'Z', lastUsed: p.last_used })), required: role === 'admin' };
+    const rows = all('SELECT id, name, cred_id, created_at, last_used FROM passkeys WHERE user_id = ? ORDER BY id', u.id);
+    return { passkeys: rows.map(p => ({ id: p.id, name: p.name, created: p.created_at.replace(' ', 'T') + 'Z', lastUsed: p.last_used })), required: role === 'admin',
+      // damit der Browser gelöschte Passkeys auch im Passwortmanager des Geräts entfernen kann
+      rpId: rp(req).id, userId: Buffer.from(`${role}:${u.id}`).toString('base64url'), accepted: rows.map(p => p.cred_id) };
   });
 
   app.post('/api/passkey/delete', async req => {
