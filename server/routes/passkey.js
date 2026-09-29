@@ -4,11 +4,13 @@ import { generateRegistrationOptions, verifyRegistrationResponse, generateAuthen
 import { config } from '../config.js';
 import { get, all, run } from '../db.js';
 import { COOKIE, currentUser, requireUser, startSession } from '../auth.js';
-import { bad, forbidden, notFound, clean, randomToken, nowIso } from '../util.js';
+import { HttpError, bad, forbidden, notFound, clean, randomToken, nowIso, limited } from '../util.js';
 
 const challenges = new Map(); // id → { challenge, role, userId, exp }
 const TTL = 5 * 60000;
-const keep = data => { const id = randomToken(16); challenges.set(id, { ...data, exp: Date.now() + TTL }); return id; };
+const keep = data => {
+  if (challenges.size > 20000) throw new HttpError(503, 'Gerade sind zu viele Anmeldungen offen. Bitte gleich noch einmal versuchen.');
+  const id = randomToken(16); challenges.set(id, { ...data, exp: Date.now() + TTL }); return id; };
 const take = id => { const c = challenges.get(String(id || '')); challenges.delete(String(id || '')); if (!c || c.exp < Date.now()) throw bad('Die Anfrage ist abgelaufen. Bitte erneut versuchen.'); return c; };
 setInterval(() => { const now = Date.now(); for (const [k, v] of challenges) if (v.exp < now) challenges.delete(k); }, 60000).unref();
 
@@ -53,6 +55,7 @@ export default async function passkeyRoutes(app) {
   // Anmelden (ohne E-Mail: der Passkey weiß, zu welchem Konto er gehört)
   app.post('/api/passkey/login/options', async req => {
     const role = roleOf(req.body?.role), r = rp(req);
+    if (limited('pk:' + req.ip, config.ipLoginsPerHour, 3600000)) throw new HttpError(429, 'Zu viele Versuche. Bitte später erneut versuchen.');
     const options = await generateAuthenticationOptions({ rpID: r.id, userVerification: 'preferred', allowCredentials: [] });
     return { options, challengeId: keep({ challenge: options.challenge, role }) };
   });

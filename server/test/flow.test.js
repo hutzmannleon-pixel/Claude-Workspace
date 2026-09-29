@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-test-'));
-Object.assign(process.env, { DATA_DIR: dir, TEST_MODE: '1', ADMIN_EMAILS: 'admin@test.de', BASE_URL: 'http://localhost:3000', APP_SECRET: 'test', ADMIN_PASSKEY: 'optional' });
+Object.assign(process.env, { DATA_DIR: dir, TEST_MODE: '1', ADMIN_EMAILS: 'admin@test.de', BASE_URL: 'http://localhost:3000', APP_SECRET: 'test', ADMIN_PASSKEY: 'optional', IP_CODES_PER_HOUR: '100000', IP_LOGINS_PER_HOUR: '100000' });
 
 const { build } = await import('../index.js');
 const { get, all, run } = await import('../db.js');
@@ -520,4 +520,44 @@ test('Passkeys: Betreiber-Pflicht, danach kein E-Mail-Code mehr; Einrichten nur 
     assert.equal(bad.code, 'passkey_unknown');
     run(`DELETE FROM passkeys WHERE cred_id = 'test-cred'`);
   } finally { config.adminPasskeyRequired = false; }
+});
+
+test('Fristen: am Termintag kein Buchen/Absagen mehr, keine Tage in der Vergangenheit, Antwortfrist vor dem ersten Tag', async () => {
+  const { today } = await import('../util.js');
+  const c = get(`SELECT * FROM campaigns WHERE street = 'Ahornweg' ORDER BY id DESC LIMIT 1`);
+  const w = get('SELECT * FROM windows WHERE campaign_id = ? ORDER BY date LIMIT 1', c.id);
+  // Neue Tage nicht in der Vergangenheit, nicht sonntags
+  await fails(400, 's', 'POST', '/api/sweep/campaigns', { id: c.id, slotLen: 30, deadline: iso(1), windows: [{ id: w.id, date: w.date, start: w.start, end: w.end }, { date: iso(-2), start: '08:00', end: '10:00' }] });
+  const sun = new Date(); sun.setDate(sun.getDate() + ((7 - sun.getDay()) % 7 || 7));
+  const sunIso = `${sun.getFullYear()}-${String(sun.getMonth() + 1).padStart(2, '0')}-${String(sun.getDate()).padStart(2, '0')}`;
+  await fails(400, 's', 'POST', '/api/sweep/campaigns', { id: c.id, slotLen: 30, deadline: iso(1), windows: [{ date: sunIso, start: '08:00', end: '10:00' }] });
+  // Antwortfrist nach dem ersten Tag → auf den Vortag gezogen
+  const first = iso(12);
+  await ok('s', 'POST', '/api/sweep/campaigns', { id: c.id, slotLen: 30, deadline: iso(30), windows: [{ id: w.id, date: first, start: '08:00', end: '10:00' }] });
+  assert.ok(get('SELECT deadline FROM campaigns WHERE id = ?', c.id).deadline < first);
+  // Buchen, dann wird es Termintag: nicht mehr änderbar
+  await ok('k1', 'POST', '/api/customer/book', { windowId: w.id, time: '08:00' });
+  run('UPDATE windows SET date = ? WHERE id = ?', today(), w.id);
+  let me = await ok('k1', 'GET', '/api/customer/state');
+  assert.equal(me.booking.changeable, false);
+  assert.equal(me.campaign.windows[0].open, false);
+  assert.equal((await fails(400, 'k1', 'POST', '/api/customer/cancel', {})).code, 'closed');
+  assert.equal((await fails(400, 'k1', 'POST', '/api/customer/book', { windowId: w.id, time: '09:00' })).code, 'closed');
+  // Der Kaminfeger kann weiterhin absagen; danach kann an diesem Tag nicht neu gebucht werden
+  await ok('s', 'POST', `/api/sweep/bookings/${get(`SELECT id FROM bookings WHERE window_id = ? AND status = 'booked'`, w.id).id}/cancel`, {});
+  assert.equal((await fails(400, 'k1', 'POST', '/api/customer/book', { windowId: w.id, time: '09:00' })).code, 'closed');
+  run('UPDATE windows SET date = ? WHERE id = ?', first, w.id);
+});
+
+test('Schutz: ungültige Herkunft, Einladungen begrenzt, Anfragen pro Anschluss gebremst', async () => {
+  const { config } = await import('../config.js');
+  await fails(403, 'k1', 'POST', '/api/customer/prefs', { eve: true }, { headers: { origin: 'null' } });
+  await fails(403, 'k1', 'POST', '/api/customer/prefs', { eve: true }, { headers: { origin: '::kaputt' } });
+  await fails(400, 'k1', 'POST', '/api/customer/members', { email: 'berger@test.de' });
+  await ok('k1', 'POST', '/api/customer/members', { email: 'gast1@test.de' });
+  await fails(400, 'k1', 'POST', '/api/customer/members', { email: 'gast1@test.de' });
+  const before = config.ipCodesPerHour;
+  config.ipCodesPerHour = 1;
+  try { await fails(429, 'x', 'POST', '/api/auth/code', { email: 'irgendwer@test.de', role: 'customer', purpose: 'login' }); }
+  finally { config.ipCodesPerHour = before; }
 });

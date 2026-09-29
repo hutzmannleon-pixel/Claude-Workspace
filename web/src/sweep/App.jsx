@@ -20,7 +20,7 @@ export default function SweepApp({ onLogout }) {
   const msgs = useData('/api/sweep/messages', { enabled: scr === 'notify' });
   const cust = useData('/api/sweep/customers', { enabled: scr === 'customers' });
   const [seen, setSeen] = useState(() => { try { return localStorage.getItem('kf-sweep-seen') || ''; } catch { return ''; } });
-  useEffect(() => { if ([ov.error, camp.error, route.error, msgs.error].some(e => e?.status === 401)) onLogout(); }, [ov.error, camp.error, route.error, msgs.error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if ([ov.error, camp.error, route.error, msgs.error, cust.error].some(e => e?.status === 401)) onLogout(); }, [ov.error, camp.error, route.error, msgs.error, cust.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const o = ov.data;
   if (!o) return ov.error && ov.error.status !== 401 ? <Shell glow={GLOW.sweep}><Hero icon="ph-wifi-slash" muted title="Keine Verbindung" sub={ov.error.message} /></Shell> : <Loading />;

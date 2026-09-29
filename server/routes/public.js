@@ -6,7 +6,7 @@ import { live } from '../live.js';
 import { requestCode, checkCode, startSession, endSession, currentUser, COOKIE } from '../auth.js';
 import { readLink, useLink, activeSweepForDistrict, adminLog } from '../domain.js';
 import { queueMail } from '../mail.js';
-import { HttpError, bad, notFound, nowIso, normEmail } from '../util.js';
+import { HttpError, bad, notFound, nowIso, normEmail, limited } from '../util.js';
 
 export default async function publicRoutes(app) {
   app.get('/api/health', async () => ({ ok: true }));
@@ -21,11 +21,16 @@ export default async function publicRoutes(app) {
   });
 
   // Live-Kanal: nur Versionsnummern, keine Daten
-  app.get('/api/events', (req, reply) => { reply.hijack(); live.attach(reply.raw); });
+  app.get('/api/events', (req, reply) => {
+    if (!live.canAttach(req.ip)) return reply.code(429).send({ error: 'Zu viele offene Verbindungen.' });
+    reply.hijack(); live.attach(reply.raw, req.ip);
+  });
 
   // ---------- Login per E-Mail-Code ----------
   app.post('/api/auth/code', async req => {
     const { email, role, purpose } = req.body || {};
+    // Pro Anschluss begrenzt – sonst ließen sich beliebige Postfächer mit Mails fluten
+    if (limited('code:' + req.ip, config.ipCodesPerHour, 3600000)) throw new HttpError(429, 'Zu viele Anfragen von diesem Anschluss. Bitte später erneut versuchen.');
     try { await requestCode(email, role, purpose || 'login'); }
     catch (e) {
       if (e.statusCode) throw e;
@@ -38,6 +43,7 @@ export default async function publicRoutes(app) {
   app.post('/api/auth/login', async (req, reply) => {
     const { email, role, code } = req.body || {};
     if (!COOKIE[role]) throw bad('Unbekannte Rolle.');
+    if (limited('login:' + req.ip, config.ipLoginsPerHour, 3600000)) throw new HttpError(429, 'Zu viele Versuche. Bitte später erneut versuchen.');
     const e = checkCode(email, role, 'login', code);
     let user = get('SELECT * FROM users WHERE email = ? AND role = ?', e, role);
     if (!user && role === 'admin' && config.adminEmails.includes(e)) {

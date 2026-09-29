@@ -25,10 +25,14 @@ export async function build({ logger = !config.testMode } = {}) {
   app.addHook('onRequest', async (req, reply) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || !req.url.startsWith('/api/')) return;
     const origin = req.headers.origin;
-    if (origin && new URL(origin).host !== req.headers.host && origin !== config.baseUrl) return reply.code(403).send({ error: 'Ungültige Herkunft.' });
+    if (!origin) return;
+    let host = null;
+    try { host = new URL(origin).host; } catch {}
+    if (host !== req.headers.host && origin !== config.baseUrl) return reply.code(403).send({ error: 'Ungültige Herkunft.' });
   });
   app.addHook('onSend', async (req, reply) => {
     reply.header('X-Frame-Options', 'SAMEORIGIN').header('Referrer-Policy', 'same-origin').header('X-Content-Type-Options', 'nosniff');
+    if (config.production && config.baseUrl.startsWith('https:')) reply.header('Strict-Transport-Security', 'max-age=31536000');
     if (req.url.startsWith('/api/') && !reply.getHeader('cache-control')) reply.header('Cache-Control', 'no-store');
   });
 
@@ -60,6 +64,8 @@ export async function build({ logger = !config.testMode } = {}) {
     } });
     app.setNotFoundHandler((req, reply) => {
       if (req.url.startsWith('/api/')) return reply.code(404).send({ error: 'Nicht gefunden' });
+      // Fehlende Programmdateien (z. B. aus einer älteren Version) nicht mit der Startseite beantworten
+      if (req.url.startsWith('/assets/') || /\.(js|css|png|svg|webmanifest|woff2?)(\?|$)/.test(req.url)) return reply.code(404).type('text/plain').send('Nicht gefunden');
       return reply.header('Cache-Control', 'no-cache').sendFile('index.html');
     });
   }

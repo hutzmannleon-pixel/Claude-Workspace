@@ -70,3 +70,15 @@ export function parseCsv(text) {
   return rows.slice(1).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] ?? '').trim()])));
 }
 export const pick = (row, ...names) => { for (const n of names) if (row[n]) return row[n]; return ''; };
+
+// --- Einfache Bremse gegen Missbrauch (pro Schlüssel, z. B. IP), im Speicher ---
+const hits = new Map();
+/** true, wenn der Schlüssel im Zeitfenster schon max-mal dran war; zählt sonst mit. */
+export function limited(key, max, windowMs) {
+  const now = Date.now(), h = hits.get(key);
+  if (!h || h.reset < now) { hits.set(key, { n: 1, reset: now + windowMs }); return false; }
+  if (h.n >= max) return true;
+  h.n++;
+  return false;
+}
+setInterval(() => { const now = Date.now(); for (const [k, v] of hits) if (v.reset < now) hits.delete(k); }, 60000).unref();

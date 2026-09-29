@@ -270,6 +270,18 @@ export default async function sweepRoutes(app) {
     validateWindows(b.windows, slotLen);
     if (!DATE_RE.test(deadline)) throw bad('Bitte eine Antwortfrist angeben.');
     let c = b.id ? ownCampaign(s, b.id) : null;
+    // Neue oder verlegte Tage nicht in der Vergangenheit und nicht am Sonntag; bestehende (evtl. schon vorbei) bleiben erlaubt
+    for (const w of b.windows) {
+      const ex = c && w.id && get('SELECT date FROM windows WHERE id = ? AND campaign_id = ?', Number(w.id), c.id);
+      if (ex && ex.date === w.date) continue;
+      if (w.date < today()) throw bad(`Der ${dayLabel(w.date)} liegt in der Vergangenheit.`);
+      if (new Date(w.date + 'T12:00:00').getDay() === 0) throw bad('Sonntags sind keine Termine möglich.');
+    }
+    // Antwortfrist: frühestens heute, spätestens am Tag vor dem ersten Termin
+    const firstDay = b.windows.map(w => w.date).sort()[0];
+    let dl = deadline < today() ? today() : deadline;
+    if (dl >= firstDay) { const d = new Date(firstDay + 'T12:00:00'); d.setDate(d.getDate() - 1); dl = d.toISOString().slice(0, 10); }
+    if (dl < today()) dl = today();
     const street = c ? c.street : clean(b.street), plz = c ? c.plz : clean(b.plz, 5);
     const hs = streetHouseholds({ district_id: s.district_id, street_key: streetKey(street), plz });
     if (!hs.length) throw bad('Diese Straße steht nicht in Ihrem Kehrbuch.');
@@ -277,11 +289,11 @@ export default async function sweepRoutes(app) {
     const result = tx(() => {
       if (!c) {
         const id = Number(run('INSERT INTO campaigns (district_id, street, street_key, plz, slot_len, deadline, sent_at) VALUES (?,?,?,?,?,?,?)',
-          s.district_id, street, streetKey(street), plz, slotLen, deadline, nowIso()).lastInsertRowid);
+          s.district_id, street, streetKey(street), plz, slotLen, dl, nowIso()).lastInsertRowid);
         for (const w of b.windows) run('INSERT INTO windows (campaign_id, date, start, end) VALUES (?,?,?,?)', id, w.date, w.start, w.end);
         return { id, created: true };
       }
-      run('UPDATE campaigns SET slot_len = ?, deadline = ?, sent_at = ? WHERE id = ?', slotLen, deadline, nowIso(), c.id);
+      run('UPDATE campaigns SET slot_len = ?, deadline = ?, sent_at = ? WHERE id = ?', slotLen, dl, nowIso(), c.id);
       const keep = new Set();
       for (const w of b.windows) {
         const ex = w.id && get('SELECT id FROM windows WHERE id = ? AND campaign_id = ?', Number(w.id), c.id);
@@ -303,8 +315,8 @@ export default async function sweepRoutes(app) {
     const wins = windowsOf(c.id);
     const winText = wins.map(w => `${w.label} ${w.start}–${w.end}`).join(', ');
     const text = result.created
-      ? `Guten Tag! Ich komme zur Feuerstättenschau in die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(deadline)} eine Zeit, in der jemand zu Hause ist.`
-      : `Neue Zeitfenster für die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(deadline)} Ihre Zeit in der App.`;
+      ? `Guten Tag! Ich komme zur Feuerstättenschau in die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} eine Zeit, in der jemand zu Hause ist.`
+      : `Neue Zeitfenster für die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App.`;
     postMessage(s.id, c.id, text, hs.map(h => h.id));
     if (dropped.length) postMessage(s.id, c.id, 'Ihr bisheriger Termin passt leider nicht mehr in die neuen Zeitfenster. Bitte wählen Sie in der App eine neue Zeit.', dropped);
     for (const h of hs) {
@@ -316,7 +328,7 @@ export default async function sweepRoutes(app) {
         // Einladung an die E-Mail aus dem Kehrbuch – bestätigt zugleich den Wohnsitz
         const l = makeLink('invite', h.id, null, 30 * 86400000, '/kunde?einladung=');
         queueMail({ to: h.email, subject: 'Einladung: Termin für die Feuerstättenschau wählen',
-          text: `Guten Tag ${householdName(h) ? 'Familie ' + householdName(h) : ''}, ich komme zur Feuerstättenschau in die ${h.street} ${h.nr}: ${winText}.\n\nBitte wählen Sie bis ${dayLabel(deadline)} Ihre Zeit in der App. Mit dem Link ist Ihre Adresse sofort bestätigt.\n\nIhr Kaminfeger ${sweepName(s)}`,
+          text: `Guten Tag ${householdName(h) ? 'Familie ' + householdName(h) : ''}, ich komme zur Feuerstättenschau in die ${h.street} ${h.nr}: ${winText}.\n\nBitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App. Mit dem Link ist Ihre Adresse sofort bestätigt.\n\nIhr Kaminfeger ${sweepName(s)}`,
           link: l.url, linkLabel: 'Einladung annehmen' });
       }
     }
@@ -368,6 +380,7 @@ export default async function sweepRoutes(app) {
     const w = get('SELECT * FROM windows WHERE id = ? AND campaign_id = ?', Number(body.windowId), c.id);
     if (!w || !slotsOf(w, c.slot_len).includes(body.time)) throw bad('Ungültige Zeit.');
     if (w.id === b.window_id && body.time === b.time) throw bad('Das ist bereits die gebuchte Zeit.');
+    if (w.date < today()) throw bad('Dieser Tag liegt in der Vergangenheit.');
     try {
       tx(() => {
         run(`UPDATE bookings SET status = 'replaced', updated_at = ? WHERE id = ?`, nowIso(), b.id);

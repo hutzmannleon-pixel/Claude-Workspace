@@ -38,6 +38,9 @@ export const config = {
   codeTtlMin: 10,
   codeMaxAttempts: 5,
   codesPerHour: 6,
+  // Obergrenzen pro Anschluss (IP) und Stunde
+  ipCodesPerHour: Number(env.IP_CODES_PER_HOUR || 30),
+  ipLoginsPerHour: Number(env.IP_LOGINS_PER_HOUR || 60),
   sessionDays: 60,
   adminIdleMin: 5,
   docMaxDays: 14,
@@ -51,6 +54,7 @@ export function emailAllowed(email) {
   return config.allowedEmails.some(a => a.startsWith('@') ? e.endsWith(a) : a === e);
 }
 
-if (config.production && config.secret.startsWith('dev-')) {
-  console.warn('WARNUNG: APP_SECRET ist nicht gesetzt. Bitte in der Umgebung konfigurieren.');
+// In Produktion nie mit dem Beispiel-Geheimnis starten – sonst wären Codes und Sitzungen vorhersagbar
+if (config.production && (config.secret.startsWith('dev-') || config.secret.length < 24)) {
+  throw new Error('APP_SECRET fehlt oder ist zu kurz (mind. 24 Zeichen). Bitte in der Umgebung setzen.');
 }

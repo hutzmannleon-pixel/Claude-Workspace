@@ -39,11 +39,14 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   }
 
   // Zeitwahl
-  const w = c ? (c.windows.find(x => x.id === ui.selW) || c.windows[0]) : null;
+  // Tage, die heute oder früher sind, lassen sich nicht mehr buchen (bis zum Vortag)
+  const openWins = c ? c.windows.filter(x => x.open !== false) : [];
+  const w = c ? (openWins.find(x => x.id === ui.selW) || openWins[0] || null) : null;
   const hasSel = !!ui.selT && ui.selW === w?.id;
-  const freeLabel = n => n ? n + ' frei' : 'ausgebucht';
-  const toPick = () => set({ screen: 'pick', resched: false, selW: c.windows[0]?.id, selT: null, overlay: null });
-  const toResched = () => set({ screen: 'pick', resched: true, selW: b?.windowId || c.windows[0]?.id, selT: null, overlay: null, keyOn: !!b?.key, keyWho: b?.key || '' });
+  const freeLabel = x => x.open === false ? 'nicht mehr buchbar' : x.free ? x.free + ' frei' : 'ausgebucht';
+  const toPick = () => set({ screen: 'pick', resched: false, selW: openWins[0]?.id, selT: null, overlay: null });
+  const toResched = () => set({ screen: 'pick', resched: true, selW: openWins.find(x => x.id === b?.windowId)?.id || openWins[0]?.id, selT: null, overlay: null, keyOn: !!b?.key, keyWho: b?.key || '' });
+  const canChange = b && b.changeable !== false;
   const goHome = () => { act.setError(null); set({ screen: 'home', overlay: null }); };
   const openMsgs = () => { set({ screen: 'msgs' }); setTimeout(() => api('/api/customer/read', { body: {} }).then(reload).catch(() => {}), 1200); };
   const doConfirm = () => act.run(async () => {
@@ -83,7 +86,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
     </div>
   );
   let bottom = null;
-  if (scr === 'pick') bottom = btn(hasSel ? `Weiter · ${short(w.label).day} ${ui.selT}–${endOf(ui.selT, len)}` : 'Bitte eine Zeit wählen', () => hasSel && set({ screen: 'confirm' }), { disabled: !hasSel, fade: true });
+  if (scr === 'pick' && w) bottom = btn(hasSel ? `Weiter · ${short(w.label).day} ${ui.selT}–${endOf(ui.selT, len)}` : 'Bitte eine Zeit wählen', () => hasSel && set({ screen: 'confirm' }), { disabled: !hasSel, fade: true });
   if (scr === 'confirm') bottom = btn('Termin verbindlich bestätigen', doConfirm, { icon: 'ph-check-circle', glow: true, disabled: !verified, hint: verified ? null : 'Buchen ist möglich, sobald Ihr Wohnsitz bestätigt ist. Sie bekommen dann eine E-Mail.' });
   if (scr === 'done') bottom = btn('Fertig', goHome, { secondary: true });
   if (scr === 'info') bottom = b ? btn('Termin ansehen', toTermin, { icon: 'ph-calendar-blank' }) : c && s.houseStatus !== 'booked' && r.status !== 'moved' ? btn(verified ? 'Zeit wählen' : 'Zeiten ansehen', toPick, { icon: 'ph-calendar-plus' }) : null;
@@ -208,7 +211,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
             {c.windows.map(x => (
               <div key={x.id} style={sx(`display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14px;background:${DIV_BOTTOM}`)}>
                 <span>{x.label} <span style={sx('color:var(--color-neutral-500)')}>· {x.start}–{x.end}</span></span>
-                <span style={sx('font-size:12px;color:var(--color-accent-300)')}>{freeLabel(x.free)}</span>
+                <span style={sx('font-size:12px;color:var(--color-accent-300)')}>{freeLabel(x)}</span>
               </div>
             ))}
           </div>
@@ -227,7 +230,8 @@ export default function CustomerApp({ onLogout, onReaddress }) {
               {b.key && <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-key" style={sx('font-size:18px;color:var(--color-accent)')} /><span>Schlüssel bei {b.key}</span></div>}
               <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-timer" style={sx('font-size:18px;color:var(--color-neutral-500)')} /><span>Dauer ca. {len} Minuten</span></div>
             </div>
-            {!b.visit && !r.isMember && <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px')}>
+            {!b.visit && !canChange && <div style={sx('display:flex;gap:8px;margin-top:12px;font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}><Icon n="ph-info" style={sx('font-size:16px;margin-top:1px;flex:none')} /><span>Heute ist Ihr Termin. Änderungen bitte direkt mit {sweepName}{sweep?.phone ? <> absprechen: <a href={`tel:${sweep.phone.replace(/[^\d+]/g, '')}`}>{sweep.phone}</a></> : ' absprechen.'}</span></div>}
+            {!b.visit && canChange && !r.isMember && <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px')}>
               <button className="btn btn-secondary" onClick={toResched} style={sx('min-height:44px')}><Icon n="ph-calendar-dots" />Verschieben</button>
               <button className="btn btn-secondary" onClick={() => set({ overlay: 'cancel' })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Absagen</button>
             </div>}
@@ -277,16 +281,23 @@ export default function CustomerApp({ onLogout, onReaddress }) {
         </div>
       </>}
 
+      {scr === 'pick' && c && !w && <>
+        <BackHeader onBack={goHome} title={ui.resched ? 'Termin verschieben' : 'Zeit wählen'} />
+        <div className="glass" style={sx(`${cardS};display:flex;flex-direction:column;gap:8px`)}>
+          <div style={sx('font-size:20px;font-weight:600;line-height:1.2')}>Keine buchbaren Tage mehr</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Online buchen geht bis zum Vortag. Bitte vereinbaren Sie Ihren Termin direkt mit {sweepName}{sweep?.phone ? <>: <a href={`tel:${sweep.phone.replace(/[^\d+]/g, '')}`}>{sweep.phone}</a></> : '.'}</div>
+        </div>
+      </>}
       {scr === 'pick' && c && w && <>
         <BackHeader onBack={goHome} title={ui.resched ? 'Termin verschieben' : 'Zeit wählen'} sub="Schritt 1 von 2" />
         <div style={sx('padding:14px 22px 0;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>An diesen Tagen ist {sweepName} in der {c.street}. Ein Besuch dauert etwa {len} Minuten.</div>
         <div style={sx('display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;padding:16px 16px 0')}>
           {c.windows.map(x => { const on = x.id === w.id, p = short(x.label); return (
-            <button key={x.id} onClick={() => set({ selW: x.id, selT: null })} style={sx(`text-align:left;padding:12px 10px 10px;border-radius:var(--radius-md);background:${on ? 'var(--color-accent-900)' : 'var(--color-surface)'};border:1px solid ${on ? 'var(--color-accent)' : 'transparent'};color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px;box-shadow:${on ? '0 0 24px color-mix(in srgb, var(--color-accent) 18%, transparent)' : 'none'}`)}>
+            <button key={x.id} disabled={x.open === false} onClick={() => set({ selW: x.id, selT: null })} style={sx(`opacity:${x.open === false ? 0.45 : 1};text-align:left;padding:12px 10px 10px;border-radius:var(--radius-md);background:${on ? 'var(--color-accent-900)' : 'var(--color-surface)'};border:1px solid ${on ? 'var(--color-accent)' : 'transparent'};color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:2px;box-shadow:${on ? '0 0 24px color-mix(in srgb, var(--color-accent) 18%, transparent)' : 'none'}`)}>
               <span style={sx(`font-size:12px;color:${on ? 'var(--color-accent)' : 'var(--color-neutral-500)'}`)}>{p.day}</span>
               <span style={sx('font-size:17px;font-weight:500;letter-spacing:-0.01em')}>{p.date}</span>
               <span style={sx('font-size:12px;color:var(--color-neutral-400)')}>{x.start}–{x.end}</span>
-              <span style={sx('font-size:11px;color:var(--color-accent-300);margin-top:6px')}>{freeLabel(x.free)}</span>
+              <span style={sx('font-size:11px;color:var(--color-accent-300);margin-top:6px')}>{freeLabel(x)}</span>
             </button>
           ); })}
         </div>

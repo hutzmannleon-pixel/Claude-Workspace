@@ -37,11 +37,21 @@ export const upload = (path, file) => { const f = new FormData(); f.append('file
 
 // ---------- Live-Aktualisierung (Server-Sent Events) ----------
 let version = 0; const subs = new Set(); let es = null;
+const notify = v => { version = v; subs.forEach(f => f(v)); };
 function ensureStream() {
   if (es || typeof EventSource === 'undefined') return;
   es = new EventSource('/api/events');
-  es.addEventListener('change', e => { const v = Number(e.data); if (v !== version) { version = v; subs.forEach(f => f(v)); } });
+  es.addEventListener('change', e => { const v = Number(e.data); if (v !== version) notify(v); });
+  // Antwortet der Server beim Neuverbinden mit einem Fehler (z. B. kurz während eines Updates),
+  // gibt der Browser endgültig auf – dann selbst neu verbinden
+  es.onerror = () => { if (es && es.readyState === 2) { es.close(); es = null; setTimeout(ensureStream, 5000); } };
 }
+// Zurück in der App (Handy aus dem Hintergrund): Daten frisch laden
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !subs.size) return;
+  notify(version - 0.5);
+  if (!es) ensureStream();
+});
 export function useLive() {
   const [v, setV] = useState(version);
   useEffect(() => { ensureStream(); subs.add(setV); return () => subs.delete(setV); }, []);

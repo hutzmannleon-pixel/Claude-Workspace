@@ -1,4 +1,4 @@
-import { StrictMode, lazy, Suspense } from 'react';
+import { StrictMode, lazy, Suspense, Component } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-500.css';
@@ -33,8 +33,34 @@ function route() {
   return <Landing />;
 }
 
+// Fängt Abstürze der Oberfläche ab. Nach einem Update fehlen alte Programmteile – dann einmal automatisch neu laden.
+class Guard extends Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(err) {
+    const chunk = /dynamically imported module|Importing a module script failed|Failed to fetch|error loading dynamically/i.test(String(err?.message || err));
+    let last = 0; try { last = Number(sessionStorage.getItem('kf-reloaded') || 0); } catch {}
+    if (chunk && Date.now() - last > 30000) {
+      try { sessionStorage.setItem('kf-reloaded', String(Date.now())); } catch {}
+      location.reload();
+    }
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24, textAlign: 'center' }}>
+        <div style={{ maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 22, fontWeight: 600 }}>Da ist etwas schiefgelaufen</div>
+          <div style={{ fontSize: 14, color: 'var(--color-neutral-300)' }}>Bitte laden Sie die Seite neu. Ihre Daten sind sicher gespeichert.</div>
+          <button className="btn btn-primary" onClick={() => location.reload()} style={{ minHeight: 48, marginTop: 8 }}>Neu laden</button>
+        </div>
+      </div>
+    );
+  }
+}
+
 createRoot(document.getElementById('root')).render(
-  <StrictMode><Suspense fallback={<Loading />}>{route()}</Suspense></StrictMode>
+  <StrictMode><Guard><Suspense fallback={<Loading />}>{route()}</Suspense></Guard></StrictMode>
 );
 
 if ('serviceWorker' in navigator && location.hostname !== 'localhost' && !new URLSearchParams(location.search).has('embed')) {

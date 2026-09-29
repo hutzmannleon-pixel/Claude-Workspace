@@ -7,7 +7,7 @@ import {
   makeLink, readLink, useLink, activeSweepForDistrict, sweepName, initials, campaignForHousehold, windowsOf, freeCount,
   routeFor, routeStarted, householdName
 } from '../domain.js';
-import { bad, forbidden, notFound, clean, streetKey, nrKey, nowIso, slotsOf, toMin, fmtMin, dayLabel, parseDate, EMAIL_RE, normEmail } from '../util.js';
+import { bad, forbidden, notFound, clean, streetKey, nrKey, nowIso, slotsOf, toMin, fmtMin, dayLabel, parseDate, today, EMAIL_RE, normEmail } from '../util.js';
 
 const LONG = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag', Sa: 'Samstag', So: 'Sonntag' };
 const longDay = label => { const [d, rest] = label.split(', '); return (LONG[d] || d) + ', ' + rest; };
@@ -27,6 +27,9 @@ function lookup({ street, nr, plz }) {
 }
 
 const failed = new Map(); // Fehlversuche Kundennummer je Bewohner
+
+// Buchen, verschieben und absagen geht bis zum Vortag – am Termintag nur noch telefonisch mit dem Kaminfeger
+const openDay = date => date > today();
 
 function residentOf(user) {
   const r = get('SELECT * FROM residents WHERE user_id = ?', user.id);
@@ -49,6 +52,7 @@ export default async function customerRoutes(app) {
     const l = readLink('invite', req.params.token) || readLink('member', req.params.token);
     if (!l) throw notFound('Der Einladungslink ist ungültig oder wurde schon benutzt.');
     const h = get('SELECT * FROM households WHERE id = ?', l.ref_id);
+    if (!h) throw notFound('Diese Adresse gibt es nicht mehr. Bitte wenden Sie sich an Ihren Kaminfeger.');
     const s = activeSweepForDistrict(h.district_id), d = get('SELECT * FROM districts WHERE id = ?', h.district_id);
     return { kind: l.kind, family: householdName(h), street: h.street, nr: h.nr, plz: h.plz, ort: h.ort, bez: d.number, sweep: sweepName(s), email: l.data?.email || '' };
   });
@@ -59,6 +63,7 @@ export default async function customerRoutes(app) {
     if (get('SELECT 1 x FROM users WHERE email = ? AND role = ?', email, 'customer')) throw bad('Zu dieser E-Mail gibt es schon ein Konto.');
     const link = b.invite ? (readLink('invite', b.invite) || readLink('member', b.invite)) : null;
     if (b.invite && !link) throw bad('Der Einladungslink ist ungültig oder wurde schon benutzt.');
+    if (link && !get('SELECT 1 x FROM households WHERE id = ?', link.ref_id)) throw bad('Diese Adresse gibt es nicht mehr. Bitte wenden Sie sich an Ihren Kaminfeger.');
     const result = tx(() => {
       const uid = Number(run('INSERT INTO users (email, role) VALUES (?,?)', email, 'customer').lastInsertRowid);
       if (link) {
@@ -138,11 +143,11 @@ export default async function customerRoutes(app) {
       campaign = { id: c.id, street: c.street, slotLen: c.slot_len, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline),
         windows: wins.map(w => {
           const taken = new Set(all(`SELECT time FROM bookings WHERE window_id = ? AND status = 'booked' AND household_id != ?`, w.id, h.id).map(x => x.time));
-          return { ...w, free: freeCount(c, w, h.id), slots: slotsOf(w, c.slot_len).map(t => ({ t, taken: taken.has(t) })) };
+          return { ...w, open: openDay(w.date), free: openDay(w.date) ? freeCount(c, w, h.id) : 0, slots: slotsOf(w, c.slot_len).map(t => ({ t, taken: taken.has(t) })) };
         }) };
       if (my) {
         const w = wins.find(x => x.id === my.window_id);
-        booking = { windowId: my.window_id, t: my.time, end: fmtMin(toMin(my.time) + c.slot_len), key: my.key_note, visit: my.visit, date: w.date, label: w.label, longDate: longDay(w.label) };
+        booking = { windowId: my.window_id, t: my.time, end: fmtMin(toMin(my.time) + c.slot_len), key: my.key_note, visit: my.visit, date: w.date, label: w.label, longDate: longDay(w.label), changeable: openDay(w.date) || my.visit === 'missed' };
         if (routeStarted(h.district_id, w.date)) {
           const route = routeFor(h.district_id, w.date);
           const cur = route.find(x => !x.visit);
@@ -181,7 +186,11 @@ export default async function customerRoutes(app) {
     const { windowId, time } = req.body || {};
     const w = get('SELECT * FROM windows WHERE id = ? AND campaign_id = ?', Number(windowId), c.id);
     if (!w || !slotsOf(w, c.slot_len).includes(time)) throw bad('Diese Zeit gibt es nicht.');
+    if (!openDay(w.date)) throw bad('Dieser Tag kann nicht mehr gebucht werden. Bitte einen späteren Tag wählen oder den Kaminfeger anrufen.', 'closed');
     const key = clean(req.body.key, 120) || null;
+    const cur = get(`SELECT b.*, w.date FROM bookings b JOIN windows w ON w.id = b.window_id WHERE b.campaign_id = ? AND b.household_id = ? AND b.status = 'booked'`, c.id, h.id);
+    if (cur && cur.visit === 'done') throw bad('Die Feuerstättenschau ist bereits erledigt.');
+    if (cur && !cur.visit && !openDay(cur.date)) throw bad('Ihr Termin ist heute – Änderungen bitte direkt mit dem Kaminfeger absprechen.', 'closed');
     try {
       tx(() => {
         const old = get(`SELECT * FROM bookings WHERE campaign_id = ? AND household_id = ? AND status = 'booked'`, c.id, h.id);
@@ -205,8 +214,9 @@ export default async function customerRoutes(app) {
     const u = requireUser(req, 'customer'), r = residentOf(u);
     const h = get('SELECT * FROM households WHERE id = ?', r.household_id);
     const c = h && campaignForHousehold(h);
-    const b = c && get(`SELECT * FROM bookings WHERE campaign_id = ? AND household_id = ? AND status = 'booked'`, c.id, h.id);
-    if (!b) throw bad('Kein Termin zum Absagen.');
+    const b = c && get(`SELECT b.*, w.date FROM bookings b JOIN windows w ON w.id = b.window_id WHERE b.campaign_id = ? AND b.household_id = ? AND b.status = 'booked'`, c.id, h.id);
+    if (!b || b.visit) throw bad('Kein Termin zum Absagen.');
+    if (!openDay(b.date)) throw bad('Ihr Termin ist heute – absagen bitte direkt beim Kaminfeger.', 'closed');
     run(`UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE id = ?`, nowIso(), b.id);
     live.bump();
     return { ok: true };
@@ -241,7 +251,11 @@ export default async function customerRoutes(app) {
     if (r.status !== 'verified') throw forbidden('Erst nach der Bestätigung Ihres Wohnsitzes möglich.');
     const email = normEmail(req.body?.email);
     if (!EMAIL_RE.test(email)) throw bad('Bitte eine gültige E-Mail-Adresse eingeben.');
+    if (email === u.email) throw bad('Das ist Ihre eigene Adresse.');
     const h = get('SELECT * FROM households WHERE id = ?', r.household_id);
+    const pending = all(`SELECT data, created_at FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h.id, nowIso());
+    if (pending.some(t => JSON.parse(t.data).email === email)) throw bad('An diese Adresse ist schon eine Einladung unterwegs.');
+    if (pending.length >= 5) throw bad('Es sind schon 5 Einladungen offen. Bitte warten, bis sie angenommen wurden.');
     const l = makeLink('member', h.id, { email, by: r.id }, 14 * 86400000, '/kunde?einladung=');
     queueMail({ to: email, subject: `Einladung: Kaminfeger-Termin für ${h.street} ${h.nr}`,
       text: `${r.family_name} lädt Sie ein, den Termin für die Feuerstättenschau in der ${h.street} ${h.nr} zu sehen und Erinnerungen zu bekommen.\n\nDer Link gilt 14 Tage und nur einmal.`,
