@@ -4,7 +4,7 @@ import { sendMail } from './mail.js';
 import { HttpError, bad, hmac, randomCode, randomToken, isoIn, nowIso, normEmail, EMAIL_RE, safeEqual } from './util.js';
 
 export const COOKIE = { customer: 'kf_c', sweep: 'kf_s', admin: 'kf_a' };
-const ROLE_LABEL = { customer: 'Kaminfeger-Termine', sweep: 'Kaminfeger-Termine für Kaminfeger', admin: 'Betreiber-Zugang' };
+const ROLE_LABEL = { customer: 'Kaminfeger Verwaltung', sweep: 'Kaminfeger Verwaltung für Kaminfeger', admin: 'Betreiber-Zugang' };
 
 const codeHash = (email, role, purpose, code) => hmac(`${email}|${role}|${purpose}|${code}`);
 

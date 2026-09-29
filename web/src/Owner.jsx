@@ -30,7 +30,7 @@ export default function Owner({ token }) {
       <div style={sx('padding:64px 26px 0;display:flex;flex-direction:column;gap:12px')}>
         <span className="card-kicker">Bewohner bestätigen</span>
         <div style={sx('font-size:28px;font-weight:500;letter-spacing:-0.02em;line-height:1.15;text-wrap:pretty')}>Wohnt {info.resident} in der {info.address}?</div>
-        <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Guten Tag {info.owner}, die Person möchte über Kaminfeger-Termine die Feuerstättenschau buchen. Laut Kehrbuch Ihres Kaminfegers sind Sie Eigentümer. Bitte bestätigen Sie nur, wenn Sie es sicher wissen.</div>
+        <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Guten Tag {info.owner}, die Person möchte über Kaminfeger Verwaltung die Feuerstättenschau buchen. Laut Kehrbuch Ihres Kaminfegers sind Sie Eigentümer. Bitte bestätigen Sie nur, wenn Sie es sicher wissen.</div>
       </div>
     </Shell>
   );

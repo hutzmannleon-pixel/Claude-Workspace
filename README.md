@@ -1,4 +1,4 @@
-# Kaminfeger-Termine
+# Kaminfeger Verwaltung
 
 Der Kaminfeger gibt pro Straße Zeitfenster frei, die Bewohner wählen die halbe Stunde, in der sie zu Hause sind. So steht er seltener vor verschlossenen Türen.
 

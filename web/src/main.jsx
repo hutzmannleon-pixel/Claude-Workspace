@@ -8,6 +8,7 @@ import '@phosphor-icons/web/regular';
 import '@phosphor-icons/web/bold';
 import '@phosphor-icons/web/fill';
 import './ds/nocturne.css';
+import './ds/theme.css';
 import './app.css';
 import { Loading } from './ui.jsx';
 import Landing from './Landing.jsx';

@@ -68,7 +68,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const app = await build();
   startJobs();
   await app.listen({ port: config.port, host: config.host });
-  console.log(`Kaminfeger-Termine läuft auf ${config.baseUrl}${config.testMode ? '  (Testmodus: ' + config.baseUrl + '/test)' : ''}`);
+  console.log(`Kaminfeger Verwaltung läuft auf ${config.baseUrl}${config.testMode ? '  (Testmodus: ' + config.baseUrl + '/test)' : ''}`);
   if (!config.smtp) console.log('Hinweis: SMTP ist nicht konfiguriert – E-Mails werden im Log ausgegeben.');
   if (!config.adminEmails.length) console.log('Hinweis: ADMIN_EMAILS ist leer – niemand kann sich als Betreiber anmelden.');
 }

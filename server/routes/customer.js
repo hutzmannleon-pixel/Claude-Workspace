@@ -307,7 +307,7 @@ export default async function customerRoutes(app) {
     if (!b) throw notFound('Kein Termin.');
     const s = activeSweepForDistrict(h.district_id);
     const dt = (date, t) => { const d = parseDate(date); const [hh, mm] = t.split(':').map(Number); d.setHours(hh, mm); return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
-    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kaminfeger-Termine//DE', 'BEGIN:VEVENT', `UID:kf-${b.id}@kaminfeger-termine`,
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kaminfeger Verwaltung//DE', 'BEGIN:VEVENT', `UID:kf-${b.id}@kaminfeger-termine`,
       `DTSTAMP:${dt(b.date, b.time)}`, `DTSTART:${dt(b.date, b.time)}`, `DTEND:${dt(b.date, fmtMin(toMin(b.time) + c.slot_len))}`,
       `SUMMARY:Feuerstättenschau – Kaminfeger ${sweepName(s)}`, `LOCATION:${h.street} ${h.nr}\\, ${h.plz} ${h.ort}`,
       'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Kaminfeger kommt in einer Stunde', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');

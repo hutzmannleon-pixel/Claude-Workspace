@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Kaminfeger-Termine: Zeitfenster pro Straße, Buchung durch Bewohner, Prüfung durch den Betreiber",
+  "description": "Kaminfeger Verwaltung: Zeitfenster pro Straße, Buchung durch Bewohner, Prüfung durch den Betreiber",
   "engines": {
     "node": ">=22.13"
   },

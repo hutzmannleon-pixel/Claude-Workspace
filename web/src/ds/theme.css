@@ -1,0 +1,101 @@
+/* Theme „Kaminfeger Verwaltung“ – blaugrauer Morgennebel mit Glas-Karten.
+   Liegt über nocturne.css (dort bleiben Struktur und Klassen); hier nur Farben, Rundungen und Glas. */
+
+:root {
+  --color-bg: #1e2e42;
+  --app-bg: linear-gradient(180deg, #4e6887 0%, #344b67 26%, #243750 58%, #1b2a3d 100%);
+  --color-surface: rgba(150, 180, 214, 0.13);
+  --color-surface-solid: #2c415b;
+  --color-text: #eef3f9;
+  --color-accent: #8cc6f5;
+  --color-accent-2: #a9cdea;
+  --color-divider: rgba(226, 236, 248, 0.14);
+
+  --color-neutral-100: #f1f5fa;
+  --color-neutral-200: #dfe7f0;
+  --color-neutral-300: #c6d3e1;
+  --color-neutral-400: #a8b8ca;
+  --color-neutral-500: #8a9cb1;
+  --color-neutral-600: #6d8098;
+  --color-neutral-700: #52657d;
+  --color-neutral-800: #3a4c63;
+  --color-neutral-900: #26354a;
+
+  --color-accent-100: #eef7ff;
+  --color-accent-200: #d6ecff;
+  --color-accent-300: #b6dcfb;
+  --color-accent-400: #9ccff8;
+  --color-accent-500: #7db9ea;
+  --color-accent-600: #5b98cf;
+  --color-accent-700: #3f77a8;
+  --color-accent-800: #2c5a82;
+  --color-accent-900: #1f3f5e;
+
+  --color-accent-2-100: #eef6fd;
+  --color-accent-2-200: #d8eaf8;
+  --color-accent-2-300: #bcd9ef;
+  --color-accent-2-400: #a3c7e3;
+  --color-accent-2-500: #86aed0;
+  --color-accent-2-600: #6890b3;
+  --color-accent-2-700: #4d7292;
+  --color-accent-2-800: #37556f;
+  --color-accent-2-900: #263b4e;
+
+  --color-section-glow: #5f7ea3;
+  --color-ok: #6fd3a5;
+
+  --font-heading-weight: 600;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --glass-border: rgba(226, 236, 248, 0.16);
+  --shadow-sm: 0 0 0 1px var(--glass-border);
+  --shadow-md: 0 0 0 1px var(--glass-border), 0 10px 28px rgba(8, 16, 30, 0.35);
+  --shadow-lg: 0 0 0 1px rgba(226, 236, 248, 0.22), 0 24px 60px rgba(6, 12, 24, 0.55);
+}
+
+html { background: #1b2a3d; }
+body { background: var(--app-bg) fixed; }
+
+/* Buttons: Glas mit weichem Licht */
+.btn { border-radius: 16px; transition: background-color .15s, box-shadow .15s, transform .08s; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn-primary {
+  color: #fff; border-color: rgba(226, 236, 248, 0.28);
+  background: linear-gradient(180deg, rgba(130, 170, 214, 0.62), rgba(86, 124, 168, 0.58));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 26px rgba(8, 18, 34, 0.35);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.btn-primary:hover { background: linear-gradient(180deg, rgba(145, 185, 228, 0.72), rgba(96, 136, 180, 0.66)); }
+.btn-primary:active { background: linear-gradient(180deg, rgba(120, 160, 204, 0.72), rgba(80, 116, 160, 0.7)); }
+.btn-secondary { background: rgba(150, 180, 214, 0.1); border-color: var(--glass-border); }
+.btn-secondary:hover { background: rgba(150, 180, 214, 0.18); }
+.btn-ghost { color: var(--color-accent-300); }
+
+/* Eingaben */
+.input {
+  background: rgba(150, 180, 214, 0.1); border-color: var(--glass-border); border-radius: 14px;
+  color-scheme: dark;
+}
+.input::placeholder { color: var(--color-neutral-500); }
+.input:focus-visible { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(140, 198, 245, 0.18); }
+
+/* Segment-Auswahl als Pillen wie im Filter „Alle / Aktiv / Abgeschlossen“ */
+.seg { border-radius: 999px; background: rgba(150, 180, 214, 0.08); border-color: var(--glass-border); padding: 3px; gap: 3px; }
+.seg-opt { border-radius: 999px; }
+.seg-opt + .seg-opt { border-left: 0; }
+.seg-opt:has(input:checked) { color: #10233a; background: linear-gradient(180deg, #a9d3f5, #86bbe6); box-shadow: 0 4px 14px rgba(8, 18, 34, 0.3); font-weight: 500; }
+
+/* Tags: grün für „bestätigt / läuft / offen“ wie „Geplant / Aktiv“ */
+.tag { border-radius: 999px; font-weight: 500; }
+.tag-accent { background: rgba(80, 200, 150, 0.2); color: #8fe6bf; }
+.tag-neutral { background: rgba(226, 236, 248, 0.12); color: var(--color-neutral-200); }
+.tag-outline { border-color: rgba(226, 236, 248, 0.35); color: var(--color-neutral-100); background: rgba(150, 180, 214, 0.1); }
+
+.card-kicker { color: var(--color-accent-300); }
+a { color: var(--color-accent-300); }
+
+/* Glas für Flächen mit var(--color-surface) */
+.glass { background: var(--color-surface); box-shadow: var(--shadow-sm); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }

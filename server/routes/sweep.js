@@ -187,7 +187,7 @@ export default async function sweepRoutes(app) {
       const h = all('SELECT * FROM households WHERE district_id = ? AND street_key = ? AND plz = ?', s.district_id, streetKey(r.street), r.plz).find(x => nrKey(x.nr) === nrKey(r.nr));
       if (!h) continue;
       run(`UPDATE residents SET household_id = ?, status = 'needs_verify' WHERE id = ?`, h.id, r.id);
-      queueMail({ to: r.email, subject: 'Ihr Kaminfeger ist jetzt dabei', text: `${sweepName(s)} nutzt Kaminfeger-Termine jetzt auch für die ${h.street}. Bestätigen Sie in der App kurz Ihren Wohnsitz – dann können Sie Termine buchen.`,
+      queueMail({ to: r.email, subject: 'Ihr Kaminfeger ist jetzt dabei', text: `${sweepName(s)} nutzt Kaminfeger Verwaltung jetzt auch für die ${h.street}. Bestätigen Sie in der App kurz Ihren Wohnsitz – dann können Sie Termine buchen.`,
         link: `${config.baseUrl}/kunde`, linkLabel: 'Wohnsitz bestätigen' });
     }
     live.bump();
@@ -486,7 +486,7 @@ export default async function sweepRoutes(app) {
         adminLog('Kaminfeger', `${r.family_name} · Eigentümer per E-Mail gefragt`, 'Kaminfeger konnte nicht bestätigen');
       });
       queueMail({ to: r.hemail, subject: `Wohnt ${r.family_name} in der ${r.street} ${r.nr}?`,
-        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger-Termine die Feuerstättenschau für ${r.street} ${r.nr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
+        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger Verwaltung die Feuerstättenschau für ${r.street} ${r.nr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
         link: l.url, linkLabel: 'Antworten' });
       toast = 'Danke – wir fragen den Eigentümer per E-Mail.';
     } else {

@@ -2,12 +2,18 @@
 import { createContext, useContext, useEffect, useId, useRef, useState } from 'react';
 import { sx, EMBED, useWide, parseDate, isoDate, dayLabel } from './lib/core.js';
 import { FeedbackButton } from './Feedback.jsx';
+import { LogoMark, Scenery } from './brand.jsx';
 
 export const GLOW = {
-  sweep: 'radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-section-glow) 45%, transparent), transparent 70%)',
-  customer: 'radial-gradient(110% 45% at 0% 0%, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 70%)',
-  admin: 'radial-gradient(110% 40% at 100% 0%, color-mix(in srgb, var(--color-neutral-600) 22%, transparent), transparent 70%)'
+  sweep: 'radial-gradient(90% 38% at 88% 0%, rgba(255, 214, 170, 0.16), transparent 70%)',
+  customer: 'radial-gradient(90% 38% at 88% 0%, rgba(255, 214, 170, 0.18), transparent 70%)',
+  admin: 'radial-gradient(90% 38% at 88% 0%, rgba(214, 228, 255, 0.12), transparent 70%)'
 };
+/** Illustration dezent hinter dem Kopfbereich, nach unten ausgeblendet */
+const HeaderScenery = ({ h = 240, o = 0.32, wide }) => (
+  <div aria-hidden="true" style={sx(`position:absolute;top:0;left:0;right:0;height:${h}px;pointer-events:none;opacity:${o};-webkit-mask-image:linear-gradient(to bottom, #000 45%, transparent);mask-image:linear-gradient(to bottom, #000 45%, transparent)`)}><Scenery simple wide={wide} /></div>
+);
+const BADGE = 'background:#e5484d;color:#fff;box-shadow:0 2px 8px rgba(229,72,77,0.4)';
 export const DIV_BOTTOM = 'linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px';
 export const DIV_TOP_48 = 'linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px';
 
@@ -18,7 +24,7 @@ export const useIsWide = () => useContext(WideCtx);
  * Bildschirm-Hülle einer App. Auf dem Handy Vollbild mit Leiste unten (nav.tabs),
  * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
  */
-export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' } }) {
+export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' }, scenery = true, backdrop }) {
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();
   const wide = isWide && !!nav;
@@ -26,17 +32,18 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
   useEffect(() => { if (asideRef.current) asideRef.current.scrollTop = 0; }, [asideKey]);
   if (wide) return (
     <WideCtx.Provider value={true}>
-      <div style={sx('height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45;background:var(--color-bg);position:relative;overflow:hidden;display:flex')}>
+      <div style={sx('height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45;background:var(--app-bg);position:relative;overflow:hidden;display:flex')}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
-        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider)')}>
+        <HeaderScenery h={260} o={0.3} wide />
+        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider);background:rgba(20,32,48,0.35);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)')}>
           <div style={sx('display:flex;gap:10px;align-items:center;padding:0 10px 20px')}>
-            <div style={sx('width:34px;height:34px;border-radius:10px;background:var(--color-accent);color:var(--color-bg);display:grid;place-items:center;flex:none')}><Icon w="ph-fill" n="ph-flame" style={sx('font-size:19px')} /></div>
+            <LogoMark size={40} title="Kaminfeger Verwaltung" />
             <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
           </div>
           {nav.tabs.map(t => (
-            <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:var(--radius-md);border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:${t.on ? 'var(--color-surface)' : 'none'};color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
+            <button key={t.label} onClick={t.onClick} aria-current={t.on ? 'page' : undefined} style={sx(`display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:var(--radius-md);border:0;cursor:pointer;font:inherit;font-size:14px;text-align:left;background:${t.on ? 'var(--color-surface)' : 'none'};box-shadow:${t.on ? 'var(--shadow-sm)' : 'none'};color:${t.on ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>
               <Icon n={t.icon} style={sx(`font-size:20px;color:${t.on ? 'var(--color-accent)' : 'inherit'}`)} /><span style={sx('flex:1')}>{t.label}</span>
-              {!!t.badge && <span style={sx('min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--color-accent);color:var(--color-bg);font-size:11px;font-weight:600;display:grid;place-items:center')}>{t.badge}</span>}
+              {!!t.badge && <span style={sx(`min-width:20px;height:20px;padding:0 6px;border-radius:10px;${BADGE};font-size:11px;font-weight:600;display:grid;place-items:center`)}>{t.badge}</span>}
             </button>
           ))}
           <div style={sx('flex:1')} />
@@ -56,10 +63,12 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
   // Schmale Ansichten (Anmeldung, Bewohner) stehen am Desktop als Karte mittig auf der Seite
   const card = isWide && !nav;
   return (
-    <div style={sx(card ? 'min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--color-accent) 8%, transparent), transparent 70%), var(--color-bg);font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45'
+    <div style={sx(card ? 'min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(70% 50% at 80% 0%, rgba(255,214,170,0.14), transparent 70%), var(--app-bg);font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45'
       : 'width:100%;max-width:520px;margin:0 auto;height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45')}>
-      <div style={sx(`position:relative;width:100%;${card ? 'max-width:460px;height:min(880px, calc(100dvh - 48px));border-radius:28px;box-shadow:0 0 0 1px var(--color-divider), var(--shadow-lg)' : 'height:100%'};overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column`)}>
+      <div style={sx(`position:relative;width:100%;${card ? 'max-width:460px;height:min(880px, calc(100dvh - 48px));border-radius:32px;box-shadow:var(--shadow-lg)' : 'height:100%'};overflow:hidden;background:var(--app-bg);display:flex;flex-direction:column`)}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
+        {scenery && <HeaderScenery />}
+        {backdrop}
         {!EMBED && <div style={sx('height:max(10px, env(safe-area-inset-top));flex:none')} />}
         {top}
         <div style={sx('flex:1;min-height:0;position:relative;display:flex;flex-direction:column')}>
@@ -198,19 +207,19 @@ export function CheckRow({ on, label, onClick, disabled, strike, minH = '50px' }
 export function Sheet({ children, scroll }) {
   const wide = useIsWide();
   return (
-    <div style={sx(`position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 70%, transparent);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
-      <div role="dialog" aria-modal="true" style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:var(--color-surface);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
+    <div style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
+      <div role="dialog" aria-modal="true" style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(62,86,116,0.96), rgba(38,55,78,0.97));box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
     </div>
   );
 }
 
 export function TabBar({ tabs, padX = '24px' }) {
   return (
-    <div style={sx(`flex:none;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr);padding:8px ${padX} 0;position:relative;z-index:2;background:${DIV_TOP_48}`)}>
+    <div style={sx(`flex:none;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr);padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.45);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 var(--color-divider)`)}>
       {tabs.map(t => (
         <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent)' : 'var(--color-neutral-500)'};position:relative`)}>
           <Icon n={t.icon} style={sx('font-size:24px')} />{t.label}
-          {!!t.badge && <span style={sx('position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--color-accent);color:var(--color-bg);font-size:10px;font-weight:600;display:grid;place-items:center')}>{t.badge}</span>}
+          {!!t.badge && <span style={sx('position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:600;display:grid;place-items:center;' + BADGE)}>{t.badge}</span>}
         </button>
       ))}
     </div>
@@ -268,7 +277,7 @@ export function Hero({ icon, title, sub, muted, pad = '52px 24px 0', children })
 }
 
 export function Loading() {
-  return <div style={sx('min-height:100dvh;display:grid;place-items:center;color:var(--color-neutral-500);font-size:13px;background:var(--color-bg)')}>Lädt …</div>;
+  return <div style={sx('min-height:100dvh;display:grid;place-items:center;color:var(--color-neutral-500);font-size:13px;background:var(--app-bg)')}>Lädt …</div>;
 }
 
 /** Datei-Auswahl hinter einem beliebigen Knopf */

@@ -1,6 +1,7 @@
 // Registrierung & Anmeldung der Bewohner – nach „KundenAnmeldung“ (Claude Design).
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
+import { LogoMark } from '../brand.jsx';
 import { Shell, GLOW, Icon, StepsBar, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
@@ -155,7 +156,8 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     <Shell glow={GLOW.customer} top={top} bottom={bottom} scrollKey={scr}>
       {scr === 'welcome' && <>
         <div style={sx('padding:64px 26px 0;display:flex;flex-direction:column;gap:14px')}>
-          <span className="card-kicker">Kaminfeger-Termine</span>
+          <LogoMark size={60} title="Kaminfeger Verwaltung" />
+          <span className="card-kicker" style={sx('margin-top:6px')}>Kaminfeger Verwaltung</span>
           <div style={sx('font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;text-wrap:pretty')}>Der Kaminfeger kommt, wenn Sie zu Hause sind.</div>
           <div style={sx('font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Ihr Kaminfeger gibt Zeitfenster für Ihre Straße frei – Sie wählen die halbe Stunde, die passt.</div>
         </div>

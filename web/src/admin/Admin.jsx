@@ -1,6 +1,7 @@
 // Betreiber-App – nach „BetreiberApp“ (Claude Design), angebunden an /api/admin/*.
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
+import { LogoMark } from '../brand.jsx';
 import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
@@ -46,9 +47,10 @@ function Lock({ onUnlock }) {
         {sent && <button className="btn btn-ghost" onClick={() => { setSent(false); act.setError(null); }} style={sx('min-height:40px;color:var(--color-neutral-400)')}>Andere E-Mail</button>}
       </div>
     }>
-      <div style={sx('padding:88px 26px 0;display:flex;flex-direction:column;gap:12px')}>
-        <span className="card-kicker">Betreiber-Zugang</span>
-        <div style={sx('font-size:32px;font-weight:500;letter-spacing:-0.025em;line-height:1.1')}>Kaminfeger-Termine<br />Verwaltung</div>
+      <div style={sx('padding:56px 26px 0;display:flex;flex-direction:column;gap:12px')}>
+        <LogoMark size={64} title="Kaminfeger Verwaltung" />
+        <span className="card-kicker" style={sx('margin-top:8px')}>Kaminfeger Verwaltung</span>
+        <div style={sx('font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1')}>Betreiber-Zugang</div>
         <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Nur für freigeschaltete Admins. Jede Entscheidung wird mit deinem Namen protokolliert.</div>
       </div>
       <div style={sx('display:flex;flex-direction:column;gap:12px;padding:36px 26px 20px;font-size:13px;color:var(--color-neutral-400)')}>

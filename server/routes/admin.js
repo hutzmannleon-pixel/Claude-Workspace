@@ -165,7 +165,7 @@ export default async function adminRoutes(app) {
       const l = makeLink('owner', r.id, null, 14 * 86400000, '/eigentuemer/');
       run(`UPDATE residents SET status = 'owner' WHERE id = ?`, r.id);
       queueMail({ to: r.hemail, subject: `Wohnt ${r.family_name} in der ${r.hstreet} ${r.hnr}?`,
-        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger-Termine die Feuerstättenschau für ${r.hstreet} ${r.hnr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
+        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger Verwaltung die Feuerstättenschau für ${r.hstreet} ${r.hnr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
         link: l.url, linkLabel: 'Antworten' });
       adminLog(a.email, `${r.family_name} · ${action === 'resend' ? 'Bestätigungs-E-Mail erneut gesendet' : 'Eigentümer per E-Mail gefragt'}`, action === 'resend' ? 'Neuer Link, alter Link ungültig' : 'Keine Dokumente gespeichert');
       toast = action === 'resend' ? 'Neue E-Mail gesendet, der alte Link ist ungültig.' : `E-Mail an ${r.owner_name} (Eigentümer) gesendet.`;

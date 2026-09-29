@@ -1,6 +1,7 @@
 // Registrierung der Kaminfeger – nach „KaminfegerAnmeldung“ (Claude Design).
 import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
+import { LogoMark } from '../brand.jsx';
 import { Shell, GLOW, Icon, StepsBar, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
@@ -102,7 +103,8 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     <Shell glow={GLOW.sweep} top={top} bottom={bottom} scrollKey={scr}>
       {scr === 'welcome' && <>
         <div style={sx('padding:64px 26px 0;display:flex;flex-direction:column;gap:14px')}>
-          <span className="card-kicker">Für Kaminfeger</span>
+          <LogoMark size={60} title="Kaminfeger Verwaltung" />
+          <span className="card-kicker" style={sx('margin-top:6px')}>Für Kaminfeger</span>
           <div style={sx('font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;text-wrap:pretty')}>Weniger verschlossene Türen. Mehr erledigte Häuser.</div>
           <div style={sx('font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Zeitfenster pro Straße freigeben, Rückmeldungen sehen, Route planen.</div>
         </div>

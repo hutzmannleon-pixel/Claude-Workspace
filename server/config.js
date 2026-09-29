@@ -32,7 +32,7 @@ export const config = {
     secure: env.SMTP_SECURE === '1' || env.SMTP_SECURE === 'true',
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined
   } : null,
-  mailFrom: env.MAIL_FROM || 'Kaminfeger-Termine <no-reply@localhost>',
+  mailFrom: env.MAIL_FROM || 'Kaminfeger Verwaltung <no-reply@localhost>',
   codeTtlMin: 10,
   codeMaxAttempts: 5,
   codesPerHour: 6,

@@ -64,7 +64,7 @@ export default function TestPage() {
       <div style={sx('display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between')}>
         <div style={sx('display:flex;flex-direction:column;gap:8px;max-width:720px')}>
           <span className="card-kicker">Testmodus · 3 Apps, live verbunden</span>
-          <h1 style={sx('margin:0;font-size:40px;font-weight:500;letter-spacing:-0.02em;text-wrap:pretty')}>Kaminfeger-Termine testen</h1>
+          <h1 style={sx('margin:0;font-size:40px;font-weight:500;letter-spacing:-0.02em;text-wrap:pretty')}>Kaminfeger Verwaltung testen</h1>
           <p style={sx('margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Echte Abläufe mit echter Datenbank – ohne Beispieldaten. E-Mails landen im Postfach links, statt verschickt zu werden. Verzeichnis und Kehrbuch laden Sie als CSV hoch.</p>
         </div>
         <div style={sx('display:flex;gap:8px;align-items:center')}>

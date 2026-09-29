@@ -21,7 +21,7 @@ export default function Legal({ page }) {
     <Shell glow={GLOW.customer}>
       <div style={sx('display:flex;align-items:center;padding:4px 12px 0')}><button className="btn btn-icon" onClick={back} style={sx('width:44px;height:44px')} aria-label="Zurück"><Icon n="ph-caret-left" style={sx('font-size:22px')} /></button></div>
       <div style={sx('padding:6px 22px 32px')}>
-        <span className="card-kicker">Kaminfeger-Termine</span>
+        <span className="card-kicker">Kaminfeger Verwaltung</span>
         <div style={sx('font-size:28px;font-weight:500;letter-spacing:-0.02em;margin:6px 0 4px')}>{page === 'impressum' ? 'Impressum' : 'Datenschutz'}</div>
         {cfg?.restricted && <P><b style={sx('font-weight:500;color:var(--color-accent-300)')}>Testbetrieb:</b> Diese Anwendung ist ein nicht-kommerzielles Testprojekt und nur für eingeladene Testpersonen freigegeben.</P>}
 
