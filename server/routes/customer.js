@@ -1,4 +1,5 @@
 import { config } from '../config.js';
+import { isDemoEmail } from '../demo.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
 import { checkCode, requireUser, startSession, endSession } from '../auth.js';
@@ -15,7 +16,7 @@ const longDay = label => { const [d, rest] = label.split(', '); return (LONG[d] 
 /** Sucht Haushalt/Bezirk zu einer Adresse – nur Bezirke mit aktivem Kaminfeger zählen. */
 function lookup({ street, nr, plz }) {
   const sk = streetKey(street), p = clean(plz, 5);
-  const candidates = all('SELECT * FROM households WHERE street_key = ? AND plz = ?', sk, p);
+  const candidates = all('SELECT h.* FROM households h JOIN districts d ON d.id = h.district_id WHERE h.street_key = ? AND h.plz = ? AND d.demo = 0', sk, p);
   for (const h of candidates) {
     const s = activeSweepForDistrict(h.district_id);
     if (!s) continue;
@@ -171,7 +172,7 @@ export default async function customerRoutes(app) {
     const pending = all(`SELECT data FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h ? h.id : -1, nowIso())
       .map(t => JSON.parse(t.data).email).map(e => ({ ini: e.slice(0, 2).toUpperCase(), name: e, sub: 'Einladung gesendet' }));
     return {
-      me: { email: u.email },
+      me: { email: u.email }, demo: isDemoEmail(u.email),
       resident: { family: r.family_name, street: h ? h.street : r.street, nr: h ? h.nr : r.nr, plz: h ? h.plz : r.plz, ort: h ? h.ort : r.ort,
         status: r.status, method: r.method, isMember: !!r.is_member,
         prefs: { eve: !!r.rem_eve, hour: !!r.rem_hour, push: !!r.ch_push, mail: !!r.ch_mail }, prep: JSON.parse(r.prep || '[]') },
@@ -256,6 +257,7 @@ export default async function customerRoutes(app) {
     const email = normEmail(req.body?.email);
     if (!EMAIL_RE.test(email)) throw bad('Bitte eine gültige E-Mail-Adresse eingeben.');
     if (email === u.email) throw bad('Das ist Ihre eigene Adresse.');
+    if (isDemoEmail(u.email)) throw bad('In der Vorschau werden keine Einladungen verschickt.');
     const h = get('SELECT * FROM households WHERE id = ?', r.household_id);
     const pending = all(`SELECT data, created_at FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h.id, nowIso());
     if (pending.some(t => JSON.parse(t.data).email === email)) throw bad('An diese Adresse ist schon eine Einladung unterwegs.');

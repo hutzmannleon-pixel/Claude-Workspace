@@ -46,7 +46,7 @@ function check() {
     : fail('Kein Betreiber-Passkey', 'Unter /betreiber per Code entsperren und Passkey einrichten');
   const td = testDistricts(), th = testHouseholds();
   !td.length && !th.length ? ok('Keine Testdaten') : fail(`Testdaten vorhanden (${td.length} Testbezirk, ${th.length} Test-Haushalte)`, 'npm run go-live -- --ausfuehren');
-  const districts = get('SELECT COUNT(*) n FROM districts').n - td.length;
+  const districts = get('SELECT COUNT(*) n FROM districts WHERE demo = 0').n - td.length;
   ok(`${districts} Bezirke im Verzeichnis – fehlende tragen Kaminfeger bei der Registrierung selbst ein`);
 
   console.log('\nSicherung');

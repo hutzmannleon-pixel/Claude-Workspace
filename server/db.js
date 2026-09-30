@@ -239,6 +239,8 @@ if (!db.prepare('PRAGMA table_info(campaigns)').all().some(c => c.name === 'clos
 // Selbst angegebener Bezirk (steht noch nicht im Verzeichnis) – wird bei der Freigabe ins Verzeichnis übernommen
 if (!db.prepare('PRAGMA table_info(sweeps)').all().some(c => c.name === 'req_bez'))
   db.exec('ALTER TABLE sweeps ADD COLUMN req_land TEXT; ALTER TABLE sweeps ADD COLUMN req_kreis TEXT; ALTER TABLE sweeps ADD COLUMN req_bez TEXT;');
+// Demo-Bezirk für die Vorschau des Betreibers (siehe demo.js)
+if (!db.prepare('PRAGMA table_info(districts)').all().some(c => c.name === 'demo')) db.exec('ALTER TABLE districts ADD COLUMN demo INTEGER NOT NULL DEFAULT 0');
 
 const norm = params => params.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
 export const get = (sql, ...p) => db.prepare(sql).get(...norm(p));

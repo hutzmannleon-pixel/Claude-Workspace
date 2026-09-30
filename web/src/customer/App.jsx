@@ -1,7 +1,7 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DemoBadge, DIV_BOTTOM } from '../ui.jsx';
 import { Scenery } from '../brand.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
@@ -92,6 +92,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   if (scr === 'info') bottom = b ? btn('Termin ansehen', toTermin, { icon: 'ph-calendar-blank' }) : c && s.houseStatus !== 'booked' && r.status !== 'moved' ? btn(verified ? 'Zeit wählen' : 'Zeiten ansehen', toPick, { icon: 'ph-calendar-plus' }) : null;
 
   const overlay = <>
+    {s.demo && <DemoBadge />}
     <PasskeyOffer role="customer" />
     {ui.overlay === 'cancel' && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Termin absagen?</div>

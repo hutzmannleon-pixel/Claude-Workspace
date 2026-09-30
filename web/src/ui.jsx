@@ -25,6 +25,16 @@ export const useIsWide = () => useContext(WideCtx);
  * Bildschirm-Hülle einer App. Auf dem Handy Vollbild mit Leiste unten (nav.tabs),
  * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
  */
+/** Hinweis oben in der Vorschau des Betreibers (Demo-Bezirk) */
+export function DemoBadge() {
+  return (
+    <div role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 96px)', left: '50%', transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
+      padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', color: '#10233a', background: 'linear-gradient(180deg, #f6d9a8, #e9bd78)', boxShadow: '0 6px 18px rgba(8,18,34,0.35)', whiteSpace: 'nowrap' }}>
+      Vorschau · Beispieldaten
+    </div>
+  );
+}
+
 export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' }, scenery = true, backdrop }) {
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();

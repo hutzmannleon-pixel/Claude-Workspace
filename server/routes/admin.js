@@ -3,7 +3,8 @@ import path from 'node:path';
 import { config } from '../config.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
-import { requireUser, endSession } from '../auth.js';
+import { requireUser, endSession, startSession } from '../auth.js';
+import { ensureDemo } from '../demo.js';
 import { queueMail } from '../mail.js';
 import { makeLink, revokeLinks, sweepName, initials, activeSweepForDistrict, adminLog, findDistrict } from '../domain.js';
 import { deleteDocuments } from './sweep.js';
@@ -74,10 +75,10 @@ export default async function adminRoutes(app) {
   app.get('/api/admin/queue', async req => {
     admin(req);
     const sweeps = all(`SELECT s.*, u.email, d.land, d.kreis, d.number, d.holder_name, d.business_address, d.appointed_until FROM sweeps s JOIN users u ON u.id = s.user_id
-      LEFT JOIN districts d ON d.id = s.district_id WHERE s.status != 'draft' ORDER BY s.submitted_at DESC`)
+      LEFT JOIN districts d ON d.id = s.district_id WHERE s.status != 'draft' AND u.email NOT LIKE '%@demo.invalid' ORDER BY s.submitted_at DESC`)
       .map(s => ({ id: s.id, name: sweepName(s), ini: initials(sweepName(s)), bez: bezOf(s), since: s.submitted_at, manual: isManual(s),
         status: s.status === 'active' ? 'approved' : s.status, auto: sweepAuto(s) }));
-    const residents = all(`SELECT r.id FROM residents r WHERE r.status IN ('review','asked','owner','rejected','dismissed') OR (r.status = 'verified' AND r.method IN ('sweep','owner','admin')) ORDER BY r.id DESC`)
+    const residents = all(`SELECT r.id FROM residents r JOIN users ru ON ru.id = r.user_id WHERE ru.email NOT LIKE '%@demo.invalid' AND (r.status IN ('review','asked','owner','rejected','dismissed') OR (r.status = 'verified' AND r.method IN ('sweep','owner','admin'))) ORDER BY r.id DESC`)
       .map(x => residentRow(x.id)).map(r => ({ id: r.id, name: r.family_name, ini: initials(r.family_name), addr: `${r.hstreet || r.street} ${r.hnr || r.nr}`, since: r.created_at,
         status: RES_STATUS[r.status] || 'pending', auto: residentAuto(r),
         flag: r.method === 'sweep' ? 'Mieter – keine Kundennummer' : r.method === 'number' ? 'Kundennummer passt nicht' : null }));
@@ -215,6 +216,16 @@ export default async function adminRoutes(app) {
     return { ok: true, toast };
   });
 
+  // Vorschau: Kaminfeger- bzw. Bewohner-App mit dem Demo-Bezirk öffnen (eigene Sitzung in diesem Browser)
+  app.post('/api/admin/demo', async (req, reply) => {
+    admin(req);
+    const as = req.body?.as === 'customer' ? 'customer' : 'sweep';
+    const ids = ensureDemo(!!req.body?.reset);
+    startSession(reply, as === 'sweep' ? ids.sweepUserId : ids.residentUserId, as);
+    live.bump();
+    return { ok: true, url: as === 'sweep' ? '/kaminfeger' : '/kunde' };
+  });
+
   app.get('/api/admin/log', async req => {
     admin(req);
     return { log: all('SELECT * FROM admin_log ORDER BY id DESC LIMIT 200').map(l => ({ id: l.id, at: l.at, what: l.what, note: l.note, by: l.admin_email })) };
@@ -223,7 +234,7 @@ export default async function adminRoutes(app) {
   // ---------- Bezirksverzeichnis ----------
   app.get('/api/admin/directory', async req => {
     admin(req);
-    return { count: get('SELECT COUNT(*) n FROM districts').n, rows: all('SELECT * FROM districts ORDER BY land, kreis, CAST(number AS INTEGER) LIMIT 300') };
+    return { count: get('SELECT COUNT(*) n FROM districts WHERE demo = 0').n, rows: all('SELECT * FROM districts WHERE demo = 0 ORDER BY land, kreis, CAST(number AS INTEGER) LIMIT 300') };
   });
   app.post('/api/admin/directory', async req => {
     const a = admin(req);

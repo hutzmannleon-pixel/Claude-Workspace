@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { config } from '../config.js';
+import { isDemoEmail } from '../demo.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
 import { checkCode, requireUser, startSession, endSession } from '../auth.js';
@@ -82,7 +83,7 @@ export default async function sweepRoutes(app) {
     }));
     const counts = s.district_id ? get(`SELECT COUNT(*) n, COUNT(DISTINCT street_key || plz) st FROM households WHERE district_id = ?`, s.district_id) : { n: 0, st: 0 };
     return {
-      email: s.email, first: s.first, last: s.last, phone: s.phone, bstreet: s.bstreet, bplz: s.bplz, bort: s.bort,
+      email: s.email, demo: isDemoEmail(s.email), first: s.first, last: s.last, phone: s.phone, bstreet: s.bstreet, bplz: s.bplz, bort: s.bort,
       status: s.status, rejectReason: s.reject_reason,
       district: s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez, holder: s.holder_name, until: s.appointed_until, officialEmail: s.official_email, households: counts.n, streets: counts.st,
         selfListed: s.official_email === s.email }
@@ -177,6 +178,7 @@ export default async function sweepRoutes(app) {
   // ---------- Kehrbuch importieren ----------
   app.post('/api/sweep/kehrbuch', async req => {
     const s = activeSweep(req);
+    if (isDemoEmail(s.email)) throw bad('In der Vorschau kann kein Kehrbuch importiert werden.');
     const file = await req.file({ limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
     if (!file) throw bad('Keine Datei.');
     const rows = parseCsv((await file.toBuffer()).toString('utf8'));
@@ -239,7 +241,7 @@ export default async function sweepRoutes(app) {
       .map(a => ({ id: 'c' + a.id, at: a.updated_at.replace(' ', 'T') + 'Z', campaignId: a.cid,
         text: `Familie ${householdName({ id: a.hid, owner_name: a.owner_name })}, ${a.street} ${a.nr} hat den Termin am ${dayLabel(a.date)}, ${a.time} Uhr abgesagt.` }));
     return {
-      name: sweepName(s), first: s.first, ini: initials(sweepName(s)), bez: s.bez, kreis: s.kreis,
+      name: sweepName(s), first: s.first, ini: initials(sweepName(s)), bez: s.bez, kreis: s.kreis, demo: isDemoEmail(s.email),
       today: { date, label: dayLabel(date), isToday: date === today(), count: route.length, from: route[0]?.t || null, to: route[route.length - 1]?.end || null,
         streets: [...new Set(route.map(r => r.street))] },
       streets, tenants, households: hh, alerts,

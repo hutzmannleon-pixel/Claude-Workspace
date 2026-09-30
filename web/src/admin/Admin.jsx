@@ -138,8 +138,17 @@ function AdminApp({ me, onLock }) {
     { label: 'Prüfungen', icon: 'ph-seal-check', on: scr === 'queue', onClick: toQueue, badge: cnt('sweep') + cnt('res') },
     { label: 'Protokoll', icon: 'ph-list-checks', on: scr === 'log', onClick: () => set({ screen: 'log', toast: null }) },
     { label: 'Verzeichnis', icon: 'ph-book-open', on: scr === 'dir', onClick: () => set({ screen: 'dir', toast: null, dir: null }) },
+    { label: 'Vorschau', icon: 'ph-eye', on: scr === 'demo', onClick: () => set({ screen: 'demo', toast: null }) },
     { label: 'Feedback', icon: 'ph-chat-circle-dots', on: scr === 'feedback', onClick: () => set({ screen: 'feedback', toast: null }), badge: (fb.data?.items || []).filter(f => f.status === 'open').length }
   ];
+  // Vorschau: neuer Tab zuerst öffnen (sonst blockt der Browser das Popup nach dem Warten), dann Adresse setzen
+  const openDemo = (as, reset = false) => {
+    const w = window.open('about:blank', '_blank');
+    act.run(async () => {
+      try { const r = await api('/api/admin/demo', { body: { as, reset } }); if (w) w.location.href = r.url; else location.href = r.url; }
+      catch (e) { if (w) w.close(); throw e; }
+    });
+  };
   const fbAct = (id, action) => act.run(async () => { await api(`/api/admin/feedback/${id}`, { body: { action } }); fb.reload(); });
   const fbImg = (fb.data?.items || []).find(f => f.id === ui.fbId);
   const mailto = to => {
@@ -219,7 +228,7 @@ function AdminApp({ me, onLock }) {
         <div style={sx('margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-trash-simple" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Urkunden und Ausweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
   </>;
   const inQueue = ['queue', 'detail', 'result'].includes(scr);
-  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir', 'feedback'].includes(scr),
+  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir', 'feedback', 'demo'].includes(scr),
     footer: <button className="btn btn-secondary" onClick={lock} style={sx('min-height:44px')}><Icon n="ph-lock-simple" />Sperren</button> };
 
   return (
@@ -321,6 +330,23 @@ function AdminApp({ me, onLock }) {
             </div>
           ))}
         </div>
+      </>}
+
+      {scr === 'demo' && <>
+        <div style={sx('padding:10px 22px 4px')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Vorschau</div><div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Die Apps mit Beispieldaten ansehen und ausprobieren – zum Zeigen oder Testen.</div></div>
+        <div style={sx('display:flex;flex-direction:column;gap:10px;padding:12px 16px 0')}>
+          {[['sweep', 'ph-hard-hat', 'Kaminfeger-App ansehen', 'Als „Max Muster“, Kehrbezirk Musterstadt 1 · 3 Straßen, laufende Runde mit Terminen heute'],
+            ['customer', 'ph-house-line', 'Bewohner-App ansehen', 'Als Familie Engel, Lindenweg 5 · Termin heute, Live-Anzeige sobald die Route läuft']].map(([as, icon, t, sub]) => (
+            <button key={as} disabled={act.busy} onClick={() => openDemo(as)} style={sx('text-align:left;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;gap:14px;align-items:center')}>
+              <span style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,0.1);flex:none')}><Icon n={icon} style={sx('font-size:22px')} /></span>
+              <span style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}><span style={sx('font-size:16px;font-weight:500')}>{t}</span><span style={sx('font-size:12px;color:var(--color-neutral-400);text-wrap:pretty')}>{sub}</span></span>
+              <Icon n="ph-arrow-square-out" style={sx('color:var(--color-neutral-400)')} />
+            </button>
+          ))}
+          {act.error && <ErrorLine text={act.error} />}
+          <button className="btn btn-ghost" disabled={act.busy} onClick={() => openDemo('sweep', true)} style={sx('min-height:44px;align-self:flex-start;color:var(--color-neutral-300)')}><Icon n="ph-arrow-counter-clockwise" />Beispieldaten zurücksetzen und Kaminfeger-App öffnen</button>
+        </div>
+        <div style={sx('margin:12px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-shield-check" style={sx('font-size:15px;margin-top:1px;flex:none')} /><span style={sx('text-wrap:pretty')}>Der Demo-Bezirk ist für echte Nutzer unsichtbar, und es gehen keine E-Mails raus. Die Vorschau öffnet sich in einem neuen Tab. Ein eigenes Kaminfeger- oder Bewohner-Konto in diesem Browser wird dabei abgemeldet. Die Beispieldaten erneuern sich jeden Tag.</span></div>
       </>}
 
       {scr === 'feedback' && <>

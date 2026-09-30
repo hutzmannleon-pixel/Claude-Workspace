@@ -23,6 +23,8 @@ function html({ subject, text, link, linkLabel }) {
  * Im Testmodus landet sie zusätzlich im Test-Postfach (nie in Produktion – dort stünden Codes im Klartext).
  */
 export async function sendMail({ to, subject, text, link, linkLabel }) {
+  // Demo-Konten der Vorschau (…@demo.invalid) bekommen nie echte Mails
+  if (/\.invalid$/i.test(String(to || ''))) return;
   if (!emailAllowed(to)) { console.log(`E-Mail an ${to} nicht gesendet (nicht auf der Freigabeliste): ${subject}`); return; }
   const body = link ? `${text}\n\n${linkLabel || 'Link'}: ${link}` : text;
   if (config.testMode) {

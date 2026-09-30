@@ -631,3 +631,35 @@ test('Bezirk nicht im Verzeichnis: selbst angeben, Betreiber prüft im Register,
   await ok('n2', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', bstreet: 'X 1', bplz: '88416', bort: 'Ochsenhausen', email: 'zweit@test.de', code: codeFor('zweit@test.de') });
   assert.equal((await ok('n2', 'POST', '/api/sweep/district', { ...where, kreis: 'biberach' })).result, 'taken');
 });
+
+test('Vorschau für den Betreiber: Demo-Bezirk abgeschottet, keine Mails, eigene Sitzungen', async () => {
+  const r = await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep' });
+  assert.equal(r.url, '/kaminfeger');
+  const me = await ok('admin', 'GET', '/api/sweep/me');
+  assert.deepEqual([me.demo, me.status, me.district.bez], [true, 'active', '1']);
+  const ov = await ok('admin', 'GET', '/api/sweep/overview');
+  assert.ok(ov.streets.length === 3 && ov.today.isToday && ov.today.count === 5);
+  await fails(400, 'admin', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer;email\nX;1;11111;Y;Z;echt@test.de\n'));
+  // Bewohner-Sicht
+  await ok('admin', 'POST', '/api/admin/demo', { as: 'customer' });
+  const st = await ok('admin', 'GET', '/api/customer/state');
+  assert.deepEqual([st.demo, st.resident.family, !!st.booking], [true, 'Engel', true]);
+  await fails(400, 'admin', 'POST', '/api/customer/members', { email: 'fremd@test.de' });
+  // Für echte Nutzer unsichtbar
+  const opts = await ok('x', 'GET', '/api/directory/options');
+  assert.ok(!opts.lands.includes('Vorschau'));
+  assert.equal((await ok('x', 'POST', '/api/customer/lookup', { street: 'Lindenweg', nr: '5', plz: '00000' })).district, null);
+  const q = await ok('admin', 'GET', '/api/admin/queue');
+  assert.ok(!q.sweeps.some(s => s.name === 'Max Muster'));
+  assert.ok(!(await ok('admin', 'GET', '/api/admin/directory')).rows.some(d => d.land === 'Vorschau'));
+  // Keine Mails an Demo-Adressen
+  const before = get('SELECT COUNT(*) n FROM outbox').n;
+  const bid = get(`SELECT b.id FROM bookings b JOIN households h ON h.id = b.household_id JOIN districts d ON d.id = h.district_id WHERE d.demo = 1 AND b.status = 'booked' LIMIT 1`).id;
+  await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep' });
+  await ok('admin', 'POST', `/api/sweep/bookings/${bid}/cancel`, {});
+  assert.equal(get('SELECT COUNT(*) n FROM outbox').n, before);
+  // Zurücksetzen legt alles frisch an, Nicht-Betreiber dürfen nicht
+  await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep', reset: true });
+  assert.equal(get(`SELECT COUNT(*) n FROM districts WHERE demo = 1`).n, 1);
+  await fails(401, 'k1', 'POST', '/api/admin/demo', { as: 'sweep' });
+});

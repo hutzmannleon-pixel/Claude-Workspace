@@ -71,7 +71,7 @@ export default async function publicRoutes(app) {
 
   // ---------- Bezirksverzeichnis (Auswahllisten) ----------
   app.get('/api/directory/options', async () => {
-    const rows = all('SELECT DISTINCT land, kreis FROM districts ORDER BY land, kreis');
+    const rows = all('SELECT DISTINCT land, kreis FROM districts WHERE demo = 0 ORDER BY land, kreis');
     const lands = [...new Set(rows.map(r => r.land))];
     return { lands, kreise: Object.fromEntries(lands.map(l => [l, rows.filter(r => r.land === l).map(r => r.kreis)])) };
   });
