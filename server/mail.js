@@ -9,13 +9,13 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 function html({ subject, text, link, linkLabel }) {
   const paras = text.split(/\n{2,}/).map(p => `<p style="margin:0 0 14px">${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
-  const btn = link ? `<p style="margin:22px 0"><a href="${esc(link)}" style="display:inline-block;padding:11px 18px;border-radius:14px;background:#4f78a3;color:#ffffff;text-decoration:none;font-weight:600">${esc(linkLabel || 'Öffnen')}</a></p>
-    <p style="margin:0;font-size:12px;color:#6b7686">Falls der Knopf nicht funktioniert: ${esc(link)}</p>` : '';
-  return `<!doctype html><html><body style="margin:0;background:#dde6ef;font-family:Inter,Segoe UI,Arial,sans-serif;color:#1b2230">
+  const btn = link ? `<p style="margin:22px 0"><a href="${esc(link)}" style="display:inline-block;padding:11px 18px;border-radius:14px;background:#e8692b;color:#ffffff;text-decoration:none;font-weight:600">${esc(linkLabel || 'Öffnen')}</a></p>
+    <p style="margin:0;font-size:12px;color:#7a6a62">Falls der Knopf nicht funktioniert: ${esc(link)}</p>` : '';
+  return `<!doctype html><html><body style="margin:0;background:#f6ebe3;font-family:Inter,Segoe UI,Arial,sans-serif;color:#2a1c19">
   <div style="max-width:520px;margin:0 auto;padding:28px 20px"><div style="background:#fff;border-radius:20px;padding:26px 24px">
-  <table role="presentation" style="border-collapse:collapse;margin-bottom:14px"><tr><td style="padding:0 10px 0 0"><img src="${esc(config.baseUrl)}/icon-192.png" width="40" height="40" alt="" style="display:block;border-radius:10px"></td><td style="font-size:14px;font-weight:700;line-height:1.1;color:#1f3048">Kaminfeger<br>Verwaltung</td></tr></table>
+  <table role="presentation" style="border-collapse:collapse;margin-bottom:14px"><tr><td style="padding:0 10px 0 0"><img src="${esc(config.baseUrl)}/icon-192.png" width="40" height="40" alt="" style="display:block;border-radius:10px"></td><td style="font-size:14px;font-weight:700;line-height:1.1;color:#5a2e1c">Kaminfeger<br>Verwaltung</td></tr></table>
   <h1 style="font-size:20px;font-weight:600;margin:0 0 16px">${esc(subject)}</h1>${paras}${btn}</div>
-  <p style="font-size:11px;color:#8a94a3;text-align:center;margin-top:14px">Diese E-Mail wurde automatisch versendet.</p></div></body></html>`;
+  <p style="font-size:11px;color:#9a8a82;text-align:center;margin-top:14px">Diese E-Mail wurde automatisch versendet.</p></div></body></html>`;
 }
 
 /**

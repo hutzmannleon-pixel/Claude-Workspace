@@ -1,49 +1,54 @@
-/* Theme „Kaminfeger Verwaltung“ – blaugrauer Morgennebel mit Glas-Karten.
+/* Theme „Kaminfeger Verwaltung“ – warmes Abendglühen mit Glas-Karten, Akzent je App.
    Liegt über nocturne.css (dort bleiben Struktur und Klassen); hier nur Farben, Rundungen und Glas. */
 
 :root {
-  --color-bg: #1e2e42;
-  --app-bg: linear-gradient(180deg, #4e6887 0%, #344b67 26%, #243750 58%, #1b2a3d 100%);
-  --color-surface: rgba(255, 255, 255, 0.055);
-  --color-surface-solid: #2c415b;
+  /* Grundakzent (Startseite); jede App färbt ihn über html[data-app] um */
+  --acc: #ff8a3d;
+  --acc-2: #ffc857;
+  --app-glow: radial-gradient(90% 40% at 88% 0%, color-mix(in srgb, var(--acc) 26%, transparent), transparent 70%);
+
+  --color-bg: #2a1c19;
+  --app-bg: linear-gradient(180deg, color-mix(in oklab, var(--acc) 42%, #5a3228) 0%, color-mix(in oklab, var(--acc) 16%, #4a2d27) 26%, #3b2521 58%, #271917 100%);
+  --color-surface: rgba(255, 238, 226, 0.065);
+  --color-surface-solid: #4c312b;
   --glass-blur: blur(7px) saturate(190%) brightness(1.06);
-  --color-text: #eef3f9;
-  --color-accent: #8cc6f5;
-  --color-accent-2: #a9cdea;
-  --color-divider: rgba(226, 236, 248, 0.14);
+  --color-text: #fbf3ee;
+  --color-accent: var(--acc);
+  --color-accent-2: var(--acc-2);
+  --color-divider: rgba(255, 228, 212, 0.14);
 
-  --color-neutral-100: #f1f5fa;
-  --color-neutral-200: #dfe7f0;
-  --color-neutral-300: #c6d3e1;
-  --color-neutral-400: #a8b8ca;
-  --color-neutral-500: #8a9cb1;
-  --color-neutral-600: #6d8098;
-  --color-neutral-700: #52657d;
-  --color-neutral-800: #3a4c63;
-  --color-neutral-900: #26354a;
+  --color-neutral-100: #fbf5f1;
+  --color-neutral-200: #f0e3da;
+  --color-neutral-300: #ddc9bc;
+  --color-neutral-400: #c4ab9c;
+  --color-neutral-500: #a68d7e;
+  --color-neutral-600: #866e61;
+  --color-neutral-700: #665248;
+  --color-neutral-800: #483831;
+  --color-neutral-900: #2f2420;
 
-  --color-accent-100: #eef7ff;
-  --color-accent-200: #d6ecff;
-  --color-accent-300: #b6dcfb;
-  --color-accent-400: #9ccff8;
-  --color-accent-500: #7db9ea;
-  --color-accent-600: #5b98cf;
-  --color-accent-700: #3f77a8;
-  --color-accent-800: #2c5a82;
-  --color-accent-900: #1f3f5e;
+  --color-accent-100: color-mix(in oklab, var(--acc) 12%, #fff);
+  --color-accent-200: color-mix(in oklab, var(--acc) 30%, #fff);
+  --color-accent-300: color-mix(in oklab, var(--acc) 52%, #fff);
+  --color-accent-400: color-mix(in oklab, var(--acc) 76%, #fff);
+  --color-accent-500: var(--acc);
+  --color-accent-600: color-mix(in oklab, var(--acc) 80%, #000);
+  --color-accent-700: color-mix(in oklab, var(--acc) 62%, #000);
+  --color-accent-800: color-mix(in oklab, var(--acc) 42%, #1a0d09);
+  --color-accent-900: color-mix(in oklab, var(--acc) 26%, #1a0d09);
 
-  --color-accent-2-100: #eef6fd;
-  --color-accent-2-200: #d8eaf8;
-  --color-accent-2-300: #bcd9ef;
-  --color-accent-2-400: #a3c7e3;
-  --color-accent-2-500: #86aed0;
-  --color-accent-2-600: #6890b3;
-  --color-accent-2-700: #4d7292;
-  --color-accent-2-800: #37556f;
-  --color-accent-2-900: #263b4e;
+  --color-accent-2-100: color-mix(in oklab, var(--acc-2) 12%, #fff);
+  --color-accent-2-200: color-mix(in oklab, var(--acc-2) 30%, #fff);
+  --color-accent-2-300: color-mix(in oklab, var(--acc-2) 52%, #fff);
+  --color-accent-2-400: color-mix(in oklab, var(--acc-2) 76%, #fff);
+  --color-accent-2-500: var(--acc-2);
+  --color-accent-2-600: color-mix(in oklab, var(--acc-2) 80%, #000);
+  --color-accent-2-700: color-mix(in oklab, var(--acc-2) 62%, #000);
+  --color-accent-2-800: color-mix(in oklab, var(--acc-2) 42%, #1a0d09);
+  --color-accent-2-900: color-mix(in oklab, var(--acc-2) 26%, #1a0d09);
 
-  --color-section-glow: #5f7ea3;
-  --color-ok: #6fd3a5;
+  --color-section-glow: #a0634f;
+  --color-ok: #6fdc9a;
 
   --font-heading-weight: 600;
 
@@ -51,25 +56,31 @@
   --radius-md: 12px;
   --radius-lg: 20px;
 
-  --glass-border: rgba(226, 236, 248, 0.16);
+  --glass-border: rgba(255, 228, 212, 0.17);
   --shadow-sm: 0 0 0 1px var(--glass-border);
-  --shadow-md: 0 0 0 1px var(--glass-border), 0 10px 28px rgba(8, 16, 30, 0.35);
-  --shadow-lg: 0 0 0 1px rgba(226, 236, 248, 0.22), 0 24px 60px rgba(6, 12, 24, 0.55);
+  --shadow-md: 0 0 0 1px var(--glass-border), 0 10px 28px rgba(24, 8, 4, 0.38);
+  --shadow-lg: 0 0 0 1px rgba(255, 228, 212, 0.22), 0 24px 60px rgba(20, 6, 2, 0.55);
 }
 
-html { background: #1b2a3d; }
+/* Jede App hat ihre eigene Glut: Bewohner Bernstein, Kaminfeger Orange, Betreiber Himbeere */
+html[data-app="customer"] { --acc: #ffbd3f; --acc-2: #ff8a5c; }
+html[data-app="sweep"]    { --acc: #ff7a2f; --acc-2: #ffc857; }
+html[data-app="admin"]    { --acc: #ff5f8f; --acc-2: #ffa94d; }
+
+html { background: #271917; }
 body { background: var(--app-bg) fixed; }
 
 /* Buttons: Glas mit weichem Licht */
 .btn { border-radius: 16px; }
 .btn-primary {
-  color: #fff; border-color: rgba(226, 236, 248, 0.28);
-  background: linear-gradient(180deg, rgba(150, 190, 232, 0.34), rgba(96, 136, 180, 0.24));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 26px rgba(8, 18, 34, 0.35);
+  color: #fff; border-color: color-mix(in srgb, var(--color-accent-300) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 78%, transparent), color-mix(in srgb, var(--color-accent-700) 72%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 26px color-mix(in srgb, var(--acc) 30%, rgba(20, 6, 2, 0.4));
+  text-shadow: 0 1px 2px rgba(40, 12, 4, 0.45);
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
-.btn-primary:hover { background: linear-gradient(180deg, rgba(160, 200, 240, 0.44), rgba(106, 146, 190, 0.34)); }
-.btn-primary:active { background: linear-gradient(180deg, rgba(140, 180, 224, 0.5), rgba(90, 126, 170, 0.42)); }
+.btn-primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent-400) 88%, transparent), color-mix(in srgb, var(--color-accent-600) 80%, transparent)); }
+.btn-primary:active { background: linear-gradient(180deg, var(--color-accent-600), var(--color-accent-700)); }
 .btn-secondary { background: rgba(255, 255, 255, 0.04); border-color: var(--glass-border); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
 .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
 .btn-ghost { color: var(--color-accent-300); }
@@ -80,23 +91,23 @@ body { background: var(--app-bg) fixed; }
   color-scheme: dark;
 }
 .input::placeholder { color: var(--color-neutral-500); }
-.input:focus-visible { border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(140, 198, 245, 0.18); }
+.input:focus-visible { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 25%, transparent); }
 
 /* Segment-Auswahl als Pillen wie im Filter „Alle / Aktiv / Abgeschlossen“ */
 .seg { border-radius: 999px; background: rgba(255, 255, 255, 0.04); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border-color: var(--glass-border); padding: 3px; gap: 3px; }
 .seg-opt { border-radius: 999px; }
 .seg-opt + .seg-opt { border-left: 0; }
-.seg-opt:has(input:checked) { color: #10233a; box-shadow: none; font-weight: 500; }
+.seg-opt:has(input:checked) { color: #2a120a; box-shadow: none; font-weight: 500; }
 
 /* Tags: grün für „bestätigt / läuft / offen“ wie „Geplant / Aktiv“ */
 .tag { border-radius: 999px; font-weight: 500; }
 .tag-accent { background: rgba(80, 200, 150, 0.2); color: #8fe6bf; }
-.tag-neutral { background: rgba(226, 236, 248, 0.12); color: var(--color-neutral-200); }
-.tag-outline { border-color: rgba(226, 236, 248, 0.35); color: var(--color-neutral-100); background: rgba(150, 180, 214, 0.1); }
+.tag-neutral { background: rgba(255, 228, 212, 0.12); color: var(--color-neutral-200); }
+.tag-outline { border-color: color-mix(in srgb, var(--acc) 55%, transparent); color: var(--color-accent-200); background: color-mix(in srgb, var(--acc) 12%, transparent); }
 
 .card-kicker { color: var(--color-accent-300); }
 a { color: var(--color-accent-300); }
 
 /* Glas für Flächen mit var(--color-surface) */
 .glass { background: var(--color-surface); box-shadow: var(--shadow-sm); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
-body { text-shadow: 0 1px 2px rgba(10, 20, 34, 0.35); }
+body { text-shadow: 0 1px 2px rgba(30, 10, 4, 0.35); }

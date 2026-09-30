@@ -3,7 +3,7 @@ import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, passkeySupported } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM, bubble } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
@@ -338,7 +338,7 @@ function AdminApp({ me, onLock }) {
           {[['sweep', 'ph-hard-hat', 'Kaminfeger-App ansehen', 'Als „Max Muster“, Kehrbezirk Musterstadt 1 · 3 Straßen, laufende Runde mit Terminen heute'],
             ['customer', 'ph-house-line', 'Bewohner-App ansehen', 'Als Familie Engel, Lindenweg 5 · Termin heute, Live-Anzeige sobald die Route läuft']].map(([as, icon, t, sub]) => (
             <button key={as} disabled={act.busy} onClick={() => openDemo(as)} style={sx('text-align:left;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;gap:14px;align-items:center')}>
-              <span style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,0.1);flex:none')}><Icon n={icon} style={sx('font-size:22px')} /></span>
+              <span style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;' + bubble(as === 'sweep' ? '#ff7a2f' : '#ffbd3f'))}><Icon w="ph-fill" n={icon} style={sx('font-size:22px')} /></span>
               <span style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:3px')}><span style={sx('font-size:16px;font-weight:500')}>{t}</span><span style={sx('font-size:12px;color:var(--color-neutral-400);text-wrap:pretty')}>{sub}</span></span>
               <Icon n="ph-arrow-square-out" style={sx('color:var(--color-neutral-400)')} />
             </button>

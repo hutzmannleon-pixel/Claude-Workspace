@@ -6,14 +6,18 @@ import { FeedbackButton } from './Feedback.jsx';
 import { LogoMark, Scenery } from './brand.jsx';
 
 export const GLOW = {
-  sweep: 'radial-gradient(90% 38% at 88% 0%, rgba(255, 214, 170, 0.16), transparent 70%)',
-  customer: 'radial-gradient(90% 38% at 88% 0%, rgba(255, 214, 170, 0.18), transparent 70%)',
-  admin: 'radial-gradient(90% 38% at 88% 0%, rgba(214, 228, 255, 0.12), transparent 70%)'
+  sweep: 'var(--app-glow)',
+  customer: 'var(--app-glow)',
+  admin: 'var(--app-glow)'
 };
 /** Illustration dezent hinter dem Kopfbereich, nach unten ausgeblendet */
 const HeaderScenery = ({ o = 0.6, wide }) => (
   <div aria-hidden="true" style={sx(`position:absolute;left:0;right:0;bottom:0;height:${wide ? '100%' : '64%'};pointer-events:none;opacity:${o};-webkit-mask-image:linear-gradient(to bottom, transparent, #000 18%);mask-image:linear-gradient(to bottom, transparent, #000 18%)`)}><Scenery wide={wide} /></div>
 );
+/** Farbige Symbol-Blase: Glas mit Farbverlauf in der jeweiligen Farbe */
+export const bubble = c => `background:radial-gradient(circle at 35% 25%, color-mix(in srgb, ${c} 75%, #fff), ${c} 55%, color-mix(in srgb, ${c} 70%, #000));color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,0.5), 0 6px 16px color-mix(in srgb, ${c} 40%, transparent);text-shadow:0 1px 2px rgba(0,0,0,0.25)`;
+/** Kachelfarben: eigener Akzent zuerst, dann Türkis, Violett, Gold */
+const TILE_COLORS = ['var(--acc)', '#2fc9b0', '#a77bff', '#ffb23f'];
 const BADGE = 'background:#e5484d;color:#fff;box-shadow:0 2px 8px rgba(229,72,77,0.4)';
 export const DIV_BOTTOM = 'linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat bottom / 100% 1px';
 export const DIV_TOP_48 = 'linear-gradient(to right, transparent, var(--color-divider) 48px, var(--color-divider) calc(100% - 48px), transparent) no-repeat top / 100% 1px';
@@ -29,7 +33,7 @@ export const useIsWide = () => useContext(WideCtx);
 export function DemoBadge() {
   return (
     <div role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 96px)', left: '50%', transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
-      padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', color: '#10233a', background: 'linear-gradient(180deg, #f6d9a8, #e9bd78)', boxShadow: '0 6px 18px rgba(8,18,34,0.35)', whiteSpace: 'nowrap' }}>
+      padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', color: '#2a120a', background: 'linear-gradient(180deg, #ffe08a, #ffc145)', boxShadow: '0 6px 18px rgba(24,8,4,0.4)', whiteSpace: 'nowrap' }}>
       Vorschau · Beispieldaten
     </div>
   );
@@ -55,7 +59,7 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
       <div style={sx('height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45;background:var(--app-bg);position:relative;overflow:hidden;display:flex')}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
         <HeaderScenery o={0.55} wide />
-        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider);background:rgba(20,32,48,0.16);-webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%)')}>
+        <nav aria-label="Hauptnavigation" style={sx('flex:none;width:232px;display:flex;flex-direction:column;gap:4px;padding:24px 14px;position:relative;z-index:2;box-shadow:inset -1px 0 0 var(--color-divider);background:rgba(40,16,10,0.18);-webkit-backdrop-filter:blur(14px) saturate(120%);backdrop-filter:blur(14px) saturate(120%)')}>
           <div style={sx('display:flex;gap:10px;align-items:center;padding:0 10px 20px')}>
             <LogoMark size={40} title="Kaminfeger Verwaltung" />
             <div style={sx('min-width:0')}><div style={sx('font-size:15px;font-weight:500;line-height:1.2')}>{nav.title}</div>{nav.sub && <div style={sx('font-size:12px;color:var(--color-neutral-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{nav.sub}</div>}</div>
@@ -86,7 +90,7 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
   // Schmale Ansichten (Anmeldung, Bewohner) stehen am Desktop als Karte mittig auf der Seite
   const card = isWide && !nav;
   return (
-    <div style={sx(card ? 'min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(70% 50% at 80% 0%, rgba(255,214,170,0.14), transparent 70%), var(--app-bg);font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45'
+    <div style={sx(card ? 'min-height:100dvh;display:grid;place-items:center;padding:24px;background:var(--app-glow), var(--app-bg);font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45'
       : 'width:100%;max-width:520px;margin:0 auto;height:100dvh;font-family:var(--font-body);color:var(--color-text);font-size:15px;line-height:1.45')}>
       <div style={sx(`position:relative;width:100%;${card ? 'max-width:460px;height:min(880px, calc(100dvh - 48px));border-radius:32px;box-shadow:var(--shadow-lg)' : 'height:100%'};overflow:hidden;background:var(--app-bg);display:flex;flex-direction:column`)}>
         <div style={sx(`position:absolute;inset:0;pointer-events:none;background:${glow}`)} />
@@ -243,8 +247,8 @@ export function CheckRow({ on, label, onClick, disabled, strike, minH = '50px' }
 export function Sheet({ children, scroll }) {
   const wide = useIsWide();
   return (
-    <div className="kf-backdrop" style={sx(`position:absolute;inset:0;z-index:5;background:rgba(12,22,36,0.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
-      <div role="dialog" aria-modal="true" className={`kf-sheet${wide ? ' center' : ''}`} style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(90,120,158,0.42), rgba(40,60,86,0.5));-webkit-backdrop-filter:blur(16px) saturate(190%);backdrop-filter:blur(16px) saturate(190%);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
+    <div className="kf-backdrop" style={sx(`position:absolute;inset:0;z-index:5;background:rgba(30,10,4,0.3);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;flex-direction:column;${wide ? 'justify-content:center;align-items:center' : 'justify-content:flex-end'}`)}>
+      <div role="dialog" aria-modal="true" className={`kf-sheet${wide ? ' center' : ''}`} style={sx(`${wide ? 'width:460px;max-height:86vh;' : ''}margin:0 8px 8px;padding:22px 18px 16px;border-radius:32px;background:linear-gradient(180deg, rgba(160,98,78,0.46), rgba(72,40,32,0.58));-webkit-backdrop-filter:blur(16px) saturate(190%);backdrop-filter:blur(16px) saturate(190%);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:10px${scroll ? ';max-height:78%;overflow-y:auto;scrollbar-width:none' : ''}`)}>{children}</div>
     </div>
   );
 }
@@ -252,12 +256,12 @@ export function Sheet({ children, scroll }) {
 export function TabBar({ tabs, padX = tabs.length > 4 ? '10px' : '24px', padBottom = '8px' }) {
   const idx = tabs.findIndex(t => t.on);
   return (
-    <div style={sx(`flex:none;padding:8px ${padX} ${padBottom};position:relative;z-index:2;background:rgba(20,32,48,0.14);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18)`)}>
+    <div style={sx(`flex:none;padding:8px ${padX} ${padBottom};position:relative;z-index:2;background:rgba(40,16,10,0.16);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18)`)}>
      <div style={sx(`position:relative;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr)`)}>
       <LiquidPill index={idx} style={{ top: 0, bottom: 0, left: 0, width: `calc(100% / ${tabs.length} - 12px)`, borderRadius: 20, transform: `translateX(calc(${Math.max(0, idx)} * (100% + 12px) + 6px))` }} />
       {tabs.map(t => (
-        <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;justify-content:center;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent-200)' : 'var(--color-neutral-500)'};position:relative;z-index:1`)}>
-          <Icon w={t.on ? 'ph-fill' : 'ph'} n={t.icon} style={sx('font-size:24px')} />{t.label}
+        <button key={t.label} onClick={t.onClick} style={sx(`display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;justify-content:center;background:none;border:0;cursor:pointer;font:inherit;font-size:11px;color:${t.on ? 'var(--color-accent-200)' : 'var(--color-neutral-400)'};position:relative;z-index:1`)}>
+          <Icon w={t.on ? 'ph-fill' : 'ph'} n={t.icon} style={sx(`font-size:24px${t.on ? ';color:var(--acc)' : ''}`)} />{t.label}
           {!!t.badge && <span style={sx('position:absolute;top:-2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;font-size:10px;font-weight:600;display:grid;place-items:center;' + BADGE)}>{t.badge}</span>}
         </button>
       ))}
@@ -430,7 +434,7 @@ export function Greeting({ hi, sub }) {
 export function NextCard({ icon = 'ph-calendar-dots', kicker, title, lines = [], tag, tagCls = 'tag-accent', onClick }) {
   return (
     <button className="glass" onClick={onClick} style={sx('margin:18px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:14px;align-items:flex-start;padding:18px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
-      <div style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)')}><Icon n={icon} style={sx('font-size:24px')} /></div>
+      <div style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;' + bubble('var(--acc)'))}><Icon w="ph-fill" n={icon} style={sx('font-size:24px')} /></div>
       <div style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
         {kicker && <div style={sx('font-size:13px;color:var(--color-neutral-300)')}>{kicker}</div>}
         <div style={sx('font-size:18px;font-weight:600;letter-spacing:-0.01em')}>{title}</div>
@@ -448,9 +452,9 @@ export function NextCard({ icon = 'ph-calendar-dots', kicker, title, lines = [],
 export function Tiles({ items }) {
   return (
     <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px 16px 0')}>
-      {items.map(t => (
+      {items.map((t, i) => (
         <button key={t.label} className="glass" onClick={t.onClick} style={sx('position:relative;text-align:left;display:flex;flex-direction:column;gap:14px;padding:18px 16px 16px;min-height:104px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
-          <div style={sx('width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25)')}><Icon n={t.icon} style={sx('font-size:22px')} /></div>
+          <div style={sx('width:40px;height:40px;border-radius:50%;display:grid;place-items:center;' + bubble(t.color || TILE_COLORS[i % TILE_COLORS.length]))}><Icon w="ph-fill" n={t.icon} style={sx('font-size:22px')} /></div>
           <div style={sx('font-size:16px;font-weight:500')}>{t.label}</div>
           {!!t.badge && <span style={sx(`position:absolute;top:10px;right:10px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;font-weight:600;display:grid;place-items:center;${BADGE}`)}>{t.badge}</span>}
         </button>
@@ -474,7 +478,7 @@ export function InfoCard({ title, sub, onClick }) {
 export function ListCard({ icon = 'ph-house', title, lines = [], tag, tagCls = 'tag-accent', onClick }) {
   return (
     <button className="glass" onClick={onClick} style={sx('width:100%;text-align:left;display:flex;gap:14px;align-items:center;padding:14px 14px 14px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
-      <div style={sx('width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.12);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon n={icon} style={sx('font-size:24px')} /></div>
+      <div style={sx('width:48px;height:48px;border-radius:50%;display:grid;place-items:center;flex:none;background:color-mix(in srgb, var(--acc) 22%, transparent);color:var(--color-accent-200);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 0 1px color-mix(in srgb, var(--acc) 30%, transparent)')}><Icon n={icon} style={sx('font-size:24px')} /></div>
       <div style={sx('flex:1;min-width:0')}>
         <div style={sx('font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{title}</div>
         {lines.map((l, i) => <div key={i} style={sx('font-size:13px;color:var(--color-neutral-300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>{l}</div>)}

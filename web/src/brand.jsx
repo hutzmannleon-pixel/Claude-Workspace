@@ -6,10 +6,10 @@ const SPIKES = Array.from({ length: 28 }, (_, i) => (i / 28) * Math.PI * 2);
 /** Logo-Symbol. tone 'light' für dunkle Flächen, 'dark' für helle. */
 export function LogoMark({ size = 40, tone = 'light', title }) {
   const id = useId().replace(/:/g, '');
-  const hat = tone === 'light' ? '#f4f7fb' : '#172232';
-  const hatHi = tone === 'light' ? '#ffffff' : '#34465e';
-  const band = tone === 'light' ? '#8fb6dc' : '#4d6788';
-  const brush = tone === 'light' ? '#e3ebf4' : '#172232';
+  const hat = tone === 'light' ? '#fbf3ee' : '#24140f';
+  const hatHi = tone === 'light' ? '#ffffff' : '#4a2e26';
+  const band = tone === 'light' ? 'var(--acc, #ff8a3d)' : '#a0563a';
+  const brush = tone === 'light' ? '#f3e4da' : '#24140f';
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : true} style={{ display: 'block', flex: 'none' }}>
       {title && <title>{title}</title>}
@@ -29,7 +29,7 @@ export function LogoMark({ size = 40, tone = 'light', title }) {
         <path d="M17 12.5 Q17 9.5 20 9.5 H39 Q42 9.5 42 12.5 L40.5 37 H18.5 Z" fill={`url(#h${id})`} />
         <rect x="18.2" y="30.5" width="22.6" height="5.2" fill={band} />
         <ellipse cx="29.5" cy="38.5" rx="20.5" ry="4.6" fill={hat} />
-        <ellipse cx="29.5" cy="37.6" rx="11" ry="1.4" fill={tone === 'light' ? '#c9d6e4' : '#0d1520'} opacity=".55" />
+        <ellipse cx="29.5" cy="37.6" rx="11" ry="1.4" fill={tone === 'light' ? '#e6cfc2' : '#150a07'} opacity=".55" />
       </g>
     </svg>
   );
@@ -37,12 +37,12 @@ export function LogoMark({ size = 40, tone = 'light', title }) {
 
 /** Logo mit Schriftzug */
 export function Logo({ size = 36, tone = 'light', stacked = false, sub }) {
-  const fg = tone === 'light' ? 'var(--color-text)' : '#172232';
+  const fg = tone === 'light' ? 'var(--color-text)' : '#24140f';
   if (stacked) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
       <LogoMark size={size} tone={tone} title="Kaminfeger Verwaltung" />
       <div style={{ fontSize: size * 0.42, fontWeight: 700, lineHeight: 1.05, letterSpacing: '-0.02em', color: fg }}>Kaminfeger<br />Verwaltung</div>
-      {sub && <div style={{ fontSize: 14, color: tone === 'light' ? 'var(--color-neutral-300)' : '#3a4a5e', maxWidth: 240 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 14, color: tone === 'light' ? 'var(--color-neutral-300)' : '#5a3e34', maxWidth: 240 }}>{sub}</div>}
     </div>
   );
   return (
@@ -70,37 +70,37 @@ export function Scenery({ style, wide = false, simple = false }) {
     <svg viewBox={`${X0} 0 ${W} 320`} preserveAspectRatio="xMidYMax slice" aria-hidden="true" style={{ display: 'block', width: '100%', height: '100%', ...style }}>
       <defs>
         <radialGradient id={`sun${id}`} cx={sunX} cy="148" r={wide ? 260 : 190} gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#ffe3bd" stopOpacity=".9" /><stop offset=".18" stopColor="#f6cfa3" stopOpacity=".45" /><stop offset="1" stopColor="#f6cfa3" stopOpacity="0" />
+          <stop offset="0" stopColor="#ffd08a" stopOpacity=".95" /><stop offset=".18" stopColor="#ff9f5a" stopOpacity=".5" /><stop offset="1" stopColor="#ff8a4a" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={`mist${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#dfe8f2" stopOpacity="0" /><stop offset=".5" stopColor="#dfe8f2" stopOpacity=".28" /><stop offset="1" stopColor="#dfe8f2" stopOpacity="0" />
+          <stop offset="0" stopColor="#ffd9c4" stopOpacity="0" /><stop offset=".5" stopColor="#ffd9c4" stopOpacity=".24" /><stop offset="1" stopColor="#ffd9c4" stopOpacity="0" />
         </linearGradient>
         <linearGradient id={`roof${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3b4f68" /><stop offset="1" stopColor="#1b2839" />
+          <stop offset="0" stopColor="#5c3934" /><stop offset="1" stopColor="#2a1917" />
         </linearGradient>
         <linearGradient id={`chim${id}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#2b394c" /><stop offset=".6" stopColor="#3d506a" /><stop offset="1" stopColor="#253245" />
+          <stop offset="0" stopColor="#4a2c27" /><stop offset=".6" stopColor="#6a433a" /><stop offset="1" stopColor="#3b231f" />
         </linearGradient>
       </defs>
       <rect className="kf-breathe" x={X0} width={W} height="320" fill={`url(#sun${id})`} />
-      <circle cx={sunX} cy="148" r="9" fill="#fff4e2" opacity=".95" />
-      {tiles.map(t => <path key={'f' + t} d={far} transform={`translate(${t * 390} 0)`} fill="#7d96b2" opacity=".55" />)}
+      <circle cx={sunX} cy="148" r="9" fill="#fff1d6" opacity=".95" />
+      {tiles.map(t => <path key={'f' + t} d={far} transform={`translate(${t * 390} 0)`} fill="#b97c72" opacity=".55" />)}
       <rect className="kf-drift" x={X0 - 30} y="150" width={W + 60} height="70" fill={`url(#mist${id})`} />
-      {tiles.map(t => <path key={'m' + t} d={mid} transform={`translate(${t * 390} 0)`} fill="#56708f" opacity=".85" />)}
-      <path d={trees.join(' ')} fill="#3a5069" opacity=".9" />
+      {tiles.map(t => <path key={'m' + t} d={mid} transform={`translate(${t * 390} 0)`} fill="#80504a" opacity=".85" />)}
+      <path d={trees.join(' ')} fill="#5a3533" opacity=".9" />
       <rect className="kf-drift slow" x={X0 - 30} y="210" width={W + 60} height="50" fill={`url(#mist${id})`} />
       {!simple && <g transform={wide ? 'translate(330 40) scale(.88)' : undefined}>
         {/* Dach mit Ziegelreihen */}
         <path d="M-20 330 L52 250 L262 206 L480 330 Z" fill={`url(#roof${id})`} />
-        <path d="M52 250 L262 206" stroke="#9fb4cb" strokeOpacity=".35" strokeWidth="1.5" />
-        {[1, 2, 3, 4, 5, 6].map(i => <path key={i} d={`M${52 - i * 12} ${250 + i * 13} L${262 + i * 26} ${206 + i * 14}`} stroke="#0f1824" strokeOpacity=".45" strokeWidth="1" />)}
+        <path d="M52 250 L262 206" stroke="#f0b894" strokeOpacity=".35" strokeWidth="1.5" />
+        {[1, 2, 3, 4, 5, 6].map(i => <path key={i} d={`M${52 - i * 12} ${250 + i * 13} L${262 + i * 26} ${206 + i * 14}`} stroke="#1c0e0b" strokeOpacity=".45" strokeWidth="1" />)}
         {/* Kamin */}
         <path d="M170 158 H200 V218 L170 224 Z" fill={`url(#chim${id})`} />
-        <rect x="164" y="150" width="42" height="9" rx="1.5" fill="#44586f" />
-        <rect x="168" y="143" width="34" height="8" rx="1.5" fill="#34465c" />
+        <rect x="164" y="150" width="42" height="9" rx="1.5" fill="#7a4b40" />
+        <rect x="168" y="143" width="34" height="8" rx="1.5" fill="#5e392f" />
         {/* Kaminbesen am Kamin angelehnt */}
-        <line x1="214" y1="222" x2="240" y2="156" stroke="#18222f" strokeWidth="3" strokeLinecap="round" />
-        <g transform="translate(243 148)" stroke="#18222f" strokeWidth="1.6" strokeLinecap="round">
+        <line x1="214" y1="222" x2="240" y2="156" stroke="#22120e" strokeWidth="3" strokeLinecap="round" />
+        <g transform="translate(243 148)" stroke="#22120e" strokeWidth="1.6" strokeLinecap="round">
           {SPIKES.map((a, i) => <line key={i} x1={Math.cos(a) * 3} y1={Math.sin(a) * 3} x2={Math.cos(a) * (i % 2 ? 14 : 17)} y2={Math.sin(a) * (i % 2 ? 14 : 17)} />)}
         </g>
       </g>}

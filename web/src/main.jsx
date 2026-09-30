@@ -24,6 +24,8 @@ const Legal = lazy(() => import('./Legal.jsx'));
 
 function route() {
   const p = location.pathname.replace(/\/+$/, '') || '/';
+  // Eigene Akzentfarbe je App (siehe ds/theme.css)
+  document.documentElement.dataset.app = p === '/kunde' || p.startsWith('/eigentuemer/') ? 'customer' : p === '/kaminfeger' ? 'sweep' : p === '/betreiber' ? 'admin' : 'public';
   if (p === '/kunde') return <Customer />;
   if (p === '/kaminfeger') return <Sweep />;
   if (p === '/betreiber') return <Admin />;
