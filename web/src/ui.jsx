@@ -35,7 +35,7 @@ export function DemoBadge() {
   );
 }
 
-export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' }, scenery = true, backdrop }) {
+export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, aside, asideKey, feedback = { role: 'public' }, scenery = true, backdrop, flush = false }) {
   const ref = useRef(null), asideRef = useRef(null);
   const isWide = useWide();
   const wide = isWide && !!nav;
@@ -99,8 +99,9 @@ export function Shell({ glow, top, bottom, overlay, children, scrollKey, nav, as
           {feedback && <FeedbackButton {...feedback} />}
         </div>
         {bottom}
-        {nav && nav.bar !== false && <TabBar tabs={nav.tabs} />}
-        {!EMBED && <div style={sx('height:max(8px, env(safe-area-inset-bottom));flex:none')} />}
+        {/* Leiste reicht bis zum unteren Rand (inkl. Home-Balken), damit die Glas-Pille nicht angeschnitten wirkt */}
+        {nav && nav.bar !== false ? <TabBar tabs={nav.tabs} padBottom={EMBED ? '8px' : 'max(8px, env(safe-area-inset-bottom))'} />
+          : !EMBED && !flush && <div style={sx('height:max(8px, env(safe-area-inset-bottom));flex:none')} />}
         {overlay}
       </div>
     </div>
@@ -248,10 +249,10 @@ export function Sheet({ children, scroll }) {
   );
 }
 
-export function TabBar({ tabs, padX = '24px' }) {
+export function TabBar({ tabs, padX = tabs.length > 4 ? '10px' : '24px', padBottom = '8px' }) {
   const idx = tabs.findIndex(t => t.on);
   return (
-    <div style={sx(`flex:none;padding:8px ${padX} 0;position:relative;z-index:2;background:rgba(20,32,48,0.14);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18)`)}>
+    <div style={sx(`flex:none;padding:8px ${padX} ${padBottom};position:relative;z-index:2;background:rgba(20,32,48,0.14);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18)`)}>
      <div style={sx(`position:relative;display:grid;grid-template-columns:repeat(${tabs.length}, 1fr)`)}>
       <LiquidPill index={idx} style={{ top: 0, bottom: 0, left: 0, width: `calc(100% / ${tabs.length} - 12px)`, borderRadius: 20, transform: `translateX(calc(${Math.max(0, idx)} * (100% + 12px) + 6px))` }} />
       {tabs.map(t => (
@@ -600,3 +601,6 @@ export function PasskeyOffer({ role }) {
     </Sheet>
   );
 }
+
+/** Unterer Abstand für eine eigene Reiterleiste (Home-Balken des Handys) */
+export const TAB_PAD_BOTTOM = EMBED ? '8px' : 'max(8px, env(safe-area-inset-bottom))';

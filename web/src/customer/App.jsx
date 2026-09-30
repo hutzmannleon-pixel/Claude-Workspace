@@ -1,7 +1,7 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DemoBadge, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DemoBadge, TAB_PAD_BOTTOM, DIV_BOTTOM } from '../ui.jsx';
 import { Scenery } from '../brand.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
@@ -149,7 +149,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   </>;
 
   return (
-    <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} />}</>} overlay={overlay}>
+    <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} padBottom={TAB_PAD_BOTTOM} />}</>} flush={showTabs} overlay={overlay}>
       {scr === 'home' && <>
         <AppHeader bell={unreadList.length} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
         <Greeting hi={`Hallo Familie ${r.family},`} sub="Schön, dass Sie da sind." />
