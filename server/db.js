@@ -236,6 +236,9 @@ CREATE TABLE IF NOT EXISTS outbox (
 db.exec(SCHEMA);
 // Straßen abschließen (neue Spalte in bestehenden Datenbanken)
 if (!db.prepare('PRAGMA table_info(campaigns)').all().some(c => c.name === 'closed_at')) db.exec('ALTER TABLE campaigns ADD COLUMN closed_at TEXT');
+// Selbst angegebener Bezirk (steht noch nicht im Verzeichnis) – wird bei der Freigabe ins Verzeichnis übernommen
+if (!db.prepare('PRAGMA table_info(sweeps)').all().some(c => c.name === 'req_bez'))
+  db.exec('ALTER TABLE sweeps ADD COLUMN req_land TEXT; ALTER TABLE sweeps ADD COLUMN req_kreis TEXT; ALTER TABLE sweeps ADD COLUMN req_bez TEXT;');
 
 const norm = params => params.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
 export const get = (sql, ...p) => db.prepare(sql).get(...norm(p));

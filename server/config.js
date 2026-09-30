@@ -34,6 +34,8 @@ export const config = {
     secure: env.SMTP_SECURE === '1' || env.SMTP_SECURE === 'true',
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined
   } : null,
+  // Schornsteinfegerregister des BAFA (Abgleich bei der Prüfung selbst angegebener Bezirke)
+  bafaRegisterUrl: env.BAFA_REGISTER_URL || 'https://www.google.com/search?q=BAFA+Schornsteinfegerregister+Registerauskunft',
   mailFrom: env.MAIL_FROM || 'Kaminfeger Verwaltung <no-reply@localhost>',
   codeTtlMin: 10,
   codeMaxAttempts: 5,

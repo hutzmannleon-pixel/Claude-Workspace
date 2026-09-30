@@ -1,5 +1,5 @@
 // Betreiber-App – nach „BetreiberApp“ (Claude Design), angebunden an /api/admin/*.
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, passkeySupported } from '../lib/passkey.js';
@@ -8,6 +8,7 @@ import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, Se
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
   asked: ['beim Kaminfeger', 'tag-outline'], letter: ['E-Mail gesendet', 'tag-outline'], dismissed: ['verworfen', 'tag-neutral'] };
+const CH_BAFA = ['bafa', 'Im Schornsteinfegerregister: Name, Kehrbezirk und Bestellungsdatum stimmen'];
 const CH = [['name', 'Name auf der Urkunde = Konto-Name'], ['nr', 'Bezirksnummer auf der Urkunde stimmt'], ['valid', 'Bestellung gültig, nicht abgelaufen'], ['id', 'Ausweis lesbar und passt zur Urkunde']];
 const REASONS = ['Urkunde unleserlich – bitte neu hochladen', 'Name passt nicht zur Urkunde', 'Bezirk gehört einer anderen Person', 'Verdacht auf gefälschte Unterlagen'];
 const isOpen = s => s === 'pending' || s === 'query';
@@ -100,6 +101,7 @@ function AdminApp({ me, onLock }) {
   const x = det.data && ui.sel && det.data.id === ui.sel.id && det.data.kind === ui.sel.kind ? det.data : null;
   const decided = x ? !(isOpen(x.status) || (x.kind === 'res' && ['letter', 'asked'].includes(x.status))) : false;
   const mine = x ? ui.checks[x.id] || [] : [];
+  const needed = x?.manual ? [CH_BAFA, ...CH] : CH;
   const toQueue = () => { act.setError(null); set({ screen: 'queue', overlay: null, result: null, sel: null }); };
   const decide = (path, body, after) => act.run(async () => { const r = await api(path, { body }); after(r || {}); q.reload(); det.reload(); });
 
@@ -118,7 +120,8 @@ function AdminApp({ me, onLock }) {
     if (res.type === 'approved') {
       resTitle = `${x.name} freigegeben`; resSub = `Kehrbezirk ${x.bez} wird freigeschaltet, sobald der Link in der E-Mail geöffnet ist.`;
       resSteps = [
-        { icon: 'ph-envelope-simple', t: 'Freischaltlink per E-Mail gesendet', s: `An ${res.sentTo} – die Adresse aus dem Bezirksverzeichnis, nicht die vom Kaminfeger angegebene` },
+        { icon: 'ph-envelope-simple', t: 'Freischaltlink per E-Mail gesendet', s: res.fromList === false ? `An ${res.sentTo} (E-Mail der Registrierung)` : `An ${res.sentTo} – die Adresse aus dem Bezirksverzeichnis, nicht die vom Kaminfeger angegebene` },
+        ...(res.fromList === false ? [{ icon: 'ph-list-plus', t: `Kehrbezirk ${x.bez} ins Verzeichnis übernommen`, s: 'Mit Name und Betriebsadresse, nach dem Abgleich im Schornsteinfegerregister' }] : []),
         { icon: 'ph-trash-simple', t: 'Bestellungsurkunde gelöscht', s: 'Datei endgültig entfernt' },
         { icon: 'ph-trash-simple', t: 'Ausweisfoto gelöscht', s: 'Datei endgültig entfernt' },
         { icon: 'ph-list-checks', t: 'Protokolliert', s: 'Prüfer, Zeitpunkt, Ergebnis – keine Dokumente' }];
@@ -252,14 +255,27 @@ function AdminApp({ me, onLock }) {
               </button>
             ))}
           </div>}
+          {!decided && x.manual && x.register && <>
+            <SectionLabel pad="20px 22px 6px">Schornsteinfegerregister</SectionLabel>
+            <div style={sx('margin:0 16px;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:10px')}>
+              <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>Der Bezirk steht noch nicht im Verzeichnis. Suche den Betrieb in der Registerauskunft des BAFA und vergleiche:</div>
+              <div style={sx('display:grid;grid-template-columns:auto minmax(0, 1fr);gap:4px 12px;font-size:13px')}>
+                {[['Name', x.register.name], ['Betrieb', x.register.address], ['Kehrbezirk', `${x.register.kreis} ${x.register.bez}`], ['Bundesland', x.register.land]].map(([k, v]) => <Fragment key={k}>
+                  <span style={sx('color:var(--color-neutral-500)')}>{k}</span><span style={sx('user-select:all;overflow-wrap:anywhere')}>{v}</span>
+                </Fragment>)}
+              </div>
+              <a className="btn btn-secondary" href={x.register.url} target="_blank" rel="noopener noreferrer" style={sx('min-height:44px;text-decoration:none')}><Icon n="ph-magnifying-glass" />Im BAFA-Register prüfen<Icon n="ph-arrow-square-out" /></a>
+              <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Bei der Freigabe wird der Bezirk ins Verzeichnis übernommen. Der Freischaltlink geht an die E-Mail der Registrierung.</div>
+            </div>
+          </>}
           {!decided && <>
-            <SectionLabel pad="20px 22px 6px" right={<span style={sx('font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums')}>{mine.length} von 4</span>}>Deine Prüfung</SectionLabel>
+            <SectionLabel pad="20px 22px 6px" right={<span style={sx('font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums')}>{mine.length} von {needed.length}</span>}>Deine Prüfung</SectionLabel>
             <div style={sx('margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 14px')}>
-              {CH.map(ch => <CheckRow key={ch[0]} on={mine.includes(ch[0])} label={ch[1]} onClick={() => setUi(u => { const m = u.checks[x.id] || []; return { ...u, checks: { ...u.checks, [x.id]: m.includes(ch[0]) ? m.filter(k => k !== ch[0]) : m.concat([ch[0]]) } }; })} />)}
+              {needed.map(ch => <CheckRow key={ch[0]} on={mine.includes(ch[0])} label={ch[1]} onClick={() => setUi(u => { const m = u.checks[x.id] || []; return { ...u, checks: { ...u.checks, [x.id]: m.includes(ch[0]) ? m.filter(k => k !== ch[0]) : m.concat([ch[0]]) } }; })} />)}
             </div>
             <div style={sx('display:flex;flex-direction:column;gap:8px;padding:16px 16px 20px')}>
               {act.error && <ErrorLine text={act.error} />}
-              <button className="btn btn-primary" disabled={mine.length < 4 || act.busy} onClick={() => decide(`/api/admin/sweeps/${x.id}/approve`, { checks: mine }, r => set({ screen: 'result', result: { type: 'approved', sentTo: r.sentTo } }))} style={sx('min-height:50px;font-size:15px')}><Icon n="ph-seal-check" />Freigeben &amp; Link per E-Mail</button>
+              <button className="btn btn-primary" disabled={!needed.every(ch => mine.includes(ch[0])) || act.busy} onClick={() => decide(`/api/admin/sweeps/${x.id}/approve`, { checks: mine }, r => set({ screen: 'result', result: { type: 'approved', sentTo: r.sentTo, fromList: r.fromList } }))} style={sx('min-height:50px;font-size:15px')}><Icon n="ph-seal-check" />{x.manual ? 'Freigeben, Bezirk übernehmen & Link senden' : 'Freigeben & Link per E-Mail'}</button>
               <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
                 <button className="btn btn-secondary" onClick={() => set({ overlay: 'query', queryText: `Guten Tag, bitte bestätigen Sie uns: Ist ${x.name} bevollmächtigte/r Bezirksschornsteinfeger/in für den Kehrbezirk ${x.bez}? Vielen Dank.` })} style={sx('min-height:44px')}><Icon n="ph-phone-call" />Rückfrage</button>
                 <button className="btn btn-secondary" onClick={() => set({ overlay: 'reject', reason: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Ablehnen</button>

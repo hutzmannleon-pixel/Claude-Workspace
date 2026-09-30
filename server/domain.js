@@ -24,6 +24,13 @@ export function sweepByUser(userId) {
 export const activeSweepForDistrict = districtId =>
   get(`SELECT s.*, u.email FROM sweeps s JOIN users u ON u.id = s.user_id WHERE s.district_id = ? AND s.status = 'active'`, districtId);
 export const sweepName = s => s ? `${s.first} ${s.last}` : '';
+export const LAENDER = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen', 'Mecklenburg-Vorpommern', 'Niedersachsen',
+  'Nordrhein-Westfalen', 'Rheinland-Pfalz', 'Saarland', 'Sachsen', 'Sachsen-Anhalt', 'Schleswig-Holstein', 'Thüringen'];
+/** Bezirk im Verzeichnis suchen (Kreis ohne Groß-/Kleinschreibung, Nummer ohne führende Nullen) */
+export const findDistrict = (land, kreis, bez) =>
+  get(`SELECT * FROM districts WHERE land = ? AND lower(kreis) = lower(?) AND ltrim(number, '0') = ?`, land, kreis, String(bez).replace(/^0+(?=\d)/, ''));
+/** Bezirk des Kaminfegers als Text – aus dem Verzeichnis oder selbst angegeben */
+export const sweepBez = s => s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez ?? s.number } : s.req_bez ? { land: s.req_land, kreis: s.req_kreis, bez: s.req_bez, manual: true } : null;
 export const initials = name => String(name || '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 // ---------- Haushalte & Namen ----------

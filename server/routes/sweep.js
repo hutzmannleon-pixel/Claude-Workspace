@@ -9,7 +9,7 @@ import { queueMail } from '../mail.js';
 import {
   makeLink, sweepByUser, activeSweepForDistrict, sweepName, initials, windowsOf, houseRows, campaignsOfDistrict, validateWindows,
   routeFor, routeStarted, routeDates, defaultRouteDate, postMessage, householdEmails, householdName, adminLog, streetHouseholds,
-  closedCampaigns, campaignDone
+  closedCampaigns, campaignDone, LAENDER, findDistrict, sweepBez
 } from '../domain.js';
 import {
   bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nameKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
@@ -84,7 +84,9 @@ export default async function sweepRoutes(app) {
     return {
       email: s.email, first: s.first, last: s.last, phone: s.phone, bstreet: s.bstreet, bplz: s.bplz, bort: s.bort,
       status: s.status, rejectReason: s.reject_reason,
-      district: s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez, holder: s.holder_name, until: s.appointed_until, officialEmail: s.official_email, households: counts.n, streets: counts.st } : null,
+      district: s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez, holder: s.holder_name, until: s.appointed_until, officialEmail: s.official_email, households: counts.n, streets: counts.st,
+        selfListed: s.official_email === s.email }
+        : s.req_bez ? { land: s.req_land, kreis: s.req_kreis, bez: s.req_bez, manual: true, households: 0, streets: 0 } : null,
       docs
     };
   });
@@ -93,14 +95,21 @@ export default async function sweepRoutes(app) {
     const s = mySweep(req);
     if (!['draft', 'rejected'].includes(s.status)) throw bad('Der Bezirk kann jetzt nicht mehr geändert werden.');
     const b = req.body || {};
-    const bez = clean(b.bez, 10).replace(/^0+(?=\d)/, '');
-    const d = get('SELECT * FROM districts WHERE land = ? AND kreis = ? AND ltrim(number, \'0\') = ?', clean(b.land), clean(b.kreis), bez);
-    if (!d) return { result: 'unknown' };
+    const bez = clean(b.bez, 10).replace(/^0+(?=\d)/, ''), land = clean(b.land, 40), kreis = clean(b.kreis, 80);
+    if (!/^\d{1,4}$/.test(bez) || !land || kreis.length < 2) throw bad('Bitte Bundesland, Stadt/Landkreis und Bezirksnummer angeben.');
+    const d = findDistrict(land, kreis, bez);
+    if (!d) {
+      if (!b.manual) return { result: 'unknown' };
+      // Nicht im Verzeichnis: selbst angegeben, der Betreiber prüft im Schornsteinfegerregister und übernimmt ihn bei der Freigabe
+      if (!LAENDER.includes(land)) throw bad('Bitte ein Bundesland auswählen.');
+      run('UPDATE sweeps SET district_id = NULL, req_land = ?, req_kreis = ?, req_bez = ? WHERE id = ?', land, kreis, bez, s.id);
+      return { result: 'manual', info: { land, kreis, bez } };
+    }
     const other = activeSweepForDistrict(d.id);
     if (other && other.id !== s.id) return { result: 'taken' };
     const m = nameMatch(s.first, s.last, d.holder_name);
-    if (m === 'none') { run('UPDATE sweeps SET district_id = NULL WHERE id = ?', s.id); return { result: 'other' }; }
-    run('UPDATE sweeps SET district_id = ? WHERE id = ?', d.id, s.id);
+    if (m === 'none') { run('UPDATE sweeps SET district_id = NULL, req_land = NULL, req_kreis = NULL, req_bez = NULL WHERE id = ?', s.id); return { result: 'other' }; }
+    run('UPDATE sweeps SET district_id = ?, req_land = NULL, req_kreis = NULL, req_bez = NULL WHERE id = ?', d.id, s.id);
     return { result: 'ok', exact: m === 'exact', info: { kreis: d.kreis, bez: d.number, holder: d.holder_name, until: d.appointed_until } };
   });
 
@@ -136,12 +145,13 @@ export default async function sweepRoutes(app) {
     const s = mySweep(req);
     if (!['draft', 'rejected'].includes(s.status)) throw bad('Bereits eingereicht.');
     if (!req.body?.assure) throw bad('Bitte die Erklärung bestätigen.');
-    if (!s.district_id) throw bad('Bitte zuerst den Bezirk angeben.');
+    if (!s.district_id && !s.req_bez) throw bad('Bitte zuerst den Bezirk angeben.');
+    const sb = sweepBez(s);
     const n = get('SELECT COUNT(*) n FROM documents WHERE sweep_id = ?', s.id).n;
     if (n < 2) throw bad('Bitte Bestellungsurkunde und Ausweis hochladen.');
     run(`UPDATE sweeps SET status = 'pending', reject_reason = NULL, submitted_at = ? WHERE id = ?`, nowIso(), s.id);
-    for (const a of config.adminEmails) queueMail({ to: a, subject: `Neue Prüfung: ${sweepName(s)} · Bezirk ${s.bez}`,
-      text: `${sweepName(s)} hat Unterlagen für den Kehrbezirk ${s.kreis} ${s.bez} eingereicht.`, link: `${config.baseUrl}/betreiber`, linkLabel: 'Prüfung öffnen' });
+    for (const a of config.adminEmails) queueMail({ to: a, subject: `Neue Prüfung: ${sweepName(s)} · Bezirk ${sb.bez}`,
+      text: `${sweepName(s)} hat Unterlagen für den Kehrbezirk ${sb.kreis} ${sb.bez} eingereicht.${sb.manual ? ' Der Bezirk steht noch nicht im Verzeichnis – bitte im Schornsteinfegerregister prüfen.' : ''}`, link: `${config.baseUrl}/betreiber`, linkLabel: 'Prüfung öffnen' });
     live.bump();
     return { ok: true };
   });

@@ -591,3 +591,43 @@ test('Straße abschließen: erst wenn alles erledigt, danach wieder ungeplant un
   assert.notEqual(next.id, id);
   assert.equal((await ok('s', 'GET', `/api/sweep/campaigns/${next.id}`)).houses.every(h => h.status === 'open'), true);
 });
+
+test('Bezirk nicht im Verzeichnis: selbst angeben, Betreiber prüft im Register, Bezirk wird übernommen', async () => {
+  const email = 'neu-kf@test.de';
+  await ok('n', 'POST', '/api/auth/code', { email, role: 'sweep', purpose: 'register' });
+  await ok('n', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', bstreet: 'Hauptstr. 3', bplz: '88416', bort: 'Ochsenhausen', email, code: codeFor(email) });
+  const where = { land: 'Baden-Württemberg', kreis: 'Biberach', bez: '07' };
+  assert.equal((await ok('n', 'POST', '/api/sweep/district', where)).result, 'unknown');
+  await fails(400, 'n', 'POST', '/api/sweep/district', { ...where, land: 'Atlantis', manual: true });
+  await fails(400, 'n', 'POST', '/api/sweep/district', { ...where, kreis: '', manual: true });
+  const r = await ok('n', 'POST', '/api/sweep/district', { ...where, manual: true });
+  assert.deepEqual([r.result, r.info.bez], ['manual', '7']);
+  const me = await ok('n', 'GET', '/api/sweep/me');
+  assert.deepEqual([me.district.manual, me.district.kreis, me.district.bez], [true, 'Biberach', '7']);
+  await upload('n', '/api/sweep/documents/urkunde', 'u.pdf', 'application/pdf', '%PDF-1.4 x');
+  await upload('n', '/api/sweep/documents/ausweis', 'a.jpg', 'image/jpeg', 'jpg');
+  await ok('n', 'POST', '/api/sweep/submit', { assure: true });
+  assert.ok(lastMail('admin@test.de').text.includes('Schornsteinfegerregister'));
+  // Betreiber: Hinweis + Register-Angaben, Freigabe nur mit Register-Haken
+  const q = await ok('admin', 'GET', '/api/admin/queue');
+  const item = q.sweeps.find(s => s.name === 'Nora Kessler');
+  assert.equal(item.manual, true);
+  const d = await ok('admin', 'GET', `/api/admin/sweeps/${item.id}`);
+  assert.ok(d.auto.some(a => a[1].includes('nicht im Verzeichnis')));
+  assert.deepEqual([d.register.name, d.register.bez, d.register.plz], ['Nora Kessler', '7', '88416']);
+  assert.ok(d.register.url.startsWith('https://'));
+  await fails(400, 'admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['name', 'nr', 'valid', 'id'] });
+  const res = await ok('admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['bafa', 'name', 'nr', 'valid', 'id'] });
+  assert.deepEqual([res.sentTo, res.fromList], [email, false]);
+  const dist = get(`SELECT * FROM districts WHERE kreis = 'Biberach' AND number = '7'`);
+  assert.ok(dist && dist.official_email === email && dist.holder_name === 'Nora Kessler');
+  // Freischalten per Link an die Registrierungs-Adresse
+  const token = lastMail(email).link.split('/aktivieren/')[1];
+  assert.equal((await call('x', 'GET', `/aktivieren/${token}`)).res.headers.location, '/kaminfeger?aktiviert=1');
+  const after = await ok('n', 'GET', '/api/sweep/me');
+  assert.deepEqual([after.status, after.district.bez, after.district.selfListed, after.district.manual], ['active', '7', true, undefined]);
+  // Ein weiterer Kaminfeger findet den Bezirk jetzt im Verzeichnis – vergeben
+  await ok('n2', 'POST', '/api/auth/code', { email: 'zweit@test.de', role: 'sweep', purpose: 'register' });
+  await ok('n2', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', bstreet: 'X 1', bplz: '88416', bort: 'Ochsenhausen', email: 'zweit@test.de', code: codeFor('zweit@test.de') });
+  assert.equal((await ok('n2', 'POST', '/api/sweep/district', { ...where, kreis: 'biberach' })).result, 'taken');
+});

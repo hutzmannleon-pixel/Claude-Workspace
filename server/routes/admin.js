@@ -5,13 +5,19 @@ import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
 import { requireUser, endSession } from '../auth.js';
 import { queueMail } from '../mail.js';
-import { makeLink, revokeLinks, sweepName, initials, activeSweepForDistrict, adminLog } from '../domain.js';
+import { makeLink, revokeLinks, sweepName, initials, activeSweepForDistrict, adminLog, findDistrict } from '../domain.js';
 import { deleteDocuments } from './sweep.js';
 import { bad, forbidden, notFound, nameKey, today, parseCsv, pick, EMAIL_RE, normEmail, nowIso } from '../util.js';
 
 const REASONS = ['Urkunde unleserlich – bitte neu hochladen', 'Name passt nicht zur Urkunde', 'Bezirk gehört einer anderen Person', 'Verdacht auf gefälschte Unterlagen'];
 const CHECKS = ['name', 'nr', 'valid', 'id'];
 const kreisShort = k => String(k || '').split(' ')[0];
+// Bezirk nicht aus dem Verzeichnis, sondern vom Kaminfeger selbst angegeben
+const isManual = s => !s.district_id && !!s.req_bez;
+const bezOf = s => isManual(s) ? `${kreisShort(s.req_kreis)} ${s.req_bez}` : `${kreisShort(s.kreis)} ${s.number}`;
+/** Angaben zum Abgleich im Schornsteinfegerregister des BAFA */
+const registerInfo = s => ({ url: config.bafaRegisterUrl, name: sweepName(s), plz: s.bplz, ort: s.bort, address: `${s.bstreet}, ${s.bplz} ${s.bort}`,
+  land: isManual(s) ? s.req_land : s.land, kreis: isManual(s) ? s.req_kreis : s.kreis, bez: isManual(s) ? s.req_bez : s.number });
 
 function admin(req) {
   const u = requireUser(req, 'admin');
@@ -22,6 +28,16 @@ function admin(req) {
 
 function sweepAuto(s) {
   const out = [['ok', `E-Mail bestätigt · ${s.email}`]];
+  if (isManual(s)) {
+    out.push(['warn', `Bezirk ${s.req_kreis} ${s.req_bez} (${s.req_land}) steht nicht im Verzeichnis – vom Kaminfeger selbst angegeben`]);
+    out.push(['info', 'Bitte im Schornsteinfegerregister (BAFA) prüfen: Name, Kehrbezirk und Bestellungsdatum']);
+    const d = findDistrict(s.req_land, s.req_kreis, s.req_bez), other = d && activeSweepForDistrict(d.id);
+    if (other) out.push(['warn', `Bezirk wird bereits von ${sweepName(other)} genutzt`]);
+    const twins = get(`SELECT COUNT(*) n FROM sweeps WHERE id != ? AND status IN ('pending','query') AND lower(req_kreis) = lower(?) AND req_bez = ?`, s.id, s.req_kreis, s.req_bez).n;
+    if (twins) out.push(['warn', `Für denselben Bezirk ${twins === 1 ? 'liegt eine weitere Anfrage' : `liegen ${twins} weitere Anfragen`} vor`]);
+    out.push(['info', `Betriebsadresse (selbst angegeben): ${s.bstreet}, ${s.bplz} ${s.bort}`]);
+    return out;
+  }
   if (!s.district_id) return out.concat([['warn', 'Kein Bezirk angegeben']]);
   out.push(['ok', `Bezirk ${s.number} im Verzeichnis gefunden`]);
   const same = nameKey(s.first + s.last) === nameKey(s.holder_name);
@@ -34,7 +50,7 @@ function sweepAuto(s) {
   if (s.business_address && nameKey(entered) !== nameKey(s.business_address)) out.push(['info', `Selbst angegeben: ${entered}`]);
   return out;
 }
-const sweepRow = id => get(`SELECT s.*, u.email, d.kreis, d.number, d.holder_name, d.official_email, d.business_address, d.appointed_until
+const sweepRow = id => get(`SELECT s.*, u.email, d.land, d.kreis, d.number, d.holder_name, d.official_email, d.business_address, d.appointed_until
   FROM sweeps s JOIN users u ON u.id = s.user_id LEFT JOIN districts d ON d.id = s.district_id WHERE s.id = ?`, id);
 
 function residentRow(id) {
@@ -57,9 +73,9 @@ export default async function adminRoutes(app) {
 
   app.get('/api/admin/queue', async req => {
     admin(req);
-    const sweeps = all(`SELECT s.*, u.email, d.kreis, d.number, d.holder_name, d.business_address, d.appointed_until FROM sweeps s JOIN users u ON u.id = s.user_id
+    const sweeps = all(`SELECT s.*, u.email, d.land, d.kreis, d.number, d.holder_name, d.business_address, d.appointed_until FROM sweeps s JOIN users u ON u.id = s.user_id
       LEFT JOIN districts d ON d.id = s.district_id WHERE s.status != 'draft' ORDER BY s.submitted_at DESC`)
-      .map(s => ({ id: s.id, name: sweepName(s), ini: initials(sweepName(s)), bez: `${kreisShort(s.kreis)} ${s.number}`, since: s.submitted_at,
+      .map(s => ({ id: s.id, name: sweepName(s), ini: initials(sweepName(s)), bez: bezOf(s), since: s.submitted_at, manual: isManual(s),
         status: s.status === 'active' ? 'approved' : s.status, auto: sweepAuto(s) }));
     const residents = all(`SELECT r.id FROM residents r WHERE r.status IN ('review','asked','owner','rejected','dismissed') OR (r.status = 'verified' AND r.method IN ('sweep','owner','admin')) ORDER BY r.id DESC`)
       .map(x => residentRow(x.id)).map(r => ({ id: r.id, name: r.family_name, ini: initials(r.family_name), addr: `${r.hstreet || r.street} ${r.hnr || r.nr}`, since: r.created_at,
@@ -73,7 +89,8 @@ export default async function adminRoutes(app) {
     const s = sweepRow(Number(req.params.id));
     if (!s) throw notFound();
     const docs = all("SELECT id, kind, mime, filename FROM documents WHERE sweep_id = ? ORDER BY kind = 'urkunde' DESC", s.id);
-    return { id: s.id, kind: 'sweep', name: sweepName(s), ini: initials(sweepName(s)), bez: `${kreisShort(s.kreis)} ${s.number}`, bezNr: s.number, since: s.submitted_at,
+    return { id: s.id, kind: 'sweep', name: sweepName(s), ini: initials(sweepName(s)), bez: bezOf(s), bezNr: isManual(s) ? s.req_bez : s.number, since: s.submitted_at,
+      manual: isManual(s), register: registerInfo(s),
       status: s.status === 'active' ? 'approved' : s.status, rejectReason: s.reject_reason, auto: sweepAuto(s), docs };
   });
 
@@ -104,25 +121,36 @@ export default async function adminRoutes(app) {
   app.post('/api/admin/sweeps/:id/approve', async req => {
     const a = admin(req), s = sweepRow(Number(req.params.id));
     if (!s || !['pending', 'query'].includes(s.status)) throw bad('Nicht (mehr) offen.');
-    const checks = req.body?.checks || [];
-    if (!CHECKS.every(c => checks.includes(c))) throw bad('Bitte alle 4 Punkte prüfen.');
-    const other = activeSweepForDistrict(s.district_id);
+    const checks = req.body?.checks || [], manual = isManual(s);
+    const need = manual ? ['bafa', ...CHECKS] : CHECKS;
+    if (!need.every(c => checks.includes(c))) throw bad(`Bitte alle ${need.length} Punkte prüfen.`);
+    if (!s.district_id && !manual) throw bad('Kein Bezirk angegeben.');
+    const existing = manual ? findDistrict(s.req_land, s.req_kreis, s.req_bez) : null;
+    const other = activeSweepForDistrict(manual ? existing?.id ?? -1 : s.district_id);
     if (other && other.id !== s.id) throw bad(`Der Bezirk wird bereits von ${sweepName(other)} genutzt.`);
     const link = tx(() => {
+      if (manual) {
+        // Bezirk ins Verzeichnis übernehmen – Freischaltlink geht an die E-Mail der Registrierung
+        const did = existing ? existing.id : Number(run('INSERT INTO districts (land, kreis, number, holder_name, official_email, business_address) VALUES (?,?,?,?,?,?)',
+          s.req_land, s.req_kreis, s.req_bez, sweepName(s), s.email, `${s.bstreet}, ${s.bplz} ${s.bort}`).lastInsertRowid);
+        run('UPDATE sweeps SET district_id = ?, req_land = NULL, req_kreis = NULL, req_bez = NULL WHERE id = ?', did, s.id);
+        adminLog(a.email, `Bezirk ${s.req_kreis} ${s.req_bez} ins Verzeichnis übernommen`, 'Im Schornsteinfegerregister geprüft');
+      }
       run(`UPDATE sweeps SET status = 'approved', decided_at = ? WHERE id = ?`, nowIso(), s.id);
       deleteDocuments(s.id);
       revokeLinks('activate', s.id);
-      adminLog(a.email, `${sweepName(s)} · ${kreisShort(s.kreis)} ${s.number} freigegeben`, 'Urkunde und Ausweis gelöscht');
+      adminLog(a.email, `${sweepName(s)} · ${bezOf(s)} freigegeben`, 'Urkunde und Ausweis gelöscht');
       return makeLink('activate', s.id, null, 48 * 3600000, '/aktivieren/');
     });
-    // An die Adresse aus dem Bezirksverzeichnis – nicht an die selbst angegebene
-    queueMail({ to: s.official_email, subject: `Kehrbezirk ${s.number} freischalten`,
-      text: `Guten Tag ${sweepName(s)},\n\nIhre Bestellung wurde geprüft. Diese E-Mail geht an die Adresse aus dem Bezirksverzeichnis – so wissen wir, dass wirklich Sie es sind.\n\nDer Link gilt 48 Stunden.`,
+    const t = sweepRow(s.id), fromList = normEmail(t.official_email) !== t.email;
+    // Stammt der Bezirk aus einer amtlichen Liste, geht der Link an die dortige Adresse – nicht an die selbst angegebene
+    queueMail({ to: t.official_email, subject: `Kehrbezirk ${t.number} freischalten`,
+      text: `Guten Tag ${sweepName(t)},\n\nIhre Bestellung wurde geprüft.${fromList ? ' Diese E-Mail geht an die Adresse aus dem Bezirksverzeichnis – so wissen wir, dass wirklich Sie es sind.' : ''}\n\nDer Link gilt 48 Stunden.`,
       link: link.url, linkLabel: 'Bezirk freischalten' });
-    if (normEmail(s.official_email) !== s.email) queueMail({ to: s.email, subject: 'Prüfung abgeschlossen',
-      text: `Ihre Unterlagen sind geprüft. Den Freischaltlink haben wir an die E-Mail-Adresse aus dem Bezirksverzeichnis geschickt (${s.official_email}).` });
+    if (fromList) queueMail({ to: t.email, subject: 'Prüfung abgeschlossen',
+      text: `Ihre Unterlagen sind geprüft. Den Freischaltlink haben wir an die E-Mail-Adresse aus dem Bezirksverzeichnis geschickt (${t.official_email}).` });
     live.bump();
-    return { ok: true, sentTo: s.official_email };
+    return { ok: true, sentTo: t.official_email, fromList };
   });
 
   app.post('/api/admin/sweeps/:id/reject', async req => {

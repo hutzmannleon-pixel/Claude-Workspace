@@ -90,6 +90,7 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
 | `ADMIN_PASSKEY=optional` | Nur für lokale Tests: Betreiber ohne Passkey zulassen. Standard ist Passkey-Pflicht |
 | `BACKUP_DIR`, `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION` | Tägliche Sicherung (`deploy/backup.sh`), optional zusätzlich nach S3 |
+| `BAFA_REGISTER_URL` | Link für „Im BAFA-Register prüfen“ bei selbst angegebenen Bezirken (Standard: Websuche nach der Registerauskunft) |
 | `IP_CODES_PER_HOUR` (30), `IP_LOGINS_PER_HOUR` (60) | Obergrenzen pro Anschluss gegen Missbrauch |
 | `TEST_MODE=1` | Testseite `/test` und Test-Postfach; Route auch vor dem Termintag startbar. **Nie in Produktion** |
 

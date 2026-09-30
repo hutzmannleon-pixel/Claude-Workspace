@@ -47,7 +47,7 @@ function check() {
   const td = testDistricts(), th = testHouseholds();
   !td.length && !th.length ? ok('Keine Testdaten') : fail(`Testdaten vorhanden (${td.length} Testbezirk, ${th.length} Test-Haushalte)`, 'npm run go-live -- --ausfuehren');
   const districts = get('SELECT COUNT(*) n FROM districts').n - td.length;
-  districts > 0 ? ok(`${districts} echte Bezirke im Verzeichnis`) : warn('Noch keine echten Bezirke im Verzeichnis', 'Unter /betreiber → Verzeichnis die CSV hochladen');
+  ok(`${districts} Bezirke im Verzeichnis – fehlende tragen Kaminfeger bei der Registrierung selbst ein`);
 
   console.log('\nSicherung');
   const dir = env.BACKUP_DIR || '/opt/kaminfeger/backups';

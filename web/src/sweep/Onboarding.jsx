@@ -6,10 +6,12 @@ import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
 import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
+const LAENDER = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen', 'Mecklenburg-Vorpommern', 'Niedersachsen',
+  'Nordrhein-Westfalen', 'Rheinland-Pfalz', 'Saarland', 'Sachsen', 'Sachsen-Anhalt', 'Schleswig-Holstein', 'Thüringen'];
 
 export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const [st, setSt] = useState({ screen: start, first: '', last: '', bstreet: '', bplz: '', bort: '', phone: '', email: '', codeSent: false, code: '',
-    land: '', kreis: '', bez: '', check: null, assure: false, lEmail: '', lCode: '', lSent: false, uploading: null });
+    land: '', kreis: '', bez: '', check: null, manual: false, assure: false, lEmail: '', lCode: '', lSent: false, uploading: null });
   const set = p => setSt(s => ({ ...s, ...p }));
   const act = useAction();
   const scr = st.screen;
@@ -21,20 +23,22 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const kreise = (opts.data?.kreise || {})[st.land] || [];
 
   // Standardauswahl im Bezirksverzeichnis (bzw. bereits gespeicherter Bezirk)
+  // Steht der Bezirk nicht im Verzeichnis (oder ist es leer), trägt der Kaminfeger ihn selbst ein
   useEffect(() => {
     if (scr !== 'district' || !opts.data) return;
-    if (m?.district && !st.land) return set({ land: m.district.land, kreis: m.district.kreis, bez: m.district.bez });
-    if (!st.land && lands.length) set({ land: lands[0], kreis: (opts.data.kreise[lands[0]] || [])[0] || '' });
+    if (m?.district && !st.land) return set({ land: m.district.land, kreis: m.district.kreis, bez: m.district.bez, manual: !!m.district.manual });
+    if (!lands.length) { if (!st.manual) set({ manual: true, land: st.land || 'Baden-Württemberg' }); return; }
+    if (!st.land) set({ land: lands[0], kreis: (opts.data.kreise[lands[0]] || [])[0] || '' });
   }, [opts.data, scr, m]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Abgleich mit dem Bezirksverzeichnis
   useEffect(() => {
-    if (scr !== 'district') return;
+    if (scr !== 'district' || st.manual) return;
     const bez = st.bez.trim();
     if (!/^\d{1,4}$/.test(bez) || !st.land || !st.kreis) { set({ check: null }); return; }
     const h = setTimeout(() => api('/api/sweep/district', { body: { land: st.land, kreis: st.kreis, bez } }).then(r => set({ check: r })).catch(e => set({ check: { result: 'error', msg: e.message } })), 300);
     return () => clearTimeout(h);
-  }, [scr, st.land, st.kreis, st.bez]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scr, st.land, st.kreis, st.bez, st.manual]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Freischaltung per Link (auch auf einem anderen Gerät) → automatisch weiter
   useEffect(() => { if (scr === 'pending' && m?.status === 'active') set({ screen: 'done' }); }, [m, scr]);
@@ -65,6 +69,14 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const passkeyLogin = () => act.run(async () => { await loginPasskey('sweep'); await afterLogin(); });
   const uploadDoc = (kind, file) => act.run(async () => { set({ uploading: kind }); try { await upload(`/api/sweep/documents/${kind}`, file); await me.reload(); } finally { set({ uploading: null }); } });
   const removeDoc = kind => act.run(async () => { await api(`/api/sweep/documents/${kind}`, { method: 'DELETE' }); await me.reload(); });
+  const toManual = () => set({ manual: true, check: null, land: LAENDER.includes(st.land) ? st.land : 'Baden-Württemberg' });
+  const toList = () => set({ manual: false, check: null, land: lands[0] || '', kreis: (opts.data?.kreise[lands[0]] || [])[0] || '' });
+  const manualOk = st.manual && LAENDER.includes(st.land) && st.kreis.trim().length >= 2 && /^\d{1,4}$/.test(st.bez.trim());
+  const saveManual = () => act.run(async () => {
+    const r = await api('/api/sweep/district', { body: { land: st.land, kreis: st.kreis.trim(), bez: st.bez.trim(), manual: true } });
+    if (r.result !== 'manual') { set({ manual: false, check: r }); return; } // doch im Verzeichnis gefunden → normale Prüfung
+    await me.reload(); go('proof');
+  });
   const submit = () => act.run(async () => { await api('/api/sweep/submit', { body: { assure: true } }); await me.reload(); set({ screen: 'pending' }); });
 
   const status = m?.status;
@@ -76,7 +88,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   if (scr === 'account') cta = st.codeSent
     ? { label: 'Bestätigen', disabled: st.code.length < 6, onClick: register }
     : { label: 'Code senden', disabled: !(emailOk && st.first.trim() && st.last.trim() && st.bstreet.trim() && /^\d{5}$/.test(st.bplz) && st.bort.trim()), onClick: () => sendCode(st.email, 'register', { codeSent: true, code: '' }) };
-  if (scr === 'district') cta = { label: 'Weiter', disabled: check?.result !== 'ok', onClick: () => go('proof') };
+  if (scr === 'district') cta = st.manual ? { label: 'Weiter', disabled: !manualOk, onClick: saveManual } : { label: 'Weiter', disabled: check?.result !== 'ok', onClick: () => go('proof') };
   if (scr === 'proof') cta = { label: 'Zur Prüfung senden', disabled: !(m?.docs.urkunde && m?.docs.ausweis && st.assure), onClick: submit };
   if (scr === 'pending') {
     if (rejected) cta = { label: 'Neue Unterlagen hochladen', onClick: () => set({ screen: 'proof', assure: false }) };
@@ -91,12 +103,14 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     { k: 'urkunde', title: 'Bestellungsurkunde', empty: 'PDF oder Foto hochladen', icon: 'ph-file-text' },
     { k: 'ausweis', title: 'Schornsteinfeger-Ausweis', empty: 'Foto der Vorderseite', icon: 'ph-identification-card' }
   ];
+  const own = !!(m?.district?.manual || m?.district?.selfListed);
   const timeline = [
     T('done', 'E-Mail bestätigt', m?.email || ''),
-    T('done', `Bezirk ${bez} im Verzeichnis`, 'Name stimmt mit dem Eintrag der Behörde überein'),
+    own ? T('done', `Bezirk ${bez} angegeben`, 'Wird bei der Prüfung mit dem Schornsteinfegerregister abgeglichen')
+      : T('done', `Bezirk ${bez} im Verzeichnis`, 'Name stimmt mit dem Eintrag der Behörde überein'),
     T(reviewed ? 'done' : 'now', rejected ? 'Nachweis abgelehnt' : 'Bestellungsurkunde wird geprüft',
       reviewed ? 'Geprüft und bestätigt' : rejected ? m.rejectReason : query ? 'Rückfrage bei der Behörde läuft' : 'Prüfung durch den Betreiber · 1–2 Werktage'),
-    T(reviewed ? (status === 'active' ? 'done' : 'now') : 'todo', 'Freischaltlink per E-Mail', 'An die E-Mail-Adresse aus dem Bezirksverzeichnis – so bestätigen wir, dass Sie es wirklich sind')
+    T(reviewed ? (status === 'active' ? 'done' : 'now') : 'todo', 'Freischaltlink per E-Mail', own ? `An ${m?.email || 'Ihre E-Mail-Adresse'}` : 'An die E-Mail-Adresse aus dem Bezirksverzeichnis – so bestätigen wir, dass Sie es wirklich sind')
   ];
   const top = stepNo > 0 ? <StepsBar onBack={goBack} stepNo={stepNo} total={3} /> : scr === 'welcome' ? <HomeBack /> : null;
   const bottom = cta && <Cta {...cta} busy={act.busy} alt={alt} error={act.error} />;
@@ -149,8 +163,18 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
       </>}
 
       {scr === 'district' && <>
-        <Title title="Ihr Kehrbezirk" sub="Wir gleichen ihn mit dem Bezirksverzeichnis der zuständigen Behörde ab." />
-        {opts.data && !lands.length && <div style={sx('margin:18px 16px 0')}><ErrorLine text="Das Bezirksverzeichnis ist noch leer. Bitte wenden Sie sich an den Betreiber." /></div>}
+        <Title title="Ihr Kehrbezirk" sub={st.manual ? 'Wie in Ihrer Bestellungsurkunde. Wir gleichen die Angaben bei der Prüfung mit dem Schornsteinfegerregister ab.' : 'Wir gleichen ihn mit dem Bezirksverzeichnis der zuständigen Behörde ab.'} />
+        {st.manual && <>
+          <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
+            <Field label="Bundesland"><select className="input" value={st.land} onChange={e => set({ land: e.target.value })} style={sx('min-height:46px;font-size:15px;color-scheme:dark')}>{LAENDER.map(l => <option key={l}>{l}</option>)}</select></Field>
+            <Field label="Stadt / Landkreis"><Input value={st.kreis} onChange={e => set({ kreis: e.target.value })} placeholder="z. B. Biberach" autoComplete="off" /></Field>
+            <Field label="Bezirksnummer"><Input value={st.bez} onChange={e => set({ bez: e.target.value.replace(/\D/g, '').slice(0, 4) })} inputMode="numeric" placeholder="z. B. 7" /></Field>
+          </div>
+          <div style={sx('margin:18px 16px 0;display:flex;gap:10px;font-size:12px;color:var(--color-neutral-400)')}><Icon n="ph-info" style={sx('font-size:16px;margin-top:1px;flex:none')} /><span style={sx('text-wrap:pretty')}>Ihr Bezirk steht noch nicht in unserem Verzeichnis. Nach der Prüfung Ihrer Bestellungsurkunde nehmen wir ihn auf. Den Freischaltlink bekommen Sie an {m?.email || 'Ihre E-Mail-Adresse'}.</span></div>
+          {lands.length > 0 && <button className="btn btn-ghost" onClick={toList} style={sx('margin:8px 10px 20px;min-height:40px;align-self:flex-start;color:var(--color-neutral-400)')}><Icon n="ph-list" />Doch aus dem Verzeichnis wählen</button>}
+          {!lands.length && <div style={sx('height:20px')} />}
+        </>}
+        {!st.manual && <>
         <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
           <Field label="Bundesland"><select className="input" value={st.land} onChange={e => set({ land: e.target.value, kreis: (opts.data.kreise[e.target.value] || [])[0] || '' })} style={sx('min-height:46px;font-size:15px;color-scheme:dark')}>{lands.map(l => <option key={l}>{l}</option>)}</select></Field>
           <Field label="Stadt / Landkreis"><select className="input" value={st.kreis} onChange={e => set({ kreis: e.target.value })} style={sx('min-height:46px;font-size:15px;color-scheme:dark')}>{kreise.map(k => <option key={k}>{k}</option>)}</select></Field>
@@ -169,10 +193,12 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
           <Icon n="ph-warning" style={sx('font-size:20px;color:var(--color-accent-300)')} />
           <div style={sx('flex:1;display:flex;flex-direction:column;gap:4px')}>
             <div style={sx('font-size:14px')}>{{ other: `Bezirk ${st.bez} ist einer anderen Person zugeordnet`, unknown: `Bezirk ${st.bez} steht nicht im Verzeichnis`, taken: `Bezirk ${st.bez} ist bereits freigeschaltet` }[check.result] || check.msg}</div>
-            <div style={sx('font-size:12px;color:var(--color-neutral-400);text-wrap:pretty')}>{{ other: `Bitte Nummer prüfen. Ihr Name (${fullName || 'aus dem Konto'}) muss mit dem Eintrag im Verzeichnis übereinstimmen.`, unknown: 'Bitte Nummer und Kreis prüfen. Fehlt Ihr Bezirk, melden Sie sich beim Betreiber.', taken: 'Bei einem Wechsel des Bezirks melden Sie sich bitte beim Betreiber.' }[check.result] || ''}</div>
+            <div style={sx('font-size:12px;color:var(--color-neutral-400);text-wrap:pretty')}>{{ other: `Bitte Nummer prüfen. Ihr Name (${fullName || 'aus dem Konto'}) muss mit dem Eintrag im Verzeichnis übereinstimmen.`, unknown: 'Bitte Nummer und Kreis prüfen – oder tragen Sie Ihren Bezirk selbst ein.', taken: 'Bei einem Wechsel des Bezirks melden Sie sich bitte beim Betreiber.' }[check.result] || ''}</div>
+            {check.result === 'unknown' && <button className="btn btn-secondary" onClick={toManual} style={sx('margin-top:8px;min-height:40px;align-self:flex-start')}><Icon n="ph-pencil-simple" />Bezirk selbst eintragen</button>}
           </div>
         </div>}
-        {!check && <div style={sx('height:20px')} />}
+        {!check && <button className="btn btn-ghost" onClick={toManual} style={sx('margin:12px 10px 20px;min-height:40px;color:var(--color-neutral-400)')}><Icon n="ph-pencil-simple" />Mein Kreis steht nicht in der Liste</button>}
+        </>}
       </>}
 
       {scr === 'proof' && <>
@@ -212,7 +238,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
         </div>
         {reviewed && <>
           <MailPreview meta={`E-Mail · an ${m.district?.officialEmail || ''}`} subject={`Kehrbezirk ${bez} freischalten`}
-            text="Ihre Bestellung wurde geprüft. Diese E-Mail geht an die Adresse aus dem Bezirksverzeichnis – so wissen wir, dass wirklich Sie es sind." action="Bezirk freischalten" />
+            text={own ? 'Ihre Bestellung wurde geprüft. Öffnen Sie den Link, um Ihren Bezirk freizuschalten.' : 'Ihre Bestellung wurde geprüft. Diese E-Mail geht an die Adresse aus dem Bezirksverzeichnis – so wissen wir, dass wirklich Sie es sind.'} action="Bezirk freischalten" />
           <div style={sx('padding:10px 22px 20px;font-size:12px;color:var(--color-neutral-500)')}>Vorschau der E-Mail · Link gilt 48 Stunden. Diese Seite geht automatisch weiter.</div>
         </>}
       </>}
