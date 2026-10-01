@@ -98,6 +98,8 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 
 ## Start in den echten Betrieb
 
+Ausführliche Gesamtdokumentation (Bedienung, Betrieb, Technik): **[DOKUMENTATION.md](DOKUMENTATION.md)**, auch als PDF.
+
 Siehe **[BETRIEB.md](BETRIEB.md)**: Start-Check (`npm run launch-check`), Startschalter (`deploy/go-live.sh`), Sicherung/Wiederherstellung, Überwachung und E-Mail über Brevo.
 
 ## CSV-Formate
