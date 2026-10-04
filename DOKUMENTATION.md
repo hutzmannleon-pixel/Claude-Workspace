@@ -61,7 +61,7 @@ Du als **Betreiber** prüfst, dass nur echte Bezirkskaminfeger und echte Bewohne
 Es gibt **keine Passwörter**.
 
 - **E-Mail-Code:** Man gibt seine E-Mail ein und bekommt einen 6-stelligen Code. Er gilt 10 Minuten, erlaubt höchstens 5 Versuche und höchstens 6 Codes pro Stunde und Adresse.
-- **Passkey:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN. Für Bewohner und Kaminfeger ist das freiwillig, der E-Mail-Code bleibt als Ausweg. **Für dich als Betreiber ist der Passkey Pflicht.** Danach wird für den Betreiber kein E-Mail-Code mehr angenommen.
+- **Passkey:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN. Für alle freiwillig. Auch Betreiber können sich **immer** mit dem E-Mail-Code anmelden. Wer einen Passkey eingerichtet hat, kann wahlweise ihn nutzen. (Mit `ADMIN_PASSKEY=required` lässt sich die alte Passkey-Pflicht für Betreiber wieder einschalten.)
 - **Angemeldet bleiben:** Bewohner und Kaminfeger bleiben 60 Tage angemeldet. Der Betreiber-Bereich sperrt sich nach **5 Minuten** ohne Aktivität.
 - **Getrennte Rollen:** Bewohner, Kaminfeger und Betreiber sind getrennte Konten, auch mit derselben E-Mail. Man kann im selben Browser gleichzeitig in mehreren Apps angemeldet sein.
 
@@ -225,7 +225,7 @@ Hier liegen Straßen & Zeitfenster, Nachrichten, Kehrbuch importieren, Passkey u
 
 ## 1.6 Betreiber-App (`/betreiber`)
 
-**Anmelden:** Mit deiner Betreiber-E-Mail (`ADMIN_EMAILS`) und deinem **Passkey**. Nach 5 Minuten ohne Aktivität sperrt sich der Bereich.
+**Anmelden:** Mit deiner Betreiber-E-Mail (`ADMIN_EMAILS`) per **E-Mail-Code** oder, falls eingerichtet, per **Passkey**. Nach 5 Minuten ohne Aktivität sperrt sich der Bereich.
 
 ### Prüfungen
 
@@ -378,7 +378,7 @@ Absender: `Kaminfeger Verwaltung <no-reply@kaminfeger-verwaltung.com>`, verschic
 | `HOST=127.0.0.1`, `PORT=3000`, `TZ=Europe/Berlin` | technische Grundeinstellungen |
 | optional `BAFA_REGISTER_URL` | Ziel des Knopfs „Im BAFA-Register prüfen“ (Standard: Websuche) |
 
-**Nie im Echtbetrieb setzen:** `TEST_MODE`, `ALLOWED_EMAILS`, `ALLOW_EARLY_ROUTE`, `ADMIN_PASSKEY=optional`.
+**Nie im Echtbetrieb setzen:** `TEST_MODE`, `ALLOWED_EMAILS`, `ALLOW_EARLY_ROUTE`.
 
 Nach jeder Änderung: `sudo systemctl restart kaminfeger`.
 
@@ -392,7 +392,7 @@ Der Start-Check prüft, ob alles für den Betrieb stimmt. Er ändert nichts:
 sudo /opt/kaminfeger/app/deploy/launch-check.sh
 ```
 
-Er prüft Einstellungen, E-Mail, Betreiber-Passkey, Testdaten, Anzahl Bezirke, das Alter der letzten Sicherung und den S3-Bucket. Am Ende steht **„✓ Startklar“** oder eine Liste offener Punkte mit Lösung.
+Er prüft Einstellungen, E-Mail, Betreiber-Zugang, Testdaten, Anzahl Bezirke, das Alter der letzten Sicherung und den S3-Bucket. Am Ende steht **„✓ Startklar“** oder eine Liste offener Punkte mit Lösung.
 
 Der **Startschalter** (`deploy/go-live.sh`) wurde am 29.09.2026 ausgeführt:
 
@@ -467,7 +467,7 @@ curl -s http://127.0.0.1:3000/api/health      # muss {"ok":true} liefern
 | Problem | Was tun |
 |---|---|
 | **Seite nicht erreichbar** (Alarm-Mail) | 1. `systemctl status kaminfeger caddy` 2. `journalctl -u kaminfeger -n 100` 3. `sudo systemctl restart kaminfeger` 4. In der AWS-Konsole prüfen, ob die Instanz läuft |
-| **Betreiber-Passkey verloren** (Handy weg) | Auf dem Server: `cd /opt/kaminfeger/app && sudo -u kaminfeger env $(grep -E '^(DATA_DIR\|APP_SECRET)=' /etc/kaminfeger.env \| xargs) npm run reset-passkeys -- hutzmannleon@gmail.com admin`, danach unter `/betreiber` per E-Mail-Code entsperren und neuen Passkey einrichten |
+| **Betreiber-Passkey verloren** (Handy weg) | Einfach per E-Mail-Code entsperren und den alten Passkey unter „Passkeys“ löschen. Nur nötig, falls `ADMIN_PASSKEY=required` gesetzt ist – auf dem Server: `cd /opt/kaminfeger/app && sudo -u kaminfeger env $(grep -E '^(DATA_DIR\|APP_SECRET)=' /etc/kaminfeger.env \| xargs) npm run reset-passkeys -- hutzmannleon@gmail.com admin`, danach unter `/betreiber` per E-Mail-Code entsperren und neuen Passkey einrichten |
 | **E-Mails kommen nicht an** | Brevo-Dashboard → „Transactional“ → Logs ansehen. Tageslimit erreicht? Schlüssel abgelaufen? `journalctl -u kaminfeger \| grep -i mail` |
 | **Falsche Daten nach Fehlbedienung** | Sicherung vom Vortag zurückspielen (2.4). Achtung: Alles seit der Sicherung geht verloren |
 | **Kaminfeger hat keinen Zugriff mehr auf die Verzeichnis-E-Mail** | Bezirk im Verzeichnis mit korrekter E-Mail neu importieren, dann Freigabe erneut anstoßen |
@@ -607,7 +607,7 @@ Alle Antworten sind JSON. Fehler kommen als `{ error, field? }` mit HTTP 4xx. Sc
 ```bash
 npm install
 npm run build
-TEST_MODE=1 ADMIN_EMAILS=ich@example.de ADMIN_PASSKEY=optional npm start
+TEST_MODE=1 ADMIN_EMAILS=ich@example.de npm start
 # → http://localhost:3000/test  (alle drei Apps nebeneinander + Test-Postfach)
 ```
 

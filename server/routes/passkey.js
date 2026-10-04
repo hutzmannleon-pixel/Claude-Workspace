@@ -91,7 +91,7 @@ export default async function passkeyRoutes(app) {
     const role = roleOf(req.body?.role), u = requireUser(req, role);
     const p = get('SELECT id FROM passkeys WHERE id = ? AND user_id = ?', Number(req.body?.id), u.id);
     if (!p) throw notFound();
-    if (role === 'admin' && passkeyCount(u.id) <= 1) throw bad('Der Betreiber-Zugang braucht mindestens einen Passkey. Legen Sie zuerst einen neuen an.');
+    if (role === 'admin' && config.adminPasskeyRequired && passkeyCount(u.id) <= 1) throw bad('Der Betreiber-Zugang braucht mindestens einen Passkey. Legen Sie zuerst einen neuen an.');
     run('DELETE FROM passkeys WHERE id = ?', p.id);
     return { ok: true };
   });

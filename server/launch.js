@@ -25,7 +25,7 @@ function check() {
   config.baseUrl.startsWith('https://') ? ok(`Adresse ${config.baseUrl}`) : fail(`BASE_URL ist ${config.baseUrl}`, 'BASE_URL=https://… setzen');
   config.secret.length >= 24 && !config.secret.startsWith('dev-') ? ok('APP_SECRET gesetzt') : fail('APP_SECRET fehlt oder ist zu kurz', 'openssl rand -hex 32');
   config.adminEmails.length ? ok(`Betreiber: ${config.adminEmails.join(', ')}`) : fail('ADMIN_EMAILS ist leer');
-  config.adminPasskeyRequired ? ok('Passkey für Betreiber ist Pflicht') : fail('ADMIN_PASSKEY=optional ist gesetzt', 'Zeile ADMIN_PASSKEY entfernen');
+  ok(config.adminPasskeyRequired ? 'Betreiber: nur mit Passkey' : 'Betreiber: E-Mail-Code oder Passkey');
   !config.testMode ? ok('Testmodus aus') : fail('TEST_MODE ist an', 'Zeile TEST_MODE entfernen');
   !config.allowedEmails.length ? ok('Keine Freigabeliste – alle können sich anmelden') : fail(`Freigabeliste aktiv (${config.allowedEmails.length} Adressen)`, 'Zeile ALLOWED_EMAILS entfernen');
   !config.allowEarlyRoute ? ok('Route nur am Termintag startbar') : fail('ALLOW_EARLY_ROUTE ist an', 'Zeile ALLOW_EARLY_ROUTE entfernen');
@@ -42,8 +42,9 @@ function check() {
 
   console.log('\nDaten');
   const admins = all(`SELECT u.email, (SELECT COUNT(*) FROM passkeys p WHERE p.user_id = u.id) n FROM users u WHERE u.role = 'admin'`);
-  admins.some(a => a.n > 0 && config.adminEmails.includes(a.email)) ? ok('Betreiber-Passkey eingerichtet')
-    : fail('Kein Betreiber-Passkey', 'Unter /betreiber per Code entsperren und Passkey einrichten');
+  if (admins.some(a => a.n > 0 && config.adminEmails.includes(a.email))) ok('Betreiber-Passkey eingerichtet');
+  else if (config.adminPasskeyRequired) fail('Kein Betreiber-Passkey', 'Unter /betreiber per Code entsperren und Passkey einrichten');
+  else ok('Betreiber melden sich per E-Mail-Code an (Passkey freiwillig)');
   const td = testDistricts(), th = testHouseholds();
   !td.length && !th.length ? ok('Keine Testdaten') : fail(`Testdaten vorhanden (${td.length} Testbezirk, ${th.length} Test-Haushalte)`, 'npm run go-live -- --ausfuehren');
   const districts = get('SELECT COUNT(*) n FROM districts WHERE demo = 0').n - td.length;

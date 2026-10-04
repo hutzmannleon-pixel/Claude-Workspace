@@ -518,6 +518,11 @@ test('Passkeys: Betreiber-Pflicht, danach kein E-Mail-Code mehr; Einrichten nur 
     const lo = await ok('x', 'POST', '/api/passkey/login/options', { role: 'sweep' });
     const bad = await fails(400, 'x', 'POST', '/api/passkey/login/verify', { role: 'sweep', challengeId: lo.challengeId, response: { id: 'test-cred' } });
     assert.equal(bad.code, 'passkey_unknown');
+    // Standard (Passkey freiwillig): E-Mail-Code geht trotz Passkey weiter
+    config.adminPasskeyRequired = false;
+    await ok('x', 'POST', '/api/auth/code', { email: 'admin@test.de', role: 'admin', purpose: 'login' });
+    await login('admin', 'admin@test.de');
+    await ok('admin', 'GET', '/api/admin/queue');
     run(`DELETE FROM passkeys WHERE cred_id = 'test-cred'`);
   } finally { config.adminPasskeyRequired = false; }
 });

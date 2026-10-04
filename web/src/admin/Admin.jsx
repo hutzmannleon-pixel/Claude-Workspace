@@ -23,7 +23,7 @@ export default function Admin() {
   useEffect(() => { api('/api/auth/me?role=admin').then(r => setMe(r.user)).catch(() => setMe(null)); }, []);
   if (me === undefined) return <Loading />;
   if (!me) return <Lock onUnlock={setMe} />;
-  // Pflicht: ohne Passkey geht es nach dem ersten Entsperren nicht weiter
+  // Nur mit ADMIN_PASSKEY=required: ohne Passkey geht es nach dem ersten Entsperren nicht weiter
   if (me.passkeyRequired && !me.passkeys) return <PasskeySetup me={me} onDone={async () => setMe((await api('/api/auth/me?role=admin')).user)} onLock={() => setMe(null)} />;
   return <AdminApp me={me} onLock={() => setMe(null)} />;
 }
@@ -44,7 +44,7 @@ function Lock({ onUnlock }) {
   return (
     <Shell glow={GLOW.admin} top={<HomeBack />} bottom={
       <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2;display:flex;flex-direction:column;gap:12px')}>
-        {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" hint="Beim ersten Mal mit Code per E-Mail entsperren – danach richten Sie den Passkey ein." />}
+        {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" hint="Oder unten mit Code per E-Mail entsperren." />}
         {!sent && <Field label="Admin-E-Mail"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@betreiber.de" autoComplete="email" /></Field>}
         {sent && <CodeInput email={email} value={code} onChange={setCode} label="Entsperrcode" busy={act.busy} error={act.error} onComplete={unlock} onResend={send} />}
         {act.error && <ErrorLine text={act.error} />}
@@ -60,7 +60,7 @@ function Lock({ onUnlock }) {
         <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Nur für freigeschaltete Admins. Jede Entscheidung wird mit deinem Namen protokolliert.</div>
       </div>
       <div style={sx('display:flex;flex-direction:column;gap:12px;padding:36px 26px 20px;font-size:13px;color:var(--color-neutral-400)')}>
-        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-key" style={sx('font-size:18px;color:var(--color-accent)')} />Entsperren per Passkey – beim ersten Mal mit Code per E-Mail</div>
+        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-key" style={sx('font-size:18px;color:var(--color-accent)')} />Entsperren per E-Mail-Code oder Passkey</div>
         <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-timer" style={sx('font-size:18px;color:var(--color-accent)')} />Sperrt nach 5 Minuten Inaktivität</div>
         <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-eye" style={sx('font-size:18px;color:var(--color-accent)')} />Dokumente nur ansehen, kein Download</div>
       </div>
@@ -177,7 +177,7 @@ function AdminApp({ me, onLock }) {
     </div>}
     {ui.overlay === 'passkeys' && <Sheet scroll>
       <div style={sx('font-size:20px;font-weight:600')}>Passkeys</div>
-      <PasskeyPanel role="admin" intro="Der Betreiber-Zugang wird nur per Passkey entsperrt. Richten Sie am besten zwei Geräte ein, damit Sie bei Verlust nicht ausgesperrt sind." />
+      <PasskeyPanel role="admin" intro="Mit Passkey entsperren Sie per Fingerabdruck oder Gesicht, ohne auf den E-Mail-Code zu warten. Der E-Mail-Code funktioniert immer zusätzlich." />
       <button className="btn btn-ghost" onClick={() => set({ overlay: null })} style={sx('min-height:44px;color:var(--color-neutral-300)')}>Schließen</button>
     </Sheet>}
     {ui.overlay === 'query' && x && <Sheet>

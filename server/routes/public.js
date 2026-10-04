@@ -54,7 +54,7 @@ export default async function publicRoutes(app) {
       user = get('SELECT * FROM users WHERE email = ? AND role = ?', e, role);
     }
     if (!user) throw bad('Zu dieser E-Mail gibt es kein Konto.');
-    if (role === 'admin' && get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', user.id).n > 0) throw bad('Bitte mit Passkey entsperren.', 'passkey_required');
+    if (role === 'admin' && config.adminPasskeyRequired && get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', user.id).n > 0) throw bad('Bitte mit Passkey entsperren.', 'passkey_required');
     startSession(reply, user.id, role);
     return { ok: true };
   });

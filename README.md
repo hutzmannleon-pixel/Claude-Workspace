@@ -88,7 +88,7 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `OPERATOR_EMAIL` | Angaben für Impressum und Datenschutzerklärung (`/impressum`, `/datenschutz`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | E-Mail-Versand. Ohne SMTP werden Mails nur ins Server-Log geschrieben |
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
-| `ADMIN_PASSKEY=optional` | Nur für lokale Tests: Betreiber ohne Passkey zulassen. Standard ist Passkey-Pflicht |
+| `ADMIN_PASSKEY=required` | Betreiber nur noch per Passkey (kein E-Mail-Code mehr, sobald einer eingerichtet ist). Standard: E-Mail-Code immer möglich, Passkey freiwillig |
 | `BACKUP_DIR`, `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION` | Tägliche Sicherung (`deploy/backup.sh`), optional zusätzlich nach S3 |
 | `BAFA_REGISTER_URL` | Link für „Im BAFA-Register prüfen“ bei selbst angegebenen Bezirken (Standard: Websuche nach der Registerauskunft) |
 | `IP_CODES_PER_HOUR` (30), `IP_LOGINS_PER_HOUR` (60) | Obergrenzen pro Anschluss gegen Missbrauch |
@@ -123,7 +123,7 @@ Ein erneuter Import aktualisiert vorhandene Einträge.
 - **E-Mail:** 6-stelliger Code, gespeichert nur als Hash, 10 Minuten gültig, höchstens 5 Versuche, höchstens 6 Codes pro Stunde. Kein Passwort.
 - **Kaminfeger:** Name und Bezirksnummer werden mit dem Bezirksverzeichnis abgeglichen. Der Betreiber sieht Urkunde und Ausweis (nur ansehen, mit Wasserzeichen) und hakt 4 Punkte ab. Nach der Entscheidung, spätestens nach 14 Tagen, werden die Dokumente gelöscht. Der Freischaltlink (48 h gültig) geht an die Verzeichnis-Adresse.
 - **Bewohner:** entweder über die Kundennummer aus dem Kehrbuch, über den Einladungslink des Kaminfegers oder über eine Bestätigung durch den Kaminfeger. Kann er nicht bestätigen, wird der Eigentümer per E-Mail gefragt, sonst entscheidet der Betreiber. Bei dreimal falscher Kundennummer landet der Fall beim Betreiber.
-- **Passkeys:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN (WebAuthn). Für den Betreiber Pflicht: nach dem ersten Entsperren per E-Mail-Code muss ein Passkey eingerichtet werden, danach wird kein E-Mail-Code mehr angenommen. Für Kaminfeger und Bewohner freiwillig (Profil bzw. Konto), der E-Mail-Code bleibt dort als Ausweg. Notfall (Gerät verloren): auf dem Server `npm run reset-passkeys -- name@example.de admin`.
+- **Passkeys:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN (WebAuthn). Für alle freiwillig (Profil, Konto bzw. Betreiber → Passkeys), der E-Mail-Code geht immer. Mit `ADMIN_PASSKEY=required` wird der Passkey für Betreiber wieder Pflicht. Notfall (Gerät verloren): auf dem Server `npm run reset-passkeys -- name@example.de admin`.
 - **Betreiber:** Login nur für `ADMIN_EMAILS`. Er wird nach 5 Minuten Inaktivität gesperrt. Das Protokoll hält fest, wer was entschieden hat, aber keine Dokumente.
 
 ## Noch nicht enthalten

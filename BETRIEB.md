@@ -8,7 +8,7 @@ Alles hier bezieht sich auf den Server `kaminfeger-verwaltung.com` (App in `/opt
 |---|---|---|
 | Impressum | `OPERATOR_NAME` und `OPERATOR_ADDRESS` (ladungsfähige Anschrift) in `/etc/kaminfeger.env` | |
 | E-Mail an alle Adressen | Brevo einrichten (Abschnitt 5) – Amazon SES ist noch im Sandbox-Modus | |
-| Betreiber-Passkey | `/betreiber` per Code entsperren → Passkey einrichten | |
+| Betreiber-Zugang | `/betreiber` per E-Mail-Code entsperren (Passkey freiwillig) | |
 | Echte Bezirke | `/betreiber` → Verzeichnis → CSV mit den echten Kehrbezirken hochladen | |
 | Externe Sicherung | `BACKUP_S3_BUCKET` gesetzt (Abschnitt 3) | |
 | Überwachung | E-Mail von AWS SNS bestätigt (Abschnitt 4) | |
@@ -123,6 +123,6 @@ cd /opt/kaminfeger/app && sudo git pull && sudo npm ci && sudo npm run build && 
 
 | Problem | Lösung |
 |---|---|
-| Betreiber-Passkey verloren | `cd /opt/kaminfeger/app && sudo -u kaminfeger env $(grep -E '^(DATA_DIR\|APP_SECRET)=' /etc/kaminfeger.env \| xargs) npm run reset-passkeys -- E-Mail admin` → danach per E-Mail-Code entsperren und neuen Passkey einrichten |
+| Betreiber-Passkey verloren | Per E-Mail-Code entsperren, alten Passkey löschen. Nur bei `ADMIN_PASSKEY=required`: `cd /opt/kaminfeger/app && sudo -u kaminfeger env $(grep -E '^(DATA_DIR\|APP_SECRET)=' /etc/kaminfeger.env \| xargs) npm run reset-passkeys -- E-Mail admin` → danach per E-Mail-Code entsperren und neuen Passkey einrichten |
 | Seite nicht erreichbar | `systemctl status kaminfeger caddy`, `journalctl -u kaminfeger -n 100` |
 | Falsche Daten nach Fehlbedienung | Sicherung vom Vortag zurückspielen (Abschnitt 3) |
