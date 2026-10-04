@@ -648,4 +648,4 @@ TEST_MODE=1 ADMIN_EMAILS=ich@example.de npm start
   - `--app-bg` ist der Hintergrundverlauf.
 - **Glas-Effekte:** `web/src/ds/liquid.css`.
 - **Kachelfarben:** `TILE_COLORS` in `web/src/ui.jsx`.
-- **Nach Designänderungen:** In `web/public/sw.js` die Cache-Version erhöhen (`kf-v9` → `kf-v7`), damit installierte Apps die neue Version laden.
+- **Nach Designänderungen:** In `web/public/sw.js` die Cache-Version erhöhen (`kf-v10` → `kf-v7`), damit installierte Apps die neue Version laden.

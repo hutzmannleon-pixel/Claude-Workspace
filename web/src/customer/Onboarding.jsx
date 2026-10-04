@@ -121,7 +121,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
   const passkeyLogin = () => act.run(async () => { await loginPasskey('customer'); await afterLogin(); });
 
   let cta = null, alt = null;
-  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => set({ screen: 'address', qr: false }) }; alt = { label: 'Ich habe schon ein Konto', onClick: () => blade(() => { act.setError(null); set({ screen: 'login', lSent: false, lCode: '' }); }, { dir: 'left', title: 'Willkommen', em: 'zurück.' }) }; }
+  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => blade(() => { act.setError(null); set({ screen: 'address', qr: false }); }, { dir: 'left', title: 'Schön, dass', em: 'Sie da sind.' }) }; alt = { label: 'Ich habe schon ein Konto', onClick: () => blade(() => { act.setError(null); set({ screen: 'login', lSent: false, lCode: '' }); }, { dir: 'left', title: 'Willkommen', em: 'zurück.' }) }; }
   if (scr === 'scan') cta = { label: 'Einladung öffnen', disabled: !st.paste.trim(), onClick: openPasted };
   if (scr === 'scanned') cta = { label: inv?.kind === 'member' ? 'Einladung annehmen – weiter' : 'Das sind wir – weiter', disabled: inv?.kind === 'member' && !st.person.trim(), onClick: () => go('email') };
   if (scr === 'address') cta = { label: 'Weiter', disabled: !(st.match && st.nr.trim() && st.ort.trim() && st.name.trim()), onClick: readdress ? saveAddress : () => go('email') };

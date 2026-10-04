@@ -85,7 +85,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const bez = m?.district?.bez || st.bez;
   const check = st.check;
   let cta = null, alt = null;
-  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => go('account') }; alt = { label: 'Ich habe schon ein Konto', onClick: () => blade(() => { act.setError(null); set({ screen: 'login', lSent: false, lCode: '' }); }, { dir: 'left', title: 'Willkommen', em: 'zurück.' }) }; }
+  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => blade(() => go('account'), { dir: 'left', title: 'Schön, dass', em: 'Sie da sind.' }) }; alt = { label: 'Ich habe schon ein Konto', onClick: () => blade(() => { act.setError(null); set({ screen: 'login', lSent: false, lCode: '' }); }, { dir: 'left', title: 'Willkommen', em: 'zurück.' }) }; }
   if (scr === 'account') cta = st.codeSent
     ? { label: 'Bestätigen', disabled: st.code.length < 6, onClick: register }
     : { label: 'Code senden', disabled: !(emailOk && st.first.trim() && st.last.trim() && st.bstreet.trim() && /^\d{5}$/.test(st.bplz) && st.bort.trim()), onClick: () => sendCode(st.email, 'register', { codeSent: true, code: '' }) };
