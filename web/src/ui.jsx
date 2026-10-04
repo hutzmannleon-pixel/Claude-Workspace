@@ -183,6 +183,24 @@ export const SectionLabel = ({ children, right, pad = '22px 22px 6px' }) => (
 );
 
 /** Hauptknopf unten (+ optionaler Zweitknopf) */
+/**
+ * Klingen-Wechsel (z. B. Registrieren ↔ Anmelden): Eine dunkle, schräge Fläche fegt über den Bildschirm,
+ * deckt ihn kurz ab – genau dann wird umgeschaltet – und gibt die neue Ansicht frei. Ohne Überblenden.
+ * dir: 'left' = von rechts nach links (vorwärts), 'right' = zurück.
+ */
+export function blade(fn, { dir = 'left', kicker = 'Kaminfeger Verwaltung', title = '', em = '' } = {}) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.querySelector('.kf-blade-wrap')) { fn(); return; }
+  const wrap = document.createElement('div');
+  wrap.className = 'kf-blade-wrap';
+  wrap.setAttribute('aria-hidden', 'true');
+  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  wrap.innerHTML = `<div class="kf-blade ${dir === 'right' ? 'to-right' : 'to-left'}"><div class="kf-blade-text">
+    <span class="kf-blade-kicker">${esc(kicker)}</span><span class="kf-blade-title">${esc(title)}<br><em>${esc(em)}</em></span></div></div>`;
+  document.body.appendChild(wrap);
+  setTimeout(fn, 430);
+  setTimeout(() => wrap.remove(), 1000);
+}
+
 export function Cta({ label, onClick, disabled, busy, alt, error, glow }) {
   return (
     <div style={sx('flex:none;padding:10px 16px 2px;position:relative;z-index:2;display:flex;flex-direction:column;gap:2px')}>

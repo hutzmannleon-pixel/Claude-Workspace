@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, blade, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
 const LAENDER = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen', 'Mecklenburg-Vorpommern', 'Niedersachsen',
@@ -85,7 +85,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const bez = m?.district?.bez || st.bez;
   const check = st.check;
   let cta = null, alt = null;
-  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => go('account') }; alt = { label: 'Ich habe schon ein Konto', onClick: () => set({ screen: 'login', lSent: false, lCode: '' }) }; }
+  if (scr === 'welcome') { cta = { label: 'Registrieren', onClick: () => go('account') }; alt = { label: 'Ich habe schon ein Konto', onClick: () => blade(() => { act.setError(null); set({ screen: 'login', lSent: false, lCode: '' }); }, { dir: 'left', title: 'Willkommen', em: 'zurück.' }) }; }
   if (scr === 'account') cta = st.codeSent
     ? { label: 'Bestätigen', disabled: st.code.length < 6, onClick: register }
     : { label: 'Code senden', disabled: !(emailOk && st.first.trim() && st.last.trim() && st.bstreet.trim() && /^\d{5}$/.test(st.bplz) && st.bort.trim()), onClick: () => sendCode(st.email, 'register', { codeSent: true, code: '' }) };
@@ -96,6 +96,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     else if (!reviewed) cta = { label: 'Warte auf Prüfung durch den Betreiber', disabled: true };
   }
   if (scr === 'done') cta = { label: 'Zur App', onClick: onDone };
+  if (scr === 'login') alt = { label: 'Neu hier? Registrieren', onClick: () => blade(() => { act.setError(null); go('account'); }, { dir: 'right', title: 'Schön, dass', em: 'Sie da sind.' }) };
   if (scr === 'login') cta = st.lSent
     ? { label: 'Anmelden', disabled: st.lCode.length < 6, onClick: login }
     : { label: 'Code senden', disabled: !EMAIL_RE.test(st.lEmail.trim()), onClick: () => sendCode(st.lEmail, 'login', { lSent: true, lCode: '' }) };
@@ -135,7 +136,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
       </>}
 
       {scr === 'login' && <>
-        <div style={sx('display:flex;align-items:center;padding:4px 12px 0')}><button className="btn btn-icon" onClick={() => go('welcome')} style={sx('width:44px;height:44px')} aria-label="Zurück"><Icon n="ph-caret-left" style={sx('font-size:22px')} /></button></div>
+        <div style={sx('display:flex;align-items:center;padding:4px 12px 0')}><button className="btn btn-icon" onClick={() => blade(() => go('welcome'), { dir: 'right', title: 'Schön, dass', em: 'Sie da sind.' })} style={sx('width:44px;height:44px')} aria-label="Zurück"><Icon n="ph-caret-left" style={sx('font-size:22px')} /></button></div>
         <Title pad="10px 22px 0" title="Anmelden" sub="Mit Passkey oder Ihrer geschäftlichen E-Mail-Adresse." />
         <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
           {!st.lSent && <PasskeyLogin onPasskey={passkeyLogin} busy={act.busy} />}
