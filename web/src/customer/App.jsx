@@ -1,7 +1,7 @@
 // Kunden-App – nach „KundenApp“ (Claude Design), angebunden an /api/customer/*.
 import { useEffect, useState } from 'react';
 import { sx, api, useData, useAction, fmtAt, endOf, short, longDay, todayIso, EMAIL_RE } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DemoBadge, TAB_PAD_BOTTOM, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, PageTitle, SectionLabel, Toggle, CheckRow, Sheet, TabBar, Avatar, Hero, ErrorLine, Loading, Input, DeleteSheet, LegalLinks, PasskeyPanel, PasskeyOffer, AppHeader, Greeting, NextCard, Tiles, InfoCard, PageHead, DemoBadge, ChatThread, ChatComposer, TAB_PAD_BOTTOM, DIV_BOTTOM } from '../ui.jsx';
 import { Scenery } from '../brand.jsx';
 
 const PREP = [['access', 'Zugang zu Heizraum und Dachboden freihalten'], ['cold', 'Kaminofen ab dem Vorabend nicht mehr heizen'], ['pets', 'Haustiere während des Besuchs wegsperren']];
@@ -12,7 +12,12 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   const [ui, setUi] = useState({ screen: 'home', overlay: null, selW: null, selT: null, keyOn: false, keyWho: '', resched: false, cal: false, inviting: false, inviteEmail: '', done: null });
   const set = p => setUi(u => ({ ...u, ...p }));
   const act = useAction();
+  const chat = useData('/api/customer/chat', { enabled: ui.screen === 'msgs' });
   useEffect(() => { if (error?.status === 401) onLogout(); }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Neue Nachricht kommt an, während der Chat offen ist → gleich als gelesen markieren
+  useEffect(() => {
+    if (ui.screen === 'msgs' && s && (s.chatUnread || s.messages.some(m => !m.read))) api('/api/customer/read', { body: {} }).then(reload).catch(() => {});
+  }, [ui.screen, chat.data]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!s) return error && error.status !== 401 ? <Shell glow={GLOW.customer}><Hero icon="ph-wifi-slash" muted title="Keine Verbindung" sub={error.message} /></Shell> : <Loading />;
 
   const r = s.resident, c = s.campaign, b = s.booking, d = s.district;
@@ -22,6 +27,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   const pendingVerify = ['asked', 'owner', 'review'].includes(r.status);
   const addr = `${r.street} ${r.nr}`;
   const unreadList = s.messages.filter(m => !m.read);
+  const unreadAll = unreadList.length + (s.chatUnread || 0);
   const year = c?.windows[0] ? c.windows[0].date.slice(0, 4) : String(new Date().getFullYear());
   const call = fn => act.run(async () => { await fn(); await reload(); });
 
@@ -48,7 +54,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   const toResched = () => set({ screen: 'pick', resched: true, selW: openWins.find(x => x.id === b?.windowId)?.id || openWins[0]?.id, selT: null, overlay: null, keyOn: !!b?.key, keyWho: b?.key || '' });
   const canChange = b && b.changeable !== false;
   const goHome = () => { act.setError(null); set({ screen: 'home', overlay: null }); };
-  const openMsgs = () => { set({ screen: 'msgs' }); setTimeout(() => api('/api/customer/read', { body: {} }).then(reload).catch(() => {}), 1200); };
+  const openMsgs = () => { act.setError(null); set({ screen: 'msgs' }); };
   const doConfirm = () => act.run(async () => {
     await api('/api/customer/book', { body: { windowId: w.id, time: ui.selT, key: ui.keyOn ? ui.keyWho.trim() : '' } });
     set({ screen: 'done', cal: false, done: { date: longDay(w.label) + ', ' + short(w.label).date, time: ui.selT + '–' + endOf(ui.selT, len) } });
@@ -74,7 +80,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   const tabs = [
     { label: 'Start', icon: 'ph-house', on: scr === 'home', onClick: goHome },
     { label: 'Termin', icon: 'ph-calendar-blank', on: scr === 'termin', onClick: toTermin },
-    { label: 'Nachrichten', icon: 'ph-chat-circle-text', on: scr === 'msgs', onClick: openMsgs, badge: unreadList.length },
+    { label: 'Nachrichten', icon: 'ph-chat-circle-text', on: scr === 'msgs', onClick: openMsgs, badge: unreadAll },
     { label: 'Mehr', icon: 'ph-dots-three-outline', on: scr === 'profile', onClick: () => set({ screen: 'profile' }) }
   ];
   const btn = (label, onClick, extra = {}) => (
@@ -89,10 +95,12 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   if (scr === 'pick' && w) bottom = btn(hasSel ? `Weiter · ${short(w.label).day} ${ui.selT}–${endOf(ui.selT, len)}` : 'Bitte eine Zeit wählen', () => hasSel && set({ screen: 'confirm' }), { disabled: !hasSel, fade: true });
   if (scr === 'confirm') bottom = btn('Termin verbindlich bestätigen', doConfirm, { icon: 'ph-check-circle', glow: true, disabled: !verified, hint: verified ? null : 'Buchen ist möglich, sobald Ihr Wohnsitz bestätigt ist. Sie bekommen dann eine E-Mail.' });
   if (scr === 'done') bottom = btn('Fertig', goHome, { secondary: true });
+  const sendChat = text => act.run(async () => { await api('/api/customer/chat', { body: { text } }); await chat.reload(); return true; }).then(x => x === true ? undefined : false);
+  if (scr === 'msgs' && chat.data?.canWrite) bottom = <ChatComposer onSend={sendChat} busy={act.busy} error={act.error} placeholder={`Nachricht an ${sweepName} …`} />;
   if (scr === 'info') bottom = b ? btn('Termin ansehen', toTermin, { icon: 'ph-calendar-blank' }) : c && s.houseStatus !== 'booked' && r.status !== 'moved' ? btn(verified ? 'Zeit wählen' : 'Zeiten ansehen', toPick, { icon: 'ph-calendar-plus' }) : null;
 
   const overlay = <>
-    {s.demo && <DemoBadge />}
+    {s.demo && <DemoBadge lift={scr === 'msgs' ? 66 : 0} />}
     <PasskeyOffer role="customer" />
     {ui.overlay === 'cancel' && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Termin absagen?</div>
@@ -151,7 +159,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   return (
     <Shell glow={GLOW.customer} scrollKey={scr} feedback={{ role: 'customer', where: scr }} bottom={<>{bottom}{showTabs && <TabBar tabs={tabs} padBottom={TAB_PAD_BOTTOM} />}</>} flush={showTabs} overlay={overlay}>
       {scr === 'home' && <>
-        <AppHeader bell={unreadList.length} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
+        <AppHeader bell={unreadAll} onBell={openMsgs} onProfile={() => set({ screen: 'profile' })} ini={('F' + (r.family[0] || '')).toUpperCase()} />
         <Greeting hi={`Hallo Familie ${r.family},`} sub="Schön, dass Sie da sind." />
         {liveCard}
         {r.status === 'moved' && <div style={sx(`${cardS};box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
@@ -193,7 +201,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
         {!b && s.houseStatus === 'cancelled' && r.status !== 'moved' && <NextCard icon="ph-calendar-x" kicker={`Feuerstättenschau ${year}`} title="Termin abgesagt" lines={['Bitte wählen Sie eine neue Zeit.']} tag="Neu wählen" tagCls="tag-outline" onClick={toPick} />}
         <Tiles items={[
           { label: 'Termin', icon: 'ph-calendar-blank', onClick: toTermin },
-          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: openMsgs, badge: unreadList.length },
+          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: openMsgs, badge: unreadAll },
           { label: 'Leistungen', icon: 'ph-flame', onClick: () => set({ screen: 'info' }) },
           { label: 'Profil', icon: 'ph-user', onClick: () => set({ screen: 'profile' }) }
         ]} />
@@ -354,19 +362,13 @@ export default function CustomerApp({ onLogout, onReaddress }) {
       </>}
 
       {scr === 'msgs' && <>
-        <PageTitle title="Nachrichten" sub="von Ihrem Kaminfeger" />
-        <div style={sx('display:flex;flex-direction:column;gap:10px;padding:14px 16px 20px')}>
-          {!s.messages.length && <div style={sx('font-size:14px;color:var(--color-neutral-500);padding:8px 6px')}>Noch keine Nachrichten.</div>}
-          {s.messages.slice().reverse().map(m => (
-            <div key={m.id} style={sx('display:flex;gap:10px;align-items:flex-start')}>
-              <Avatar ini={sweep?.ini || 'KF'} size={32} fs={12} />
-              <div style={sx('flex:1;display:flex;flex-direction:column;gap:4px')}>
-                <div style={sx(`padding:10px 12px;border-radius:4px var(--radius-lg) var(--radius-lg) var(--radius-lg);background:var(--color-surface);font-size:14px;text-wrap:pretty;box-shadow:${m.read ? 'none' : '0 0 0 1px var(--color-accent-700)'}`)}>{m.text}</div>
-                <div style={sx('font-size:11px;color:var(--color-neutral-500);padding-left:4px')}>{fmtAt(m.at)}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <PageTitle title={sweepName} sub={verified ? 'Ihr Kaminfeger · schreiben Sie direkt' : 'Ihr Kaminfeger'} />
+        <ChatThread ini={sweep?.ini || 'KF'}
+          empty={verified ? `Noch keine Nachrichten. Fragen zum Termin? Schreiben Sie ${sweepName} einfach hier.` : 'Noch keine Nachrichten. Schreiben können Sie, sobald Ihr Wohnsitz bestätigt ist.'}
+          items={[
+            ...s.messages.map(m => ({ key: 'b' + m.id, mine: false, text: m.text, at: m.at, label: 'An alle in der Straße' })),
+            ...(chat.data?.messages || []).map(m => ({ key: 'c' + m.id, mine: !m.fromSweep, text: m.text, at: m.at, read: m.fromSweep ? null : m.read }))
+          ].sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0))} />
       </>}
 
       {scr === 'profile' && <Profile s={s} ui={ui} set={set} call={call} act={act} />}

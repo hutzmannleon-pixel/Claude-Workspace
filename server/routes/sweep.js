@@ -10,10 +10,10 @@ import { queueMail } from '../mail.js';
 import {
   makeLink, sweepByUser, activeSweepForDistrict, sweepName, initials, windowsOf, houseRows, campaignsOfDistrict, validateWindows,
   routeFor, routeStarted, routeDates, defaultRouteDate, postMessage, householdEmails, householdName, adminLog, streetHouseholds,
-  closedCampaigns, campaignDone, LAENDER, findDistrict, sweepBez
+  closedCampaigns, campaignDone, LAENDER, findDistrict, sweepBez, CHAT_MAX, chatMessages, chatPost, chatRead, householdHasApp
 } from '../domain.js';
 import {
-  bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nameKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
+  limited, bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nameKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
 } from '../util.js';
 
 const MIME = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic' };
@@ -245,6 +245,7 @@ export default async function sweepRoutes(app) {
       today: { date, label: dayLabel(date), isToday: date === today(), count: route.length, from: route[0]?.t || null, to: route[route.length - 1]?.end || null,
         streets: [...new Set(route.map(r => r.street))] },
       streets, tenants, households: hh, alerts,
+      chatUnread: get(`SELECT COUNT(*) n FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.district_id = ? AND m.from_sweep = 0 AND m.read_at IS NULL`, s.district_id).n,
       closed: closedCampaigns(s.district_id).slice(0, 100).map(c => ({ id: c.id, street: c.street, plz: c.plz, closedAt: c.closed_at, closedLabel: fmtDay(c.closed_at),
         households: get('SELECT COUNT(*) n FROM households WHERE district_id = ? AND street_key = ? AND plz = ?', s.district_id, c.street_key, c.plz).n,
         visited: get(`SELECT COUNT(DISTINCT household_id) n FROM bookings WHERE campaign_id = ? AND visit = 'done'`, c.id).n }))
@@ -550,6 +551,43 @@ export default async function sweepRoutes(app) {
     for (const h of ids) for (const to of householdEmails(h)) queueMail({ to, subject: `Nachricht von Ihrem Kaminfeger ${sweepName(s)}`, text, link: `${config.baseUrl}/kunde`, linkLabel: 'In der App ansehen' });
     live.bump();
     return { ok: true, n: ids.length };
+  });
+
+  // ---------- Messenger: Unterhaltungen mit einzelnen Haushalten ----------
+  const ownHousehold = (s, id) => {
+    const h = get('SELECT * FROM households WHERE id = ? AND district_id = ?', Number(id), s.district_id);
+    if (!h) throw notFound('Haushalt nicht gefunden.');
+    return h;
+  };
+  app.get('/api/sweep/chats', async req => {
+    const s = activeSweep(req);
+    const rows = all(`SELECT m.household_id hid, MAX(m.id) last, SUM(CASE WHEN m.from_sweep = 0 AND m.read_at IS NULL THEN 1 ELSE 0 END) unread
+      FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.district_id = ? GROUP BY m.household_id ORDER BY last DESC LIMIT 200`, s.district_id);
+    return { chats: rows.map(x => {
+      const h = get('SELECT * FROM households WHERE id = ?', x.hid), m = get('SELECT text, from_sweep, created_at FROM chat_messages WHERE id = ?', x.last);
+      return { id: h.id, name: householdName(h), street: h.street, nr: h.nr, last: m.text, lastMine: !!m.from_sweep, at: m.created_at, unread: x.unread };
+    }) };
+  });
+  app.get('/api/sweep/chats/:hid', async req => {
+    const s = activeSweep(req), h = ownHousehold(s, req.params.hid);
+    return { id: h.id, name: householdName(h), street: h.street, nr: h.nr, plz: h.plz, ort: h.ort, phone: h.phone || '', hasApp: householdHasApp(h.id), messages: chatMessages(h.id) };
+  });
+  app.post('/api/sweep/chats/:hid', async req => {
+    const s = activeSweep(req), h = ownHousehold(s, req.params.hid);
+    if (!householdHasApp(h.id)) throw bad('Dieser Haushalt nutzt die App noch nicht – bitte anrufen.');
+    const text = String(req.body?.text || '').trim().slice(0, CHAT_MAX);
+    if (!text) throw bad('Bitte eine Nachricht eingeben.');
+    if (limited('chat:' + s.user_id, 200, 3600000)) throw bad('Zu viele Nachrichten in kurzer Zeit. Bitte etwas später weiterschreiben.');
+    chatPost(h.id, true, s.user_id, text);
+    chatRead(h.id, true);
+    live.bump();
+    return { ok: true };
+  });
+  app.post('/api/sweep/chats/:hid/read', async req => {
+    const s = activeSweep(req), h = ownHousehold(s, req.params.hid);
+    chatRead(h.id, true);
+    live.bump();
+    return { ok: true };
   });
 
   // ---------- Bewohner bestätigen (z. B. Mieter ohne Kundennummer) ----------

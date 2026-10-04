@@ -125,6 +125,23 @@ export function householdEmails(householdId, { onlyMail = true } = {}) {
     .filter(r => !onlyMail || r.ch_mail).map(r => r.email);
 }
 
+// ---------- Messenger ----------
+export const CHAT_MAX = 1000;
+/** Kann der Haushalt Nachrichten in der App lesen? (mind. ein bestätigter Bewohner) */
+export const householdHasApp = hid => !!get(`SELECT 1 x FROM residents WHERE household_id = ? AND status = 'verified'`, hid);
+export function chatMessages(hid, since = null) {
+  return all(`SELECT id, from_sweep, text, created_at, read_at FROM chat_messages WHERE household_id = ?${since ? ' AND created_at >= ?' : ''} ORDER BY id DESC LIMIT 300`,
+    ...(since ? [hid, since] : [hid])).reverse()
+    .map(m => ({ id: m.id, fromSweep: !!m.from_sweep, text: m.text, at: m.created_at, read: !!m.read_at }));
+}
+export function chatPost(hid, fromSweep, userId, text) {
+  run('INSERT INTO chat_messages (household_id, from_sweep, user_id, text) VALUES (?,?,?,?)', hid, fromSweep ? 1 : 0, userId, text);
+}
+/** Nachrichten der Gegenseite als gelesen markieren */
+export function chatRead(hid, readerIsSweep) {
+  run(`UPDATE chat_messages SET read_at = datetime('now') WHERE household_id = ? AND from_sweep = ? AND read_at IS NULL`, hid, readerIsSweep ? 0 : 1);
+}
+
 export function adminLog(email, what, note) {
   run('INSERT INTO admin_log (admin_email, what, note) VALUES (?,?,?)', email, what, note || '');
 }

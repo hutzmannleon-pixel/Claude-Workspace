@@ -30,9 +30,9 @@ export const useIsWide = () => useContext(WideCtx);
  * am Desktop (ab 1024 px, siehe useWide) Seitenleiste links, optional eine Liste (aside) und rechts der Inhalt.
  */
 /** Hinweis oben in der Vorschau des Betreibers (Demo-Bezirk) */
-export function DemoBadge() {
+export function DemoBadge({ lift = 0 }) {
   return (
-    <div role="status" style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom) + 96px)', left: '50%', transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
+    <div role="status" style={{ position: 'fixed', bottom: `calc(env(safe-area-inset-bottom) + ${96 + lift}px)`, left: '50%', transform: 'translateX(-50%)', zIndex: 60, pointerEvents: 'none',
       padding: '5px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, letterSpacing: '0.02em', color: '#2a120a', background: 'linear-gradient(180deg, #ffe08a, #ffc145)', boxShadow: '0 6px 18px rgba(24,8,4,0.4)', whiteSpace: 'nowrap' }}>
       Vorschau · Beispieldaten
     </div>
@@ -296,6 +296,77 @@ export function CodeInput({ email, value, onChange, onResend, label = 'Bestätig
         {ok ? 'Bestätigt' : bad ? '' : busy ? 'Wird geprüft …' : ring ? 'Code vollständig' : ''}
       </div>
       {onResend && !ok && <button className="btn btn-ghost" onClick={onResend} style={sx('align-self:flex-start;min-height:40px;padding-inline:6px')}>Code erneut senden</button>}
+    </div>
+  );
+}
+
+/**
+ * Messenger: Sprechblasen einer Unterhaltung. items: { key, mine, text, at, label? }.
+ * Eigene Nachrichten rechts in der App-Farbe, fremde links im Glas. Springt bei neuen Nachrichten nach unten.
+ */
+export function ChatThread({ items, ini = 'KF', empty }) {
+  const end = useRef(null);
+  const last = items.length ? items[items.length - 1].key : null;
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }, [last]);
+  if (!items.length) return <div style={sx('padding:28px 22px;font-size:14px;color:var(--color-neutral-400);text-align:center;text-wrap:pretty')}>{empty}</div>;
+  let prevDay = null;
+  return (
+    <div role="log" aria-live="polite" style={sx('display:flex;flex-direction:column;gap:6px;padding:12px 14px 16px')}>
+      {items.map((m, i) => {
+        const day = fmtDay(m.at), showDay = day !== prevDay; prevDay = day;
+        const next = items[i + 1], tail = !next || next.mine !== m.mine || fmtDay(next.at) !== day;
+        return (
+          <div key={m.key} style={sx('display:flex;flex-direction:column')}>
+            {showDay && <div style={sx('align-self:center;margin:10px 0 6px;padding:3px 10px;border-radius:999px;font-size:11px;color:var(--color-neutral-300);background:rgba(255,255,255,0.07)')}>{day}</div>}
+            <div style={sx(`display:flex;gap:8px;align-items:flex-end;${m.mine ? 'justify-content:flex-end' : ''}`)}>
+              {!m.mine && <div style={sx(`width:28px;flex:none;${tail ? '' : 'visibility:hidden'}`)}><Avatar ini={ini} size={28} fs={11} accent /></div>}
+              <div className="kf-bubble" style={sx(`max-width:78%;padding:9px 12px 7px;font-size:15px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;text-shadow:none;${m.mine
+                ? `color:#fff;background:linear-gradient(180deg, color-mix(in srgb, var(--acc) 82%, #fff 4%), var(--color-accent-700));border-radius:18px 18px ${tail ? '6px' : '18px'} 18px;box-shadow:0 4px 14px color-mix(in srgb, var(--acc) 28%, transparent)`
+                : `background:var(--color-surface);border-radius:18px 18px 18px ${tail ? '6px' : '18px'};box-shadow:var(--shadow-sm)`}`)}>
+                {m.label && <div style={sx('font-size:11px;font-weight:600;color:var(--color-accent-300);margin-bottom:2px;display:flex;gap:4px;align-items:center')}><Icon n="ph-megaphone-simple" />{m.label}</div>}
+                {m.text}
+                <div style={sx(`font-size:10.5px;margin-top:2px;text-align:right;${m.mine ? 'color:rgba(255,255,255,0.75)' : 'color:var(--color-neutral-500)'}`)}>
+                  {fmtTime(m.at)}{m.mine && m.read != null && <Icon w="ph-bold" n={m.read ? 'ph-checks' : 'ph-check'} style={sx('margin-left:4px;font-size:12px')} />}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {/* Platz für den Feedback-Knopf unten rechts, damit die letzte Nachricht frei bleibt */}
+      <div ref={end} style={sx('height:44px;flex:none')} />
+    </div>
+  );
+}
+const toDate = ts => new Date(/Z|[+-]\d\d:?\d\d$/.test(ts) ? ts : ts.replace(' ', 'T') + 'Z');
+const fmtTime = ts => toDate(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+function fmtDay(ts) {
+  const d = toDate(ts), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Heute';
+  if (d.toDateString() === y.toDateString()) return 'Gestern';
+  return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'long' });
+}
+
+/** Eingabezeile unten im Messenger: wächst mit, Enter sendet (Umschalt+Enter = neue Zeile) */
+export function ChatComposer({ onSend, busy, error, placeholder = 'Nachricht schreiben …' }) {
+  const [text, setText] = useState('');
+  const ref = useRef(null);
+  useEffect(() => { const el = ref.current; if (el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; } }, [text]);
+  const send = async () => {
+    const t = text.trim(); if (!t || busy) return;
+    if (await onSend(t) !== false) setText('');
+  };
+  return (
+    <div style={sx('flex:none;padding:8px 12px 8px;position:relative;z-index:2;display:flex;flex-direction:column;gap:6px')}>
+      {error && <div style={sx('padding:0 6px')}><ErrorLine text={error} /></div>}
+      <div className="glass" style={sx('display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 14px;border-radius:24px')}>
+        <textarea ref={ref} value={text} rows={1} maxLength={1000} onChange={e => setText(e.target.value)} placeholder={placeholder} aria-label="Nachricht"
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
+          style={sx('flex:1;min-height:24px;max-height:140px;resize:none;border:0;outline:0;background:none;color:var(--color-text);font:inherit;font-size:16px;line-height:1.4;padding:8px 0;scrollbar-width:none')} />
+        <button className="btn btn-primary btn-icon" onClick={send} disabled={!text.trim() || busy} aria-label="Senden" style={sx('width:40px;height:40px;border-radius:50%;flex:none;padding:0')}>
+          <Icon w="ph-fill" n="ph-paper-plane-right" style={sx('font-size:18px')} />
+        </button>
+      </div>
     </div>
   );
 }

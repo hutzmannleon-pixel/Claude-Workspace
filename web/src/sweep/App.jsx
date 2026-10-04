@@ -1,7 +1,7 @@
 // Kaminfeger-App – nach „KaminfegerApp“ (Claude Design), angebunden an /api/sweep/*.
 import { useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slotsOf, toMin, dayLabel, days, addDays, todayIso, parseDate, plural, greeting } from '../lib/core.js';
-import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DemoBadge, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, PasskeyOffer, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DemoBadge, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, PasskeyOffer, ChatThread, ChatComposer, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -19,8 +19,15 @@ export default function SweepApp({ onLogout }) {
   const route = useData(`/api/sweep/route${ui.routeDate ? '?date=' + ui.routeDate : ''}`, { enabled: scr === 'route' });
   const msgs = useData('/api/sweep/messages', { enabled: scr === 'notify' });
   const cust = useData('/api/sweep/customers', { enabled: scr === 'customers' });
+  const chats = useData('/api/sweep/chats', { enabled: scr === 'chats' });
+  const thread = useData(ui.chatId ? `/api/sweep/chats/${ui.chatId}` : null, { enabled: scr === 'chat' && !!ui.chatId });
+  // Offene Unterhaltung: Nachrichten des Haushalts gleich als gelesen markieren
+  useEffect(() => {
+    const t = thread.data;
+    if (scr === 'chat' && t && t.id === ui.chatId && t.messages.some(m => !m.fromSweep && !m.read)) api(`/api/sweep/chats/${t.id}/read`, { body: {} }).catch(() => {});
+  }, [scr, thread.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const [seen, setSeen] = useState(() => { try { return localStorage.getItem('kf-sweep-seen') || ''; } catch { return ''; } });
-  useEffect(() => { if ([ov.error, camp.error, route.error, msgs.error, cust.error].some(e => e?.status === 401)) onLogout(); }, [ov.error, camp.error, route.error, msgs.error, cust.error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if ([ov.error, camp.error, route.error, msgs.error, cust.error, chats.error, thread.error].some(e => e?.status === 401)) onLogout(); }, [ov.error, camp.error, route.error, msgs.error, cust.error, chats.error, thread.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const o = ov.data;
   if (!o) return ov.error && ov.error.status !== 401 ? <Shell glow={GLOW.sweep}><Hero icon="ph-wifi-slash" muted title="Keine Verbindung" sub={ov.error.message} /></Shell> : <Loading />;
@@ -115,12 +122,12 @@ export default function SweepApp({ onLogout }) {
   ] : [];
 
   // Leiste unten wie in der Vorlage: Start, Termine, Kunden, Mehr – am Desktop mehr Punkte in der Seitenleiste
-  const tabOf = { home: 'home', streets: 'home', street: 'home', setup: 'home', route: 'route', customers: 'customers', notify: 'more', more: 'more' }[scr];
+  const tabOf = { home: 'home', streets: 'home', street: 'home', setup: 'home', route: 'route', customers: 'customers', notify: 'chats', chats: 'chats', chat: 'chats', more: 'more' }[scr];
   const toRoute = () => { act.setError(null); set({ screen: 'route', routeDate: o.today.date, callId: null, toast: null }); };
-  const tabs = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Kunden', 'ph-users', 'customers'], ['Mehr', 'ph-dots-three-outline', 'more']]
-    .map(t => ({ label: t[0], icon: t[1], on: tabOf === t[2], onClick: t[2] === 'route' ? toRoute : go(t[2]) }));
-  const sideOf = { streets: 'streets', street: 'streets', setup: 'streets', notify: 'notify' }[scr] || tabOf;
-  const side = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Straßen', 'ph-map-trifold', 'streets'], ['Kunden', 'ph-users', 'customers'], ['Nachrichten', 'ph-chat-circle-text', 'notify']]
+  const tabs = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Kunden', 'ph-users', 'customers'], ['Chats', 'ph-chat-circle-text', 'chats'], ['Mehr', 'ph-dots-three-outline', 'more']]
+    .map(t => ({ label: t[0], icon: t[1], on: tabOf === t[2], onClick: t[2] === 'route' ? toRoute : go(t[2]), badge: t[2] === 'chats' ? o.chatUnread : 0 }));
+  const sideOf = { streets: 'streets', street: 'streets', setup: 'streets', notify: 'chats', chats: 'chats', chat: 'chats' }[scr] || tabOf;
+  const side = [['Start', 'ph-house', 'home'], ['Termine', 'ph-calendar-blank', 'route'], ['Straßen', 'ph-map-trifold', 'streets'], ['Kunden', 'ph-users', 'customers'], ['Nachrichten', 'ph-chat-circle-text', 'chats']]
     .map(t => ({ label: t[0], icon: t[1], on: sideOf === t[2], onClick: t[2] === 'route' ? toRoute : go(t[2]) }));
   const newAlerts = o.alerts.filter(a => a.at > seen);
   const bellCount = o.tenants.length + newAlerts.length;
@@ -129,7 +136,13 @@ export default function SweepApp({ onLogout }) {
   const answerTenant = answer => act.run(async () => { const r = await api(`/api/sweep/tenant/${tenant.id}`, { body: { answer } }); set({ tenantId: null, toast: r.toast }); ov.reload(); });
   const importKb = file => act.run(async () => { const r = await upload('/api/sweep/kehrbuch', file); set({ kb: r }); ov.reload(); });
 
+  // ---------- Messenger ----------
+  const openChat = id => { act.setError(null); set({ custId: null, sheet: null, screen: 'chat', chatId: id, toast: null }); };
+  const th = thread.data && thread.data.id === ui.chatId ? thread.data : null;
+  const sendChat = text => act.run(async () => { await api(`/api/sweep/chats/${ui.chatId}`, { body: { text } }); await thread.reload(); return true; }).then(x => x === true ? undefined : false);
+
   const bottom = <>
+    {scr === 'chat' && th?.hasApp && <ChatComposer onSend={sendChat} busy={act.busy} error={act.error} placeholder={`Nachricht an Familie ${th.name} …`} />}
     {scr === 'setup' && <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2')}>
       {act.error && <div style={sx('padding:0 4px 8px')}><ErrorLine text={act.error} /></div>}
       <button className="btn btn-primary" onClick={saveSetup} disabled={act.busy} style={sx('width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)')}><Icon n="ph-paper-plane-tilt" />{act.busy ? 'Wird gesendet …' : `Speichern & an ${plural(nHouses, 'Haushalt', 'Haushalte')} senden`}</button>
@@ -145,7 +158,7 @@ export default function SweepApp({ onLogout }) {
   });
   const closeTarget = ui.sheet === 'close' ? (o.streets.find(x => x.campaign?.id === ui.closeId) || null) : null;
   const overlay = <>
-    {o.demo && <DemoBadge />}
+    {o.demo && <DemoBadge lift={scr === 'chat' ? 66 : 0} />}
     <PasskeyOffer role="sweep" />
     {ui.sheet === 'close' && <Sheet>
       <div style={sx('font-size:20px;font-weight:600')}>Straße abschließen?</div>
@@ -183,6 +196,7 @@ export default function SweepApp({ onLogout }) {
       </div>
       <div style={sx('font-size:14px;color:var(--color-neutral-200)')}>{custH.line}</div>
       {custH.phone && <a className="btn btn-secondary" href={`tel:${custH.phone.replace(/[^\d+]/g, '')}`} style={sx('min-height:46px')}><Icon n="ph-phone" />Anrufen · {custH.phone}</a>}
+      <button className="btn btn-secondary" onClick={() => openChat(custH.id)} style={sx('min-height:46px')}><Icon n="ph-chat-circle-text" />Nachricht schreiben</button>
       {custH.campaignId
         ? <button className="btn btn-primary" onClick={() => set({ custId: null, screen: 'street', campaignId: custH.campaignId, filter: 'all', toast: null })} style={sx('min-height:48px')}><Icon n="ph-map-trifold" />Zur Straße {custH.street}</button>
         : <button className="btn btn-primary" onClick={() => { set({ custId: null }); openSetup({ street: custH.street, plz: custH.plz, households: o.streets.find(x => x.street === custH.street && x.plz === custH.plz)?.households || 1 }); }} style={sx('min-height:48px')}><Icon n="ph-calendar-plus" />Zeitfenster für {custH.street} anlegen</button>}
@@ -392,7 +406,7 @@ export default function SweepApp({ onLogout }) {
           { label: 'Termine', icon: 'ph-calendar-blank', onClick: toRoute },
           { label: 'Kunden', icon: 'ph-users', onClick: go('customers') },
           { label: 'Straßen', icon: 'ph-map-trifold', onClick: go('streets'), badge: o.streets.filter(x => !x.campaign).length },
-          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: go('notify') }
+          { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: go('chats'), badge: o.chatUnread }
         ]} />
         <InfoCard title="Sicher. Sauber. Zukunft." sub={`Kehrbezirk ${o.bez} · ${plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch`} onClick={go('streets')} />
         <div style={sx('height:20px')} />
@@ -420,7 +434,7 @@ export default function SweepApp({ onLogout }) {
         <PageHead title="Mehr" />
         <div style={sx('display:flex;flex-direction:column;gap:10px;padding:10px 16px 20px')}>
           <ListCard icon="ph-map-trifold" title="Straßen & Zeitfenster" lines={[plural(o.streets.length, 'Straße', 'Straßen') + ' im Kehrbuch']} onClick={go('streets')} />
-          <ListCard icon="ph-chat-circle-text" title="Nachrichten" lines={['An Haushalte einer Straße schreiben']} onClick={go('notify')} />
+          <ListCard icon="ph-chat-circle-text" title="Nachrichten" lines={['Chats mit Kunden, Rundnachricht an eine Straße']} onClick={go('chats')} />
           <ListCard icon="ph-upload-simple" title="Kehrbuch importieren" lines={['CSV-Datei hochladen oder aktualisieren']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
           <ListCard icon="ph-fingerprint" title="Anmeldung mit Passkey" lines={['Per Fingerabdruck oder Gesicht anmelden']} onClick={() => set({ sheet: 'passkeys' })} />
           <ListCard icon="ph-user-circle" title="Konto" lines={[o.name, `Kehrbezirk ${o.bez} · ${o.kreis}`]} onClick={() => set({ sheet: 'account' })} />
@@ -581,7 +595,45 @@ export default function SweepApp({ onLogout }) {
         </div>
       </>)}
 
+      {scr === 'chats' && <>
+        <PageHead title="Nachrichten" onBack={wide ? null : go('home')} />
+        <div style={sx('padding:6px 16px 0')}>
+          <button className="glass" onClick={go('notify')} style={sx('width:100%;text-align:left;display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
+            <Icon n="ph-megaphone-simple" style={sx('font-size:22px;color:var(--color-accent-300)')} />
+            <span style={sx('flex:1')}><span style={sx('display:block;font-size:15px;font-weight:500')}>Rundnachricht an eine Straße</span><span style={sx('font-size:12px;color:var(--color-neutral-400)')}>z. B. „Komme 15 Min. später“ an alle Haushalte</span></span>
+            <Icon n="ph-caret-right" style={sx('color:var(--color-neutral-400)')} />
+          </button>
+        </div>
+        <SectionLabel pad="22px 22px 8px">Chats mit Kunden</SectionLabel>
+        <div style={sx('display:flex;flex-direction:column;gap:8px;padding:0 16px 20px')}>
+          {!chats.data && <div style={sx('padding:16px 6px;font-size:13px;color:var(--color-neutral-400)')}>Lädt …</div>}
+          {chats.data && !chats.data.chats.length && <div style={sx('padding:14px 6px;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Noch keine Unterhaltungen. Schreibt Ihnen ein Kunde, erscheint er hier. Selbst anschreiben: unter „Kunden“ einen Haushalt öffnen → „Nachricht schreiben“.</div>}
+          {chats.data?.chats.map(t => (
+            <button key={t.id} className="glass" onClick={() => openChat(t.id)} style={sx(`text-align:left;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer${t.unread ? ';box-shadow:0 0 0 1px var(--color-accent-600)' : ''}`)}>
+              <Avatar ini={t.name.slice(0, 2).toUpperCase()} size={44} fs={15} accent={!!t.unread} />
+              <span style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:2px')}>
+                <span style={sx('display:flex;gap:8px;align-items:baseline')}><span style={sx(`flex:1;font-size:15px;${t.unread ? 'font-weight:600' : 'font-weight:500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap`)}>Familie {t.name}</span><span style={sx('font-size:11px;color:var(--color-neutral-500);flex:none')}>{fmtAt(t.at)}</span></span>
+                <span style={sx('font-size:12px;color:var(--color-neutral-500)')}>{t.street} {t.nr}</span>
+                <span style={sx(`font-size:13px;color:${t.unread ? 'var(--color-text)' : 'var(--color-neutral-400)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap`)}>{t.lastMine ? 'Sie: ' : ''}{t.last}</span>
+              </span>
+              {!!t.unread && <span style={sx('min-width:22px;height:22px;padding:0 6px;border-radius:11px;font-size:12px;font-weight:600;display:grid;place-items:center;background:#e5484d;color:#fff;flex:none')}>{t.unread}</span>}
+            </button>
+          ))}
+        </div>
+      </>}
+
+      {scr === 'chat' && <>
+        <BackHeader onBack={go('chats')} title={th ? `Familie ${th.name}` : 'Nachrichten'} sub={th ? `${th.street} ${th.nr}, ${th.plz} ${th.ort}` : ''}
+          right={th?.phone ? <a className="btn btn-secondary btn-icon" href={`tel:${th.phone.replace(/[^\d+]/g, '')}`} aria-label={`Familie ${th.name} anrufen`} style={sx('width:42px;height:42px')}><Icon n="ph-phone" /></a> : null} />
+        {!th ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
+          {!th.hasApp && <div style={sx('margin:12px 16px 0;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);font-size:13px;color:var(--color-neutral-300);display:flex;gap:10px;align-items:center;text-wrap:pretty')}><Icon n="ph-info" style={sx('font-size:18px;flex:none')} />Dieser Haushalt nutzt die App noch nicht. {th.phone ? 'Bitte anrufen.' : 'Bitte persönlich oder per Brief Kontakt aufnehmen.'}</div>}
+          <ChatThread ini={th.name.slice(0, 2).toUpperCase()} empty={th.hasApp ? `Schreiben Sie Familie ${th.name} – die Nachricht erscheint in ihrer App, bei Bedarf auch per E-Mail.` : ''}
+            items={th.messages.map(m => ({ key: m.id, mine: m.fromSweep, text: m.text, at: m.at, read: m.fromSweep ? m.read : null }))} />
+        </>}
+      </>}
+
       {scr === 'notify' && <>
+        {!wide && <PageHead title="" onBack={go('chats')} />}
         <div style={sx('padding:10px 22px 0')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Nachricht senden</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{mc ? `In der App und per E-Mail an Kunden der ${mc.street}` : 'An Ihre Kunden'}</div></div>
         {md && !md.campaigns.length && <div style={sx('margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Sobald Sie Zeitfenster für eine Straße gesendet haben, können Sie hier den Haushalten schreiben.</div>}
         {mc && <div style={sx('padding:14px 16px 0;display:flex;flex-direction:column;gap:14px')}>

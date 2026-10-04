@@ -10,7 +10,7 @@ Object.assign(process.env, { DATA_DIR: dir, TEST_MODE: '1', ADMIN_EMAILS: 'admin
 
 const { build } = await import('../index.js');
 const { get, all, run } = await import('../db.js');
-const { sendReminders } = await import('../jobs.js');
+const { sendReminders, sendChatMails } = await import('../jobs.js');
 let app;
 before(async () => { app = await build({ logger: false }); });
 
@@ -323,6 +323,45 @@ test('Nachrichten an Empfängergruppen, gelesen markieren', async () => {
   await ok('k1', 'POST', '/api/customer/read');
   st = await ok('k1', 'GET', '/api/customer/state');
   assert.ok(st.messages.every(x => x.read));
+});
+
+test('Messenger: Bewohner und Kaminfeger schreiben sich, gelesen, gebündelte E-Mail', async () => {
+  // Bewohner schreibt, Kaminfeger sieht die Unterhaltung mit Zähler
+  await ok('k1', 'POST', '/api/customer/chat', { text: 'Kann ich den Schlüssel beim Nachbarn lassen?' });
+  await ok('k1', 'POST', '/api/customer/chat', { text: 'Nr. 3, Familie Yilmaz.' });
+  await fails(400, 'k1', 'POST', '/api/customer/chat', { text: '   ' });
+  let ov = await ok('s', 'GET', '/api/sweep/overview');
+  assert.equal(ov.chatUnread, 2);
+  const list = await ok('s', 'GET', '/api/sweep/chats');
+  const t = list.chats[0];
+  assert.equal(t.unread, 2);
+  assert.equal(t.last, 'Nr. 3, Familie Yilmaz.');
+  const th = await ok('s', 'GET', `/api/sweep/chats/${t.id}`);
+  assert.equal(th.hasApp, true);
+  assert.equal(th.messages.length, 2);
+  // Nach 10 Minuten ungelesen: genau eine Mail an den Kaminfeger
+  run(`UPDATE chat_messages SET created_at = datetime('now','-11 minutes')`);
+  const before = all('SELECT id FROM outbox WHERE to_addr = ?', 'mb@test.de').length;
+  sendChatMails(); sendChatMails();
+  assert.equal(all('SELECT id FROM outbox WHERE to_addr = ?', 'mb@test.de').length, before + 1);
+  assert.match(lastMail('mb@test.de').subject, /Neue Nachricht/);
+  run(`UPDATE chat_messages SET created_at = datetime('now')`);
+  // Kaminfeger liest und antwortet
+  await ok('s', 'POST', `/api/sweep/chats/${t.id}/read`);
+  assert.equal((await ok('s', 'GET', '/api/sweep/overview')).chatUnread, 0);
+  await ok('s', 'POST', `/api/sweep/chats/${t.id}`, { text: 'Ja, gerne – ich klingle dort.' });
+  let st = await ok('k1', 'GET', '/api/customer/state');
+  assert.equal(st.chatUnread, 1);
+  const ch = await ok('k1', 'GET', '/api/customer/chat');
+  assert.equal(ch.canWrite, true);
+  assert.deepEqual(ch.messages.map(m => m.fromSweep), [false, false, true]);
+  await ok('k1', 'POST', '/api/customer/read');
+  assert.equal((await ok('k1', 'GET', '/api/customer/state')).chatUnread, 0);
+  // Fremde Haushalte und Haushalte ohne App
+  const other = get(`SELECT id FROM households WHERE id != ? AND id NOT IN (SELECT household_id FROM residents WHERE household_id IS NOT NULL)`, t.id);
+  await fails(400, 's', 'POST', `/api/sweep/chats/${other.id}`, { text: 'Hallo' });
+  await fails(404, 's', 'GET', '/api/sweep/chats/999999');
+  await fails(401, 'niemand', 'GET', '/api/customer/chat');
 });
 
 test('Erinnerungen am Vorabend und eine Stunde vorher', async () => {

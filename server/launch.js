@@ -88,6 +88,7 @@ function goLive(execute) {
     run(`DELETE FROM message_recipients WHERE household_id IN (${hIn}) OR message_id IN (SELECT id FROM messages WHERE campaign_id IN (${cIn}) OR sweep_id IN (${inList(sweeps.map(s => s.id))}))`);
     run(`DELETE FROM messages WHERE campaign_id IN (${cIn}) OR sweep_id IN (${inList(sweeps.map(s => s.id))})`);
     run(`DELETE FROM bookings WHERE campaign_id IN (${cIn}) OR household_id IN (${hIn})`);
+    run(`DELETE FROM chat_messages WHERE household_id IN (${hIn})`);
     run(`DELETE FROM campaigns WHERE id IN (${cIn})`); // Zeitfenster per CASCADE
     run(`DELETE FROM route_days WHERE district_id IN (${inList(dIds)})`);
     run(`DELETE FROM tokens WHERE (kind IN ('invite','member') AND ref_id IN (${hIn})) OR (kind = 'owner' AND ref_id IN (${inList(residents.map(r => r.id))})) OR (kind = 'activate' AND ref_id IN (${inList(sweeps.map(s => s.id))}))`);

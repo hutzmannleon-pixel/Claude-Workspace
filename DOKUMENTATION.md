@@ -112,7 +112,7 @@ Sobald der Kaminfeger seine Route startet, zeigt die App alle Häuser der Route.
 
 ### Weitere Bereiche
 
-- **Nachrichten** vom Kaminfeger, z. B. „Komme 15 Min. später“, mit Gelesen-Status.
+- **Nachrichten – Messenger mit dem Kaminfeger:** Ein Chat wie bei WhatsApp. Darin stehen die Rundnachrichten des Kaminfegers an die Straße (markiert mit „An alle in der Straße“) und die persönliche Unterhaltung. Bestätigte Bewohner können jederzeit selbst schreiben, z. B. „Der Schlüssel liegt beim Nachbarn“. Haken zeigen, ob der Kaminfeger die Nachricht gelesen hat (✓ gesendet, ✓✓ gelesen). Mitbewohner sehen denselben Chat.
 - **Leistungen:** Was bei der Feuerstättenschau passiert, dazu eine Checkliste zur Vorbereitung: Zugang zu Heizraum und Dachboden freihalten, Ofen ab dem Vorabend nicht heizen, Haustiere wegsperren.
 - **Profil:**
   - Haushalt und Mitbewohner einladen
@@ -162,7 +162,7 @@ strasse; hausnummer; plz; ort; eigentuemer; kundennummer; email; telefon
 
 - **Heute / Nächster Termin:** Route, Uhrzeit und Anzahl Termine.
 - **Bewohner-Anfragen:** „Wohnt X in der Y?“ mit Ja/Nein.
-- **Kacheln:** Termine (Tagesroute), Kunden, Straßen (rote Zahl = Straßen ohne Zeitfenster), Nachrichten.
+- **Kacheln:** Termine (Tagesroute), Kunden, Straßen (rote Zahl = Straßen ohne Zeitfenster), Nachrichten (rote Zahl = ungelesene Chats).
 
 ### Straßen und Zeitfenster
 
@@ -209,7 +209,16 @@ Jede Straße aus dem Kehrbuch hat einen von drei Zuständen:
 
 Suchbare Liste aller Haushalte mit dem Filter Alle / Geplant / Offen / Erledigt. Ein Tipp auf einen Haushalt zeigt die Details, die Telefonnummer und den Stand. „Zuletzt erledigt am …“ erscheint, wenn eine abgeschlossene Runde existiert.
 
-### Nachrichten
+### Nachrichten (Reiter „Chats“)
+
+**Chats mit Kunden (Messenger):**
+
+- Liste aller Unterhaltungen, neueste oben, ungelesene mit roter Zahl. Die Zahl steht auch am Reiter „Chats“.
+- Schreibt ein Bewohner, erscheint er hier. Selbst anschreiben: **Kunden → Haushalt öffnen → „Nachricht schreiben“**.
+- Im Chat: Telefon-Knopf oben rechts, Eingabe unten (Enter sendet, Umschalt+Enter = neue Zeile).
+- Nur Text, max. 1000 Zeichen pro Nachricht. Schreiben geht nur an Haushalte mit App-Konto, sonst zeigt der Chat „Bitte anrufen“.
+
+**Rundnachricht an eine Straße** (oben in der Chat-Liste):
 
 - Pro Straße an **alle**, nur **offene** Haushalte oder die **Route heute** schreiben.
 - **Vorlagen:**
@@ -314,6 +323,7 @@ Alle Rückmeldungen mit Bildschirmfoto, markierter Stelle, Gerät und ggf. Konta
 | Erinnerung Vorabend 18 Uhr / 1 Stunde vorher | Bewohner (abschaltbar) |
 | Sie wurden nicht angetroffen | Bewohner |
 | Nachricht von Ihrem Kaminfeger | Bewohner |
+| Neue Chat-Nachricht (nur wenn nach 10 Min. noch ungelesen, eine Mail je Chat) | Bewohner bzw. Kaminfeger |
 | Bewohner-Anfrage / Umzug gemeldet | Kaminfeger |
 | Wohnt X in der Y? (Link, 14 Tage) | Eigentümer |
 | Adresse bestätigt / nicht bestätigt | Bewohner |
@@ -340,6 +350,7 @@ Absender: `Kaminfeger Verwaltung <no-reply@kaminfeger-verwaltung.com>`, verschic
 | Sitzung Bewohner/Kaminfeger | 60 Tage |
 | Betreiber-Sperre bei Inaktivität | 5 Minuten |
 | Feedback | gelöscht nach 90 Tagen (erledigt) bzw. 180 Tagen |
+| Chat-Nachrichten | gelöscht nach 12 Monaten; E-Mail-Hinweis nur, wenn nach 10 Min. ungelesen |
 
 ---
 
@@ -559,6 +570,7 @@ BETRIEB.md          Kurzanleitung Betrieb
 | `route_days` | an welchem Tag die Route gestartet wurde |
 | `messages`, `message_recipients`, `message_reads` | Nachrichten an Haushalte |
 | `feedback` | Rückmeldungen inkl. Bild |
+| `chat_messages` | Messenger: Haushalt, Richtung (`from_sweep`), Text, gelesen, per Mail gemeldet |
 | `admin_log` | Protokoll |
 | `outbox` | Test-Postfach (nur Testmodus) |
 
@@ -572,8 +584,8 @@ Alle Antworten sind JSON. Fehler kommen als `{ error, field? }` mit HTTP 4xx. Sc
 |---|---|
 | Öffentlich | `GET /api/health`, `GET /api/config`, `GET /api/events` (SSE), `POST /api/auth/code`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/directory/options`, `GET/POST /api/owner/:token`, `GET /aktivieren/:token` |
 | Passkey | `POST /api/passkey/register/options|verify`, `POST /api/passkey/login/options|verify`, `GET /api/passkey/list`, `POST /api/passkey/delete` |
-| Bewohner | `lookup`, `invite/:token`, `register`, `verify-number`, `request-sweep`, `state`, `book`, `cancel`, `read`, `prefs`, `prep`, `members`, `move`, `readdress`, `delete`, `logout`, `calendar.ics` (alle unter `/api/customer/…`) |
-| Kaminfeger | `register`, `me`, `district`, `documents/:kind`, `submit`, `delete`, `kehrbuch`, `overview`, `customers`, `campaigns` (+`/:id`, `/:id/close`), `bookings` (+`/:id/move`, `/:id/cancel`), `windows/:id/cancel`, `route`, `route/start`, `visit`, `messages`, `tenant/:id` (alle unter `/api/sweep/…`) |
+| Bewohner | `lookup`, `invite/:token`, `register`, `verify-number`, `request-sweep`, `state`, `book`, `cancel`, `read`, `prefs`, `prep`, `members`, `move`, `readdress`, `delete`, `logout`, `calendar.ics`, `chat` (GET/POST) (alle unter `/api/customer/…`) |
+| Kaminfeger | `register`, `me`, `district`, `documents/:kind`, `submit`, `delete`, `kehrbuch`, `overview`, `customers`, `campaigns` (+`/:id`, `/:id/close`), `bookings` (+`/:id/move`, `/:id/cancel`), `windows/:id/cancel`, `route`, `route/start`, `visit`, `messages`, `tenant/:id`, `chats`, `chats/:hid` (GET/POST), `chats/:hid/read` (alle unter `/api/sweep/…`) |
 | Betreiber | `queue`, `sweeps/:id` (+`approve`, `reject`, `query`), `residents/:id`, `documents/:id`, `log`, `directory`, `demo`, `feedback` (alle unter `/api/admin/…`) |
 | Feedback | `POST /api/feedback` |
 
@@ -599,8 +611,8 @@ Alle Antworten sind JSON. Fehler kommen als `{ error, field? }` mit HTTP 4xx. Sc
 
 ## 3.6 Hintergrund-Aufgaben (`server/jobs.js`)
 
-- **Jede Minute:** Erinnerungen. Am Vorabend ab 18 Uhr und eine Stunde vor dem Termin, je nach Einstellung des Bewohners.
-- **Stündlich:** Aufräumen. Dokumente älter als 14 Tage, alte Codes, abgelaufene Sitzungen, ungenutzte Links und altes Feedback werden gelöscht.
+- **Jede Minute:** Erinnerungen. Am Vorabend ab 18 Uhr und eine Stunde vor dem Termin, je nach Einstellung des Bewohners. Außerdem E-Mail-Hinweise für Chat-Nachrichten, die seit 10 Minuten ungelesen sind (gebündelt, eine Mail je Chat und Richtung).
+- **Stündlich:** Aufräumen. Dokumente älter als 14 Tage, alte Codes, abgelaufene Sitzungen, ungenutzte Links, altes Feedback und Chat-Nachrichten älter als 12 Monate werden gelöscht.
 
 ## 3.7 Lokal entwickeln und testen
 
@@ -636,4 +648,4 @@ TEST_MODE=1 ADMIN_EMAILS=ich@example.de npm start
   - `--app-bg` ist der Hintergrundverlauf.
 - **Glas-Effekte:** `web/src/ds/liquid.css`.
 - **Kachelfarben:** `TILE_COLORS` in `web/src/ui.jsx`.
-- **Nach Designänderungen:** In `web/public/sw.js` die Cache-Version erhöhen (`kf-v7` → `kf-v7`), damit installierte Apps die neue Version laden.
+- **Nach Designänderungen:** In `web/public/sw.js` die Cache-Version erhöhen (`kf-v8` → `kf-v7`), damit installierte Apps die neue Version laden.

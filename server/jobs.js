@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
-import { all, run } from './db.js';
+import { get, all, run } from './db.js';
 import { queueMail } from './mail.js';
 import { parseDate, dayLabel, toMin, fmtMin } from './util.js';
+import { activeSweepForDistrict, sweepName, householdName } from './domain.js';
 
 const slotDate = (date, time) => { const d = parseDate(date); d.setMinutes(toMin(time)); return d; };
 
@@ -33,6 +34,31 @@ export function sendReminders(now = new Date()) {
   }
 }
 
+/**
+ * Messenger: Ungelesene Nachrichten nach 10 Minuten per E-Mail melden – je Unterhaltung und Richtung eine Mail,
+ * damit ein Hin und Her nicht für jede Zeile eine Mail auslöst.
+ */
+export function sendChatMails() {
+  const groups = all(`SELECT household_id hid, from_sweep, COUNT(*) n, MAX(id) last FROM chat_messages
+    WHERE read_at IS NULL AND mailed = 0 AND created_at <= datetime('now','-10 minutes') GROUP BY household_id, from_sweep`);
+  for (const g of groups) {
+    run('UPDATE chat_messages SET mailed = 1 WHERE household_id = ? AND from_sweep = ? AND mailed = 0 AND id <= ?', g.hid, g.from_sweep, g.last);
+    const h = get('SELECT * FROM households WHERE id = ?', g.hid);
+    const s = h && activeSweepForDistrict(h.district_id);
+    if (!h || !s) continue;
+    const last = get('SELECT text FROM chat_messages WHERE id = ?', g.last).text;
+    const more = g.n > 1 ? `\n\n(${g.n} neue Nachrichten)` : '';
+    if (g.from_sweep) {
+      const to = all(`SELECT u.email FROM residents r JOIN users u ON u.id = r.user_id WHERE r.household_id = ? AND r.status = 'verified' AND r.ch_mail = 1`, h.id).map(x => x.email);
+      for (const m of to) queueMail({ to: m, subject: `Neue Nachricht von Ihrem Kaminfeger ${sweepName(s)}`,
+        text: `„${last}“${more}\n\nAntworten Sie direkt in der App.`, link: `${config.baseUrl}/kunde`, linkLabel: 'Nachricht öffnen' });
+    } else {
+      queueMail({ to: s.email, subject: `Neue Nachricht: Familie ${householdName(h)}, ${h.street} ${h.nr}`,
+        text: `„${last}“${more}\n\nAntworten Sie direkt in Ihrer App.`, link: `${config.baseUrl}/kaminfeger`, linkLabel: 'Nachricht öffnen' });
+    }
+  }
+}
+
 /** Dokumente spätestens nach 14 Tagen löschen, abgelaufene Codes/Sessions aufräumen. */
 export function purge() {
   const cutoff = new Date(Date.now() - config.docMaxDays * 86400000).toISOString().replace('T', ' ').slice(0, 19);
@@ -42,12 +68,16 @@ export function purge() {
   }
   run(`DELETE FROM feedback WHERE (status = 'done' AND created_at < datetime('now','-90 days')) OR created_at < datetime('now','-180 days')`);
   run(`DELETE FROM codes WHERE created_at < datetime('now','-1 day')`);
+  run(`DELETE FROM chat_messages WHERE created_at < datetime('now','-12 months')`);
   run(`DELETE FROM sessions WHERE expires_at < ?`, new Date().toISOString());
   run(`DELETE FROM tokens WHERE expires_at < ? AND used_at IS NULL`, new Date(Date.now() - 30 * 86400000).toISOString());
 }
 
 export function startJobs() {
-  const tick = () => { try { sendReminders(); } catch (e) { console.error('Erinnerungen:', e); } };
+  const tick = () => {
+    try { sendReminders(); } catch (e) { console.error('Erinnerungen:', e); }
+    try { sendChatMails(); } catch (e) { console.error('Nachrichten-Mails:', e); }
+  };
   setInterval(tick, 60000).unref();
   setInterval(() => { try { purge(); } catch (e) { console.error('Aufräumen:', e); } }, 3600000).unref();
   purge();

@@ -213,6 +213,18 @@ CREATE TABLE IF NOT EXISTS admin_log (
   note TEXT,
   at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+-- Messenger: Unterhaltung je Haushalt mit dem Kaminfeger des Bezirks (nur Text, 12 Monate)
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id INTEGER PRIMARY KEY,
+  household_id INTEGER NOT NULL REFERENCES households(id),
+  from_sweep INTEGER NOT NULL,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  text TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  read_at TEXT,
+  mailed INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS chat_household ON chat_messages(household_id, id);
 CREATE TABLE IF NOT EXISTS outbox (
   id INTEGER PRIMARY KEY,
   to_addr TEXT NOT NULL,
@@ -259,7 +271,7 @@ export function tx(fn) {
 
 export function wipe() {
   const tables = ['message_reads', 'message_recipients', 'messages', 'route_days', 'bookings', 'windows', 'campaigns', 'residents', 'households',
-    'passkeys', 'feedback', 'documents', 'sweeps', 'districts', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox'];
+    'passkeys', 'feedback', 'documents', 'sweeps', 'districts', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox', 'chat_messages'];
   db.exec('PRAGMA foreign_keys = OFF');
   for (const t of tables) db.exec(`DELETE FROM ${t}`);
   db.exec('PRAGMA foreign_keys = ON');

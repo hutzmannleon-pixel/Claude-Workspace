@@ -32,6 +32,7 @@ export function wipeDemo() {
       run(`DELETE FROM message_recipients WHERE household_id IN (${ids(hs)})`);
       run(`DELETE FROM messages WHERE campaign_id IN (${ids(camps)}) OR sweep_id IN (SELECT id FROM sweeps WHERE district_id = ?)`, d.id);
       run(`DELETE FROM bookings WHERE household_id IN (${ids(hs)})`);
+      run(`DELETE FROM chat_messages WHERE household_id IN (${ids(hs)})`);
       run(`DELETE FROM campaigns WHERE district_id = ?`, d.id);
       run(`DELETE FROM route_days WHERE district_id = ?`, d.id);
       run(`DELETE FROM tokens WHERE kind IN ('invite','member') AND ref_id IN (${ids(hs)})`);
@@ -74,12 +75,18 @@ export function seedDemo() {
     run(`INSERT INTO bookings (campaign_id, household_id, window_id, time, source, status, updated_at) VALUES (?,?,?,?, 'app', 'cancelled', ?)`, cid, L[7], w2, s2[3], nowIso());
     // Bewohner-Konto: Familie Engel, Lindenweg 5, Termin heute
     const ruid = Number(run(`INSERT INTO users (email, role) VALUES (?, 'customer')`, DEMO_RESIDENT).lastInsertRowid);
-    run(`INSERT INTO residents (user_id, household_id, family_name, person_name, street, nr, plz, ort, status, method, verified_at, ch_mail, rem_eve, rem_hour)
-      VALUES (?, ?, 'Engel', 'Familie Engel', 'Lindenweg', '5', '00000', 'Musterstadt', 'verified', 'invite', ?, 1, 1, 1)`, ruid, L[4], nowIso());
+    run(`INSERT INTO residents (user_id, household_id, family_name, person_name, street, nr, plz, ort, status, method, verified_at, ch_mail, rem_eve, rem_hour, created_at)
+      VALUES (?, ?, 'Engel', 'Familie Engel', 'Lindenweg', '5', '00000', 'Musterstadt', 'verified', 'invite', ?, 1, 1, 1, datetime('now','-7 days'))`, ruid, L[4], nowIso());
     // Nachricht an die Straße
     const mid = Number(run(`INSERT INTO messages (sweep_id, campaign_id, text) VALUES (?,?,?)`, sid, cid,
       'Guten Tag! Ich komme zur Feuerstättenschau in den Lindenweg. Bitte wählen Sie in der App eine Zeit, in der jemand zu Hause ist.').lastInsertRowid);
     for (const h of L) run('INSERT INTO message_recipients (message_id, household_id) VALUES (?,?)', mid, h);
+    // Messenger: kurze Unterhaltung mit Familie Engel, die letzte Frage ist noch ungelesen
+    const chat = (h, fromSweep, uid, text, ago, read) => run(`INSERT INTO chat_messages (household_id, from_sweep, user_id, text, created_at, read_at, mailed)
+      VALUES (?,?,?,?, datetime('now', ?), ${read ? "datetime('now')" : 'NULL'}, 1)`, h, fromSweep ? 1 : 0, uid, text, ago);
+    chat(L[4], false, ruid, 'Guten Tag! Falls wir nicht da sind: Der Schlüssel liegt bei Familie Graf in Nr. 6.', '-3 hours', true);
+    chat(L[4], true, suid, 'Danke für den Hinweis, dann klingle ich dort.', '-2 hours', false);
+    chat(L[4], false, ruid, 'Wir haben seit Sommer einen neuen Kaminofen. Schauen Sie sich den bei der Gelegenheit mit an?', '-40 minutes', false);
     return { districtId: did, sweepUserId: suid, residentUserId: ruid };
   });
 }

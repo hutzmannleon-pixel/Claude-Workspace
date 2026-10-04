@@ -6,9 +6,9 @@ import { checkCode, requireUser, startSession, endSession } from '../auth.js';
 import { queueMail } from '../mail.js';
 import {
   makeLink, readLink, useLink, activeSweepForDistrict, sweepName, initials, campaignForHousehold, windowsOf, freeCount,
-  routeFor, routeStarted, householdName
+  routeFor, routeStarted, householdName, CHAT_MAX, chatMessages, chatPost, chatRead
 } from '../domain.js';
-import { bad, forbidden, notFound, clean, streetKey, nrKey, nowIso, slotsOf, toMin, fmtMin, dayLabel, parseDate, today, EMAIL_RE, normEmail } from '../util.js';
+import { limited, bad, forbidden, notFound, clean, streetKey, nrKey, nowIso, slotsOf, toMin, fmtMin, dayLabel, parseDate, today, EMAIL_RE, normEmail } from '../util.js';
 
 const LONG = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag', Sa: 'Samstag', So: 'Sonntag' };
 const longDay = label => { const [d, rest] = label.split(', '); return (LONG[d] || d) + ', ' + rest; };
@@ -171,8 +171,9 @@ export default async function customerRoutes(app) {
       WHERE b.household_id = ? AND b.visit = 'done' AND c.closed_at IS NOT NULL`, h.id)?.d : null;
     const pending = all(`SELECT data FROM tokens WHERE kind = 'member' AND ref_id = ? AND used_at IS NULL AND expires_at > ?`, h ? h.id : -1, nowIso())
       .map(t => JSON.parse(t.data).email).map(e => ({ ini: e.slice(0, 2).toUpperCase(), name: e, sub: 'Einladung gesendet' }));
+    const chatUnread = h && !moved ? get(`SELECT COUNT(*) n FROM chat_messages WHERE household_id = ? AND from_sweep = 1 AND read_at IS NULL AND created_at >= ?`, h.id, r.created_at).n : 0;
     return {
-      me: { email: u.email }, demo: isDemoEmail(u.email),
+      me: { email: u.email }, demo: isDemoEmail(u.email), chatUnread,
       resident: { family: r.family_name, street: h ? h.street : r.street, nr: h ? h.nr : r.nr, plz: h ? h.plz : r.plz, ort: h ? h.ort : r.ort,
         status: r.status, method: r.method, isMember: !!r.is_member,
         prefs: { eve: !!r.rem_eve, hour: !!r.rem_hour, push: !!r.ch_push, mail: !!r.ch_mail }, prep: JSON.parse(r.prep || '[]') },
@@ -230,6 +231,28 @@ export default async function customerRoutes(app) {
   app.post('/api/customer/read', async req => {
     const u = requireUser(req, 'customer'), r = residentOf(u);
     if (r.household_id) run(`INSERT OR IGNORE INTO message_reads (message_id, user_id) SELECT message_id, ? FROM message_recipients WHERE household_id = ?`, u.id, r.household_id);
+    if (r.household_id && r.status === 'verified') chatRead(r.household_id, false);
+    live.bump();
+    return { ok: true };
+  });
+
+  // ---------- Messenger mit dem Kaminfeger ----------
+  app.get('/api/customer/chat', async req => {
+    const u = requireUser(req, 'customer'), r = residentOf(u);
+    if (r.status !== 'verified' || !r.household_id) return { canWrite: false, messages: [] };
+    const h = get('SELECT * FROM households WHERE id = ?', r.household_id), s = activeSweepForDistrict(h.district_id);
+    return { canWrite: !!s, messages: chatMessages(h.id, r.created_at) };
+  });
+
+  app.post('/api/customer/chat', async req => {
+    const u = requireUser(req, 'customer'), r = residentOf(u);
+    if (r.status !== 'verified' || !r.household_id) throw forbidden('Schreiben geht, sobald Ihr Wohnsitz bestätigt ist.');
+    const h = get('SELECT * FROM households WHERE id = ?', r.household_id);
+    if (!activeSweepForDistrict(h.district_id)) throw bad('Ihr Kaminfeger nutzt die App gerade nicht.');
+    const text = String(req.body?.text || '').trim().slice(0, CHAT_MAX);
+    if (!text) throw bad('Bitte eine Nachricht eingeben.');
+    if (limited('chat:' + u.id, 40, 3600000)) throw bad('Zu viele Nachrichten in kurzer Zeit. Bitte etwas später weiterschreiben.');
+    chatPost(h.id, false, u.id, text);
     live.bump();
     return { ok: true };
   });
