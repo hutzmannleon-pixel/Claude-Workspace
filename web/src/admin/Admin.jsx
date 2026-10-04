@@ -3,7 +3,7 @@ import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, passkeySupported } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM, bubble } from '../ui.jsx';
+import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, codeSuccess, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM, bubble } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
@@ -39,14 +39,14 @@ function Lock({ onUnlock }) {
     if (!u) throw new Error('Anmeldung nicht gespeichert – bitte Cookies erlauben und über https:// aufrufen.');
     onUnlock(u);
   };
-  const unlock = () => act.run(async () => { await api('/api/auth/login', { body: { email: email.trim(), role: 'admin', code } }); lsSet(email.trim()); await finish(); });
+  const unlock = () => act.run(async () => { await api('/api/auth/login', { body: { email: email.trim(), role: 'admin', code } }); lsSet(email.trim()); await codeSuccess(); await finish(); });
   const passkeyUnlock = () => act.run(async () => { await loginPasskey('admin'); await finish(); });
   return (
     <Shell glow={GLOW.admin} top={<HomeBack />} bottom={
       <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2;display:flex;flex-direction:column;gap:12px')}>
         {!sent && <PasskeyLogin onPasskey={passkeyUnlock} busy={act.busy} label="Mit Passkey entsperren" hint="Beim ersten Mal mit Code per E-Mail entsperren – danach richten Sie den Passkey ein." />}
         {!sent && <Field label="Admin-E-Mail"><Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@betreiber.de" autoComplete="email" /></Field>}
-        {sent && <CodeInput email={email} value={code} onChange={setCode} label="Entsperrcode" onResend={send} />}
+        {sent && <CodeInput email={email} value={code} onChange={setCode} label="Entsperrcode" busy={act.busy} error={act.error} onComplete={unlock} onResend={send} />}
         {act.error && <ErrorLine text={act.error} />}
         <button className="btn btn-primary" disabled={act.busy || (sent ? code.length < 6 : !EMAIL_RE.test(email.trim()))} onClick={sent ? unlock : send} style={sx('width:100%;min-height:50px;font-size:15px')}>
           <Icon n={sent ? 'ph-lock-simple-open' : 'ph-envelope-simple'} style={sx('font-size:18px')} />{sent ? 'Entsperren' : 'Code per E-Mail senden'}</button>

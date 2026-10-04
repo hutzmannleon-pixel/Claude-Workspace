@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { sx, api, upload, useAction, useData, EMAIL_RE, fileSize } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, Field, Input, MailPreview, ErrorLine, FilePick } from '../ui.jsx';
 
 const T = (state, title, sub) => ({ title, sub, state });
 const LAENDER = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen', 'Mecklenburg-Vorpommern', 'Niedersachsen',
@@ -58,6 +58,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
   const register = () => act.run(async () => {
     markPasskeyOffer('sweep');
     await api('/api/sweep/register', { body: { first: st.first.trim(), last: st.last.trim(), bstreet: st.bstreet.trim(), bplz: st.bplz, bort: st.bort.trim(), phone: st.phone.trim(), email: st.email.trim(), code: st.code } });
+    await codeSuccess();
     await me.reload(); set({ screen: 'district' });
   });
   const afterLogin = async () => {
@@ -65,7 +66,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
     if (x.status === 'active') return onDone();
     set({ screen: x.status === 'draft' ? (x.district ? 'proof' : 'district') : 'pending' });
   };
-  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } }); markPasskeyOffer('sweep'); await afterLogin(); });
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'sweep', code: st.lCode } }); await codeSuccess(); markPasskeyOffer('sweep'); await afterLogin(); });
   const passkeyLogin = () => act.run(async () => { await loginPasskey('sweep'); await afterLogin(); });
   const uploadDoc = (kind, file) => act.run(async () => { set({ uploading: kind }); try { await upload(`/api/sweep/documents/${kind}`, file); await me.reload(); } finally { set({ uploading: null }); } });
   const removeDoc = kind => act.run(async () => { await api(`/api/sweep/documents/${kind}`, { method: 'DELETE' }); await me.reload(); });
@@ -140,7 +141,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
           {!st.lSent && <PasskeyLogin onPasskey={passkeyLogin} busy={act.busy} />}
           <Field label="E-Mail-Adresse"><Input type="email" value={st.lEmail} onChange={e => set({ lEmail: e.target.value, lSent: false, lCode: '' })} placeholder="name@beispiel.de" autoComplete="email" /></Field>
         </div>
-        {st.lSent && <div style={sx('padding:22px 16px 0')}><CodeInput email={st.lEmail} value={st.lCode} onChange={v => set({ lCode: v })} label="Anmeldecode" onResend={() => sendCode(st.lEmail, 'login', { lCode: '' })} /></div>}
+        {st.lSent && <div style={sx('padding:22px 16px 0')}><CodeInput email={st.lEmail} value={st.lCode} onChange={v => set({ lCode: v })} label="Anmeldecode" busy={act.busy} error={act.error} onComplete={login} onResend={() => sendCode(st.lEmail, 'login', { lCode: '' })} /></div>}
         <div style={sx('margin:22px 16px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-shield-check" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Kein Passwort nötig. Der Code gilt 10 Minuten und nur einmal.</span></div>
       </>}
 
@@ -159,7 +160,7 @@ export default function SweepOnboarding({ start = 'welcome', notice, onDone }) {
           <Field label="Telefon für Kunden (optional)"><Input type="tel" value={st.phone} onChange={e => set({ phone: e.target.value })} placeholder="z. B. 0761 123456" autoComplete="tel" /></Field>
           <Field label="Geschäftliche E-Mail"><Input type="email" value={st.email} onChange={e => set({ email: e.target.value, codeSent: false, code: '' })} placeholder="name@betrieb.de" autoComplete="email" /></Field>
         </div>
-        {st.codeSent ? <div style={sx('padding:22px 16px 20px')}><CodeInput email={st.email} value={st.code} onChange={v => set({ code: v })} onResend={() => sendCode(st.email, 'register', { code: '' })} /></div> : <div style={sx('height:20px')} />}
+        {st.codeSent ? <div style={sx('padding:22px 16px 20px')}><CodeInput email={st.email} value={st.code} onChange={v => set({ code: v })} busy={act.busy} error={act.error} onResend={() => sendCode(st.email, 'register', { code: '' })} /></div> : <div style={sx('height:20px')} />}
       </>}
 
       {scr === 'district' && <>

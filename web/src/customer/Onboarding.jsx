@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
 
@@ -93,6 +93,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     const body = qr ? { email: st.email.trim(), code: st.code, invite: st.token, person: st.person.trim() }
       : { email: st.email.trim(), code: st.code, street: st.street.trim(), nr: st.nr.trim(), plz: st.plz.trim(), ort: st.ort.trim(), name: st.name.trim() };
     const r = await api('/api/customer/register', { body });
+    await codeSuccess();
     markPasskeyOffer('customer');
     set({ reg: { ...r, method: qr ? 'invite' : null }, screen: r.next === 'verify' ? 'verify' : 'done' });
   });
@@ -116,7 +117,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     if (s.resident.status === 'needs_verify') set({ ...fromState(s), screen: 'verify' });
     else onDone();
   };
-  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } }); markPasskeyOffer('customer'); await afterLogin(); });
+  const login = () => act.run(async () => { await api('/api/auth/login', { body: { email: st.lEmail.trim(), role: 'customer', code: st.lCode } }); await codeSuccess(); markPasskeyOffer('customer'); await afterLogin(); });
   const passkeyLogin = () => act.run(async () => { await loginPasskey('customer'); await afterLogin(); });
 
   let cta = null, alt = null;
@@ -194,7 +195,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
           <Field label="E-Mail-Adresse"><Input type="email" value={st.lEmail} onChange={e => set({ lEmail: e.target.value, lSent: false, lCode: '' })} placeholder="name@beispiel.de" autoComplete="email" /></Field>
         </div>
         {st.lSent && <div style={sx('padding:22px 16px 0')}>
-          <CodeInput email={st.lEmail} value={st.lCode} onChange={v => set({ lCode: v })} label="Anmeldecode" onResend={() => sendCode(st.lEmail, 'login', { lCode: '' })} />
+          <CodeInput email={st.lEmail} value={st.lCode} onChange={v => set({ lCode: v })} label="Anmeldecode" busy={act.busy} error={act.error} onComplete={login} onResend={() => sendCode(st.lEmail, 'login', { lCode: '' })} />
         </div>}
         <div style={sx('margin:22px 16px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-shield-check" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Kein Passwort nötig. Der Code gilt 10 Minuten und nur einmal.</span></div>
       </>}
@@ -270,7 +271,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
           <Field label="E-Mail-Adresse"><Input type="email" value={st.email} onChange={e => set({ email: e.target.value, codeSent: false, code: '' })} placeholder="name@beispiel.de" autoComplete="email" /></Field>
         </div>
         {st.codeSent && <div style={sx('padding:22px 16px 20px')}>
-          <CodeInput email={st.email} value={st.code} onChange={v => set({ code: v })} onResend={() => sendCode(st.email, 'register', { code: '' })} />
+          <CodeInput email={st.email} value={st.code} onChange={v => set({ code: v })} busy={act.busy} error={act.error} onResend={() => sendCode(st.email, 'register', { code: '' })} />
         </div>}
       </>}
 

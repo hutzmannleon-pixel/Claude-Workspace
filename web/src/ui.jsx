@@ -208,18 +208,94 @@ export function Toast({ text, icon = 'ph-check-circle' }) {
 }
 
 /** 6-stelliger Code mit unsichtbarem Eingabefeld darüber */
-export function CodeInput({ email, value, onChange, onResend, label = 'Bestätigungscode' }) {
+/** Nach erfolgreicher Prüfung aufrufen: spielt in der Code-Eingabe die Erfolgs-Animation und wartet, bis sie zu sehen war. */
+export function codeSuccess() {
+  window.dispatchEvent(new Event('kf-code-ok'));
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return new Promise(r => setTimeout(r, reduced ? 250 : 1350));
+}
+
+const SPARKS = Array.from({ length: 14 }, (_, i) => {
+  const a = (i / 14) * Math.PI * 2 + (i % 2) * 0.2, d = 46 + (i % 3) * 16;
+  return { x: Math.cos(a) * d, y: Math.sin(a) * d, s: 3 + (i % 3), delay: (i % 4) * 40 };
+});
+
+/**
+ * 6-stellige Code-Eingabe. Sind alle Ziffern da, fliegen die Kästchen auf einen Ring und drehen sich
+ * (bei busy schneller). Nach codeSuccess() werden sie grün, laufen in der Mitte zusammen und werden zum Haken.
+ * Bei einem Fehler wackeln sie rot und gehen zurück in die Reihe. onComplete wird kurz nach der 6. Ziffer aufgerufen.
+ */
+export function CodeInput({ email, value, onChange, onResend, label = 'Bestätigungscode', busy = false, error = null, onComplete }) {
+  const box = useRef(null);
+  const [w, setW] = useState(320);
+  const [phase, setPhase] = useState('row'); // row | ring | ok | done | bad
+  const [badVal, setBadVal] = useState(null);
+  const full = value.length === 6;
+  useEffect(() => {
+    const el = box.current; if (!el) return;
+    const ro = new ResizeObserver(() => setW(el.clientWidth)); ro.observe(el); setW(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+  // Reihe ↔ Ring je nach Eingabe
+  useEffect(() => {
+    if (phase === 'ok' || phase === 'done') return;
+    setPhase(full && value !== badVal ? 'ring' : 'row');
+    if (full && value !== badVal && onComplete && !busy) { const t = setTimeout(onComplete, 650); return () => clearTimeout(t); }
+  }, [value, badVal]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fehler: rot wackeln, dann zurück in die Reihe
+  useEffect(() => {
+    if (!error || !full || phase === 'ok') return;
+    setPhase('bad');
+    const t = setTimeout(() => { setBadVal(value); setPhase('row'); }, 520);
+    return () => clearTimeout(t);
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Erfolg
+  useEffect(() => {
+    const on = () => { if (value.length !== 6) return; setPhase('ok'); setTimeout(() => setPhase('done'), 520); };
+    window.addEventListener('kf-code-ok', on);
+    return () => window.removeEventListener('kf-code-ok', on);
+  }, [value]);
+
+  const ring = phase !== 'row', ok = phase === 'ok' || phase === 'done', done = phase === 'done', bad = phase === 'bad';
+  const H = ring ? 168 : 54, gap = 6, bw = (w - gap * 5) / 6, R = 60, S = 44;
+  const color = ok ? 'var(--color-ok)' : bad ? '#ff6b6b' : null;
+  const pos = i => {
+    if (!ring) return { left: i * (bw + gap), top: 0, width: bw, height: 54, opacity: 1 };
+    const a = -Math.PI / 2 + i * (Math.PI / 3), r = done ? 0 : R, s = done ? 8 : S;
+    return { left: w / 2 + Math.cos(a) * r - s / 2, top: H / 2 + Math.sin(a) * r - s / 2, width: s, height: s, opacity: done ? 0 : 1 };
+  };
   return (
     <div style={sx('display:flex;flex-direction:column;gap:10px')}>
       <div style={sx('font-size:13px;color:var(--color-neutral-400);display:flex;gap:8px;align-items:center;padding:0 6px')}><Icon n="ph-envelope-simple-open" style={sx('font-size:18px;color:var(--color-accent)')} /><span>Code an {email} gesendet</span></div>
-      <div style={sx('position:relative;display:grid;grid-template-columns:repeat(6, 1fr);gap:6px')}>
-        {[0, 1, 2, 3, 4, 5].map(i => (
-          <div key={i} style={sx(`height:54px;border-radius:var(--radius-md);border:1px solid ${i === value.length ? 'var(--color-accent)' : 'var(--color-neutral-700)'};background:var(--color-surface);display:grid;place-items:center;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums`)}>{value[i] || ''}</div>
-        ))}
-        <input value={value} onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} autoComplete="one-time-code" aria-label={label}
+      <div ref={box} className={bad ? 'kf-otp-shake' : ''} style={sx(`position:relative;height:${H}px;transition:height .55s var(--spring-soft)`)}>
+        <div className={ring && !done ? (busy || ok ? 'kf-otp-spin fast' : 'kf-otp-spin') : ''} style={sx('position:absolute;inset:0')}>
+          {ring && <div aria-hidden="true" style={sx(`position:absolute;left:${w / 2 - R}px;top:${H / 2 - R}px;width:${R * 2}px;height:${R * 2}px;border-radius:50%;border:1px dashed ${color || 'color-mix(in srgb, var(--acc) 45%, transparent)'};opacity:${done ? 0 : 0.8};transition:opacity .3s, border-color .3s`)} />}
+          {[0, 1, 2, 3, 4, 5].map(i => {
+            const p = pos(i);
+            return (
+              <div key={i} style={{ position: 'absolute', ...p, borderRadius: ring ? 14 : 'var(--radius-md)', display: 'grid', placeItems: 'center',
+                fontSize: ring ? 18 : 22, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+                border: `1px solid ${color || (!ring && i === value.length ? 'var(--color-accent)' : ring ? 'color-mix(in srgb, var(--acc) 60%, transparent)' : 'var(--color-neutral-700)')}`,
+                background: ok ? 'color-mix(in srgb, var(--color-ok) 18%, transparent)' : bad ? 'rgba(255,107,107,0.14)' : 'var(--color-surface)',
+                color: color || 'inherit', boxShadow: color ? `0 0 16px ${ok ? 'color-mix(in srgb, var(--color-ok) 45%, transparent)' : 'rgba(255,107,107,0.4)'}` : ring ? '0 0 14px color-mix(in srgb, var(--acc) 25%, transparent)' : 'none',
+                transition: `left .6s var(--spring-soft) ${i * 35}ms, top .6s var(--spring-soft) ${i * 35}ms, width .5s var(--spring-soft), height .5s var(--spring-soft), opacity .3s ${done ? '.15s' : '0s'}, border-color .25s, background .25s, color .25s, box-shadow .25s, border-radius .4s, font-size .4s` }}>
+                {done ? '' : value[i] || ''}
+              </div>
+            );
+          })}
+        </div>
+        {ring && !done && <div aria-hidden="true" style={sx(`position:absolute;left:${w / 2 - 3}px;top:${H / 2 - 3}px;width:6px;height:6px;border-radius:50%;background:${color || 'var(--acc)'};box-shadow:0 0 10px ${color || 'var(--acc)'}`)} />}
+        {done && <div aria-hidden="true" style={sx(`position:absolute;left:${w / 2}px;top:${H / 2}px`)}>
+          {SPARKS.map((k, i) => <span key={i} className="kf-otp-spark" style={{ '--dx': k.x + 'px', '--dy': k.y + 'px', width: k.s, height: k.s, animationDelay: k.delay + 'ms' }} />)}
+          <div className="kf-otp-check"><Icon w="ph-bold" n="ph-check" style={sx('font-size:30px')} /></div>
+        </div>}
+        <input value={value} onChange={e => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" maxLength={6} autoComplete="one-time-code" aria-label={label} disabled={ok}
           style={sx('position:absolute;inset:0;opacity:0;font-size:16px;cursor:text;width:100%')} autoFocus />
       </div>
-      {onResend && <button className="btn btn-ghost" onClick={onResend} style={sx('align-self:flex-start;min-height:40px;padding-inline:6px')}>Code erneut senden</button>}
+      <div aria-live="polite" style={sx(`min-height:18px;text-align:center;font-size:13px;font-weight:500;color:${ok ? 'var(--color-ok)' : 'var(--color-neutral-400)'};opacity:${ring ? 1 : 0};transition:opacity .3s`)}>
+        {ok ? 'Bestätigt' : bad ? '' : busy ? 'Wird geprüft …' : ring ? 'Code vollständig' : ''}
+      </div>
+      {onResend && !ok && <button className="btn btn-ghost" onClick={onResend} style={sx('align-self:flex-start;min-height:40px;padding-inline:6px')}>Code erneut senden</button>}
     </div>
   );
 }

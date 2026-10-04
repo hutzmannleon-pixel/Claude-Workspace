@@ -87,6 +87,22 @@ button:where([style*="var(--color-surface)"], [style*="cursor:pointer"], [style*
 .kf-breathe { animation: kf-breathe 9s ease-in-out infinite alternate; }
 @keyframes kf-breathe { from { opacity: .75; } to { opacity: 1; } }
 
+/* Code-Eingabe: Ring dreht sich, Erfolg mit Haken und Funken, Fehler wackelt */
+.kf-otp-spin { animation: kf-otp-spin 9s linear infinite; }
+.kf-otp-spin.fast { animation-duration: 1.4s; }
+@keyframes kf-otp-spin { to { transform: rotate(360deg); } }
+.kf-otp-shake { animation: kf-otp-shake .45s cubic-bezier(.36,.07,.19,.97); }
+@keyframes kf-otp-shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+.kf-otp-check { position: absolute; left: -32px; top: -32px; width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center;
+  color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--color-ok), 0 0 28px color-mix(in srgb, var(--color-ok) 55%, transparent);
+  animation: kf-otp-pop .6s var(--spring) both; }
+@keyframes kf-otp-pop { from { transform: scale(.2) rotate(-25deg); opacity: 0; } }
+.kf-otp-spark { position: absolute; left: 0; top: 0; border-radius: 50%; background: var(--color-ok); box-shadow: 0 0 6px var(--color-ok);
+  animation: kf-otp-spark 1s var(--ease-out) both; }
+@keyframes kf-otp-spark { from { transform: translate(-50%, -50%) scale(.4); opacity: 0; } 25% { opacity: 1; }
+  to { transform: translate(calc(var(--dx) - 50%), calc(var(--dy) - 50%)) scale(1); opacity: 0; } }
+
 /* Wer „Bewegung reduzieren“ eingestellt hat, bekommt keine Animationen */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
