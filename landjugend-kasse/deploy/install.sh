@@ -66,7 +66,6 @@ if [ ! -f $ENV ]; then
   say "Einstellungen anlegen: $ENV"
   BUCKET=$(grep -E '^BACKUP_S3_BUCKET=' /etc/kaminfeger.env 2>/dev/null | cut -d= -f2- || true)
   BREGION=$(grep -E '^BACKUP_S3_REGION=' /etc/kaminfeger.env 2>/dev/null | cut -d= -f2- || true)
-  umask 027
   cat > $ENV <<EOF
 NODE_ENV=production
 HOST=127.0.0.1
@@ -155,11 +154,15 @@ $DOMAIN {
 	reverse_proxy 127.0.0.1:$PORT
 }
 EOF
+# Caddy läuft als eigener Benutzer und muss die Datei lesen können
+chmod 644 $CADDY_SITE
 if ! grep -qF "import $CADDY_SITE" $CADDYFILE; then
   cp $CADDYFILE "$CADDYFILE.vor-landjugend-$(date +%Y%m%d%H%M%S)"
   printf '\nimport %s\n' "$CADDY_SITE" >> $CADDYFILE
 fi
-if ! caddy validate --config $CADDYFILE --adapter caddyfile >/tmp/caddy-validate.log 2>&1; then
+# Als der Benutzer prüfen, unter dem Caddy läuft – root dürfte auch Dateien lesen, die Caddy nicht lesen kann
+CADDY_USER=$(systemctl show -p User --value caddy); CADDY_USER=${CADDY_USER:-root}
+if ! sudo -u "$CADDY_USER" env HOME=/tmp caddy validate --config $CADDYFILE --adapter caddyfile >/tmp/caddy-validate.log 2>&1; then
   cat /tmp/caddy-validate.log
   LAST=$(ls -t $CADDYFILE.vor-landjugend-* 2>/dev/null | head -1)
   [ -n "$LAST" ] && cp "$LAST" $CADDYFILE
