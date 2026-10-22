@@ -19,6 +19,7 @@ ENV=/etc/landjugend-kasse.env
 CADDY_SITE=/etc/caddy/landjugend-kasse.caddy
 CADDYFILE=/etc/caddy/Caddyfile
 export PATH=/opt/node/bin:$PATH
+export HOME=${HOME:-/root}   # fehlt in SSM-Befehlen; npm braucht es für den Cache
 say() { echo "==> $*"; }
 
 [ "$(id -u)" = 0 ] || { echo "Bitte als root ausführen (sudo)."; exit 1; }
