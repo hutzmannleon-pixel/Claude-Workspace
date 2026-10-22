@@ -5,6 +5,7 @@ import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fstatic from '@fastify/static';
 import { config } from './config.js';
+import { get } from './db.js';
 import accountRoutes from './routes/account.js';
 import kasseRoutes from './routes/kasse.js';
 import uploadRoutes from './routes/upload.js';
@@ -35,6 +36,9 @@ export async function build({ logger = true } = {}) {
     if (err.code === 'FST_REQ_FILE_TOO_LARGE') return reply.code(400).send({ error: 'Die Datei ist zu groß.' });
     reply.code(status).send({ error: status >= 500 ? 'Interner Fehler. Bitte später erneut versuchen.' : err.message, code: err.code });
   });
+
+  // Für Überwachung und das Installationsskript
+  app.get('/api/health', async () => ({ ok: !!get('SELECT 1 ok').ok }));
 
   await app.register(accountRoutes);
   await app.register(kasseRoutes);
