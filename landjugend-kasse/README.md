@@ -75,6 +75,29 @@ docker compose exec app node -e "new (require('node:sqlite').DatabaseSync)('data
 
 **Update:** `git pull && docker compose up -d --build`
 
+## Betrieb auf dem Kaminfeger-Server
+
+Die Kasse läuft auf demselben EC2-Server wie die Kaminfeger-Verwaltung (`i-0ba1ee2f39dff0ff1`, eu-north-1), aber komplett getrennt:
+
+| Teil | Wo |
+|---|---|
+| Adresse | https://kasse.landjugend-reinstetten.com (DNS bei IONOS: A-Eintrag `kasse` → 13.61.247.225) |
+| Dienst | `landjugend-kasse` (systemd, Benutzer `landjugend`, Port 3101 nur lokal) |
+| Code | `/opt/landjugend/app/landjugend-kasse` |
+| Daten | `/opt/landjugend/data` (`kasse.sqlite` + `belege/`) |
+| Einstellungen | `/etc/landjugend-kasse.env` (`APP_SECRET` nie ändern) |
+| HTTPS | Caddy: eigene Datei `/etc/caddy/landjugend-kasse.caddy`, im `Caddyfile` nur `import` |
+| Sicherung | täglich 03:40 UTC nach `/opt/landjugend/backups` (14 Tage) und S3 `…/landjugend/` |
+
+Zugang über AWS Session Manager. **Update** (Code holen, bauen, neu starten; Daten bleiben):
+
+```
+curl -fsSL https://raw.githubusercontent.com/hutzmannleon-pixel/Claude-Workspace/<branch>/landjugend-kasse/deploy/install.sh -o /root/landjugend-install.sh
+sudo DOMAIN=kasse.landjugend-reinstetten.com BRANCH=<branch> bash /root/landjugend-install.sh
+```
+
+Status und Protokoll: `systemctl status landjugend-kasse`, `journalctl -u landjugend-kasse -n 100`.
+
 ## Bewusst (noch) nicht enthalten
 
 - Automatischer Abruf der Bankumsätze. Zahlungen werden von Hand erfasst. Ein CSV-Import aus dem Online-Banking ließe sich später ergänzen.
