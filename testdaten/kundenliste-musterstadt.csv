@@ -1,4 +1,4 @@
-﻿strasse;hausnummer;plz;ort;eigentuemer;kundennummer;email;telefon
+﻿strasse;hausnummer;plz;ort;kunde;kundennummer;email;telefon
 Teststraße;1;99999;Musterstadt;Albrecht;TEST-0001;;0000 610266
 Teststraße;2;99999;Musterstadt;Fam. Bauer;TEST-0002;;0000 303254
 Teststraße;3;99999;Musterstadt;Fam. Clausen;TEST-0003;;0000 754434

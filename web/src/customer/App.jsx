@@ -20,15 +20,17 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   }, [ui.screen, chat.data]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!s) return error && error.status !== 401 ? <Shell glow={GLOW.customer}><Hero icon="ph-wifi-slash" muted title="Keine Verbindung" sub={error.message} /></Shell> : <Loading />;
 
-  const r = s.resident, c = s.campaign, b = s.booking, d = s.district;
+  const r = s.resident, c = s.campaign, b = s.booking;
   const scr = ui.screen, len = c ? c.slotLen : 30;
-  const sweep = d?.sweep, sweepName = sweep?.name || 'Ihr Kaminfeger';
+  // Wer der Kaminfeger ist, kommt erst mit bestätigtem Wohnsitz vom Server – bis dahin neutral „Ihr Kaminfeger“
+  const sweep = s.sweep, sweepName = sweep?.name || 'Ihr Kaminfeger';
+  // Was ansteht, legt der Kaminfeger je Runde fest (Kehren, Überprüfen, Messen …)
+  const work = c?.work || 'Kaminfeger-Termin';
   const verified = r.status === 'verified';
   const pendingVerify = ['asked', 'owner', 'review'].includes(r.status);
   const addr = `${r.street} ${r.nr}`;
   const unreadList = s.messages.filter(m => !m.read);
   const unreadAll = unreadList.length + (s.chatUnread || 0);
-  const year = c?.windows[0] ? c.windows[0].date.slice(0, 4) : String(new Date().getFullYear());
   const call = fn => act.run(async () => { await fn(); await reload(); });
 
   // Live am Termintag
@@ -37,8 +39,8 @@ export default function CustomerApp({ onLogout, onReaddress }) {
   if (lv) {
     const myIdx = lv.stops.findIndex(x => x.me), ci = lv.stops.findIndex(x => x.cur), curIdx = ci < 0 ? lv.stops.length : ci;
     const dist = myIdx - curIdx, slot = `Ihr Slot ${b.t}–${b.end}`;
-    if (b.visit === 'done') { liveTitle = 'Erledigt – vielen Dank!'; liveSub = 'Die Feuerstättenschau ist abgeschlossen.'; }
-    else if (b.visit === 'missed') { liveTitle = 'Sie wurden nicht angetroffen'; liveSub = 'Bitte wählen Sie eine neue Zeit – die Feuerstättenschau bleibt Pflicht.'; }
+    if (b.visit === 'done') { liveTitle = 'Erledigt – vielen Dank!'; liveSub = 'Ihr Kaminfeger war da – alles erledigt.'; }
+    else if (b.visit === 'missed') { liveTitle = 'Sie wurden nicht angetroffen'; liveSub = 'Bitte wählen Sie eine neue Zeit, damit der Termin nachgeholt werden kann.'; }
     else if (dist <= 0) { liveTitle = 'Ihr Kaminfeger ist jetzt bei Ihnen'; liveSub = 'Bitte öffnen Sie die Tür.'; }
     else if (dist === 1) { liveTitle = 'Sie sind als Nächstes dran'; liveSub = `Gerade bei Nr. ${lv.curNr} · ${slot}`; }
     else { liveTitle = `Ihr Kaminfeger ist ${dist} Häuser entfernt`; liveSub = `Gerade bei Nr. ${lv.curNr} · ${slot}`; }
@@ -104,7 +106,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
     <PasskeyOffer role="customer" />
     {ui.overlay === 'cancel' && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Termin absagen?</div>
-      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Ihr Slot {myDate} · {myTime} wird für Nachbarn frei. Die Feuerstättenschau bleibt Pflicht – meist ist <strong style={sx('font-weight:500;color:var(--color-text)')}>Verschieben</strong> die bessere Wahl.</div>
+      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Ihr Slot {myDate} · {myTime} wird für Nachbarn frei. Die Fristen aus Ihrem Feuerstättenbescheid gelten weiter – meist ist <strong style={sx('font-weight:500;color:var(--color-text)')}>Verschieben</strong> die bessere Wahl.</div>
       <button className="btn btn-primary" onClick={toResched} style={sx('min-height:48px;margin-top:6px')}>Lieber verschieben</button>
       <button className="btn btn-secondary" disabled={act.busy} onClick={() => call(async () => { await api('/api/customer/cancel', { body: {} }); set({ overlay: null, screen: 'home' }); })} style={sx('min-height:48px')}>Trotzdem absagen</button>
       <button className="btn btn-ghost" onClick={() => set({ overlay: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Zurück</button>
@@ -186,29 +188,29 @@ export default function CustomerApp({ onLogout, onReaddress }) {
           <button className="btn btn-secondary" onClick={onReaddress} style={sx('min-height:46px')}><Icon n="ph-map-pin-plus" />Andere Adresse angeben</button>
         </div>}
         {!c && ['verified', 'asked', 'owner', 'review'].includes(r.status) && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px`)}>
-          <span className="card-kicker">Feuerstättenschau</span>
+          <span className="card-kicker">Ihr Kaminfeger</span>
           {s.lastDone ? <>
             <div style={sx('font-size:20px;font-weight:500;line-height:1.2;text-wrap:pretty')}>Erledigt – vielen Dank!</div>
-            <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Die letzte Feuerstättenschau war am {s.lastDone.label}. Für die nächste bekommen Sie rechtzeitig eine E-Mail.</div>
+            <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Der letzte Termin ({s.lastDone.work}) war am {s.lastDone.label}. Für den nächsten bekommen Sie rechtzeitig eine E-Mail.</div>
           </> : <>
             <div style={sx('font-size:20px;font-weight:500;line-height:1.2;text-wrap:pretty')}>Noch keine Zeitfenster</div>
             <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Sobald {sweepName} Zeitfenster für {r.street} freigibt, bekommen Sie eine E-Mail und wählen hier Ihre Zeit.</div>
           </>}
         </div>}
 
-        {b && !lv && <NextCard kicker="Nächster Termin" title={myDate} lines={['Feuerstättenschau', `${myTime} Uhr`]} tag="Geplant" onClick={toTermin} />}
-        {!b && c && s.houseStatus === 'open' && r.status !== 'moved' && <NextCard icon="ph-calendar-plus" kicker={`Feuerstättenschau ${year}`} title="Bitte Zeit wählen" lines={[`${c.windows.length === 1 ? '1 Zeitfenster' : c.windows.length + ' Zeitfenster'} in der ${c.street}`, `Bis ${c.deadlineLabel} wählen`]} tag="Offen" tagCls="tag-outline" onClick={toTermin} />}
-        {!b && s.houseStatus === 'cancelled' && r.status !== 'moved' && <NextCard icon="ph-calendar-x" kicker={`Feuerstättenschau ${year}`} title="Termin abgesagt" lines={['Bitte wählen Sie eine neue Zeit.']} tag="Neu wählen" tagCls="tag-outline" onClick={toPick} />}
+        {b && !lv && <NextCard kicker="Nächster Termin" title={myDate} lines={[work, `${myTime} Uhr`]} tag="Geplant" onClick={toTermin} />}
+        {!b && c && s.houseStatus === 'open' && r.status !== 'moved' && <NextCard icon="ph-calendar-plus" kicker={work} title="Bitte Zeit wählen" lines={[`${c.windows.length === 1 ? '1 Zeitfenster' : c.windows.length + ' Zeitfenster'} in der ${c.street}`, `Bis ${c.deadlineLabel} wählen`]} tag="Offen" tagCls="tag-outline" onClick={toTermin} />}
+        {!b && s.houseStatus === 'cancelled' && r.status !== 'moved' && <NextCard icon="ph-calendar-x" kicker={work} title="Termin abgesagt" lines={['Bitte wählen Sie eine neue Zeit.']} tag="Neu wählen" tagCls="tag-outline" onClick={toPick} />}
         <Tiles items={[
           { label: 'Termin', icon: 'ph-calendar-blank', onClick: toTermin },
           { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: openMsgs, badge: unreadAll },
           { label: 'Leistungen', icon: 'ph-flame', onClick: () => set({ screen: 'info' }) },
           { label: 'Profil', icon: 'ph-user', onClick: () => set({ screen: 'profile' }) }
         ]} />
-        <InfoCard title="Sicher. Sauber. Zukunft." sub="Ihr Kaminfeger sorgt für mehr Sicherheit im Bezirk." onClick={() => set({ screen: 'info' })} />
+        <InfoCard title="Sicher. Sauber. Zukunft." sub="Was Ihr Kaminfeger für Ihr Zuhause tut." onClick={() => set({ screen: 'info' })} />
         {sweep && <div style={sx('margin:16px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px')}>
           <Avatar ini={sweep.ini} />
-          <div style={sx('flex:1')}><div style={sx('font-size:14px')}>{sweep.name}</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Ihr Kaminfeger · Kehrbezirk {d.no}</div></div>
+          <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:14px')}>{sweep.company}</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Ihr Kaminfeger{sweep.company !== sweep.name ? ' · ' + sweep.name : ''}{s.options?.length ? ' · im Profil wechselbar' : ''}</div></div>
           {sweep.phone && <a className="btn btn-secondary btn-icon" href={`tel:${sweep.phone.replace(/[^\d+]/g, '')}`} style={sx('width:44px;height:44px')} aria-label={`${sweep.name} anrufen`}><Icon n="ph-phone" style={sx('font-size:18px')} /></a>}
         </div>}
         {!sweep && <div style={sx('height:20px')} />}
@@ -218,7 +220,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
         <PageHead title="Ihr Termin" onBack={goHome} />
         {liveCard}
         {c && s.houseStatus === 'open' && r.status !== 'moved' && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
-          <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">Feuerstättenschau {year}</span><span className="tag tag-accent">Zeit wählen</span></div>
+          <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">{work}</span><span className="tag tag-accent">Zeit wählen</span></div>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2;text-wrap:pretty')}>Ihr Kaminfeger kommt in die {c.street}</div>
           <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>{sweepName} hat {c.windows.length} Zeitfenster freigegeben. Wählen Sie eine halbe Stunde, in der jemand zu Hause ist – dann steht er nicht vor verschlossener Tür.</div>
           <div style={sx('display:flex;flex-direction:column;gap:2px;margin-top:4px')}>
@@ -261,16 +263,16 @@ export default function CustomerApp({ onLogout, onReaddress }) {
         </>}
 
         {s.houseStatus === 'cancelled' && r.status !== 'moved' && <div style={sx(`${cardS};background:var(--color-surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:10px`)}>
-          <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">Feuerstättenschau {year}</span><span className="tag tag-neutral">abgesagt</span></div>
+          <div style={sx('display:flex;justify-content:space-between;align-items:center')}><span className="card-kicker">{work}</span><span className="tag tag-neutral">abgesagt</span></div>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em;line-height:1.2')}>Termin abgesagt</div>
-          <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Die Feuerstättenschau ist Pflicht. Bitte wählen Sie eine neue Zeit – sonst meldet sich {sweepName} telefonisch.</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Bitte wählen Sie eine neue Zeit – sonst meldet sich {sweepName} bei Ihnen. Die Fristen aus Ihrem Feuerstättenbescheid gelten weiter.</div>
           <button className="btn btn-primary" onClick={toPick} style={sx('min-height:48px;font-size:15px')}>Neue Zeit wählen<Icon n="ph-arrow-right" /></button>
         </div>}
 
         {!b && !(c && s.houseStatus === 'open') && s.houseStatus !== 'cancelled' && <div className="glass" style={sx(`${cardS};display:flex;flex-direction:column;gap:8px`)}>
-          <span className="card-kicker">Feuerstättenschau</span>
+          <span className="card-kicker">Ihr Kaminfeger</span>
           <div style={sx('font-size:20px;font-weight:600;line-height:1.2')}>{s.lastDone ? 'Erledigt – vielen Dank!' : 'Noch kein Termin'}</div>
-          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>{s.lastDone ? `Die letzte Feuerstättenschau war am ${s.lastDone.label}. ` : ''}Sobald {sweepName} {s.lastDone ? 'neue ' : ''}Zeitfenster für {r.street || 'Ihre Straße'} freigibt, wählen Sie hier Ihre Zeit. Sie bekommen dann eine E-Mail.</div>
+          <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>{s.lastDone ? `Der letzte Termin (${s.lastDone.work}) war am ${s.lastDone.label}. ` : ''}Sobald {sweepName} {s.lastDone ? 'neue ' : ''}Zeitfenster für {r.street || 'Ihre Straße'} freigibt, wählen Sie hier Ihre Zeit. Sie bekommen dann eine E-Mail.</div>
         </div>}
         <div style={sx('height:20px')} />
       </>}
@@ -281,15 +283,17 @@ export default function CustomerApp({ onLogout, onReaddress }) {
           <div aria-hidden="true" style={sx('height:170px;position:relative;-webkit-mask-image:linear-gradient(to bottom, #000 60%, transparent);mask-image:linear-gradient(to bottom, #000 60%, transparent)')}><Scenery /></div>
           <div style={sx('padding:0 20px 22px;margin-top:-54px;position:relative;display:flex;flex-direction:column;gap:6px')}>
             <div style={sx('width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 60%, rgba(255,170,80,0.55), rgba(70,36,28,0.85) 72%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 24px rgba(24,8,4,0.4);margin-bottom:10px')}><Icon w="ph-fill" n="ph-flame" style={sx('font-size:34px;color:#f7a54a')} /></div>
-            <div style={sx('font-size:26px;font-weight:700;letter-spacing:-0.02em')}>Feuerstättenschau</div>
+            <div style={sx('font-size:26px;font-weight:700;letter-spacing:-0.02em')}>Kehren, Überprüfen, Messen</div>
             <div style={sx('font-size:16px;color:var(--color-neutral-200)')}>Sicherheit für Ihr Zuhause</div>
-            <div style={sx('font-size:14px;color:var(--color-neutral-300);line-height:1.55;margin-top:10px;text-wrap:pretty')}>Die Feuerstättenschau ist gesetzlich vorgeschrieben und findet zweimal in sieben Jahren statt. Ihr Bezirkskaminfeger prüft dabei, ob Ihre Feuerstätten sicher und effizient betrieben werden können.</div>
+            {c && <div style={sx('margin-top:10px;align-self:flex-start')}><span className="tag tag-accent">Aktuell in der {c.street}: {c.work}</span></div>}
+            <div style={sx('font-size:14px;color:var(--color-neutral-300);line-height:1.55;margin-top:10px;text-wrap:pretty')}>Ihr Kaminfeger kehrt Schornstein und Abgaswege, überprüft sie und misst die Abgaswerte Ihrer Heizung. Welche Arbeiten bei Ihnen nötig sind und in welchen Abständen, steht in Ihrem Feuerstättenbescheid.</div>
             <div className="hr" style={sx('margin:14px 0 6px')} />
-            {['Überprüfung der Feuerstätte', 'Sicherheitskontrolle von Abgasweg und Aufstellraum', 'Dokumentation im Protokoll', 'Dauer ca. ' + len + ' Minuten'].map(t => (
+            {['Kehren von Schornstein und Verbindungsstücken', 'Überprüfen der Abgaswege', 'Messen der Abgaswerte', 'Dauer ca. ' + len + ' Minuten'].map(t => (
               <div key={t} style={sx('display:flex;gap:12px;align-items:center;min-height:40px;font-size:14px')}>
                 <span style={sx('width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,0.14);box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)')}><Icon w="ph-bold" n="ph-check" style={sx('font-size:14px')} /></span>{t}
               </div>
             ))}
+            <div style={sx('display:flex;gap:10px;margin-top:12px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,255,255,0.08);font-size:13px;color:var(--color-neutral-200);line-height:1.5')}><Icon n="ph-info" style={sx('font-size:17px;margin-top:1px;flex:none')} /><span style={sx('text-wrap:pretty')}>Die <b style={sx('font-weight:500')}>Feuerstättenschau</b> und der Feuerstättenbescheid sind Aufgaben Ihres bevollmächtigten Bezirksschornsteinfegers. Dafür meldet er sich direkt bei Ihnen – diese Termine laufen nicht über die App.</span></div>
             <div style={sx('font-size:12px;color:var(--color-neutral-400);margin-top:10px;text-wrap:pretty')}>Tipp: Halten Sie den Zugang zu Heizraum und Dachboden frei und heizen Sie den Kaminofen ab dem Vorabend nicht mehr.</div>
           </div>
         </div>
@@ -331,7 +335,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
       {scr === 'confirm' && w && <>
         <BackHeader onBack={() => { act.setError(null); set({ screen: 'pick' }); }} title="Termin prüfen" sub="Schritt 2 von 2" />
         <div style={sx('margin:16px 16px 0;padding:18px 16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-800)')}>
-          <div className="card-kicker">Feuerstättenschau</div>
+          <div className="card-kicker">{work}</div>
           <div style={sx('font-size:34px;font-weight:500;letter-spacing:-0.025em;line-height:1.1;margin-top:10px')}>{ui.selT}–{endOf(ui.selT, len)}</div>
           <div style={sx('font-size:16px;color:var(--color-neutral-300)')}>{longDay(w.label)}, {short(w.label).date}</div>
           <div className="hr" style={sx('margin:14px 0 10px')} />
@@ -377,7 +381,7 @@ export default function CustomerApp({ onLogout, onReaddress }) {
 }
 
 function Profile({ s, ui, set, call, act }) {
-  const r = s.resident, d = s.district;
+  const r = s.resident;
   const moved = r.status === 'moved', verified = r.status === 'verified';
   const tag = moved ? ['tag-neutral', 'ph-x', 'beendet'] : verified ? ['tag-accent', 'ph-shield-check', 'verifiziert'] : ['tag-outline', 'ph-hourglass-medium', 'in Prüfung'];
   const inviteOk = EMAIL_RE.test(ui.inviteEmail.trim());
@@ -386,9 +390,15 @@ function Profile({ s, ui, set, call, act }) {
     <div style={sx('margin:12px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:4px')}>
       <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:17px;font-weight:500;flex:1')}>Familie {r.family}</span><span className={`tag ${tag[0]}`} style={sx('gap:5px')}><Icon w="ph-bold" n={tag[1]} />{tag[2]}</span></div>
       <div style={sx('font-size:14px;color:var(--color-neutral-300)')}>{r.street} {r.nr}, {r.plz} {r.ort}</div>
-      {d && <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Kehrbezirk {d.no}{d.sweep ? ' · ' + d.sweep.name : ''}</div>}
+      {s.sweep && <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>Ihr Kaminfeger: {s.sweep.company}</div>}
       <div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{s.me.email}</div>
     </div>
+    {verified && s.options?.length > 0 && <div style={sx('margin:12px 16px 0;padding:14px 16px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:8px')}>
+      <span className="card-kicker">Ihr Kaminfeger</span>
+      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Ihre Adresse steht bei mehreren Betrieben. Sie sehen gerade Termine und Nachrichten von <b style={sx('font-weight:500;color:var(--color-text)')}>{s.sweep?.company || 'Ihrem Kaminfeger'}</b>.</div>
+      {s.options.map(o => <button key={o.id} className="btn btn-secondary" disabled={act.busy} onClick={() => call(() => api('/api/customer/choose', { body: { householdId: o.id } }))} style={sx('min-height:44px')}><Icon n="ph-swap" />Zu {o.company} wechseln</button>)}
+      {!ui.inviting && <ErrorLine text={act.error} />}
+    </div>}
     {verified && <>
       <SectionLabel>Haushalt</SectionLabel>
       <div style={sx('margin:0 16px;border-radius:var(--radius-lg);background:var(--color-surface);padding:2px 16px')}>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { sx, api, useAction, useData, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, markPasskeyOffer } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, blade, Field, Input, MailPreview, ErrorLine, Avatar, DIV_BOTTOM } from '../ui.jsx';
+import { Shell, GLOW, Icon, StepsBar, HomeBack, PasskeyLogin, Title, Cta, CodeInput, codeSuccess, blade, Field, Input, MailPreview, ErrorLine, DIV_BOTTOM } from '../ui.jsx';
 
 const card = 'margin:18px 16px 20px;padding:12px 14px;border-radius:var(--radius-lg)';
 
@@ -25,7 +25,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
 
   // Nach dem Login / Neuladen direkt in die Wohnsitz-Prüfung: Daten vom Server holen
   const fromState = x => ({ name: x.resident.family, street: x.resident.street, nr: x.resident.nr, plz: x.resident.plz, ort: x.resident.ort, email: x.me.email,
-    match: x.district ? { no: x.district.no, sweep: x.district.sweep?.name } : null });
+    match: x.listed ? { known: true, householdFound: true } : null });
   useEffect(() => {
     if (start === 'verify') api('/api/customer/state').then(x => set(fromState(x))).catch(() => {});
   }, [start]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -56,7 +56,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     }, 350);
   };
 
-  // Bezirk zur Adresse suchen
+  // Nutzt ein Kaminfeger die App für diese Adresse? (Wer es ist, erfährt man erst mit bestätigtem Wohnsitz.)
   const plzValid = /^\d{5}$/.test(st.plz.trim());
   const addrOk = st.street.trim().length >= 3 && plzValid && st.ort.trim().length >= 2;
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     if (!addrOk) { set({ match: null }); return; }
     const h = setTimeout(() => {
       api('/api/customer/lookup', { body: { street: st.street, nr: st.nr, plz: st.plz, ort: st.ort } })
-        .then(r => set({ match: r.district ? { ...r.district, householdFound: r.householdFound } : { unknown: true } }))
+        .then(r => set({ match: r.known ? { known: true, householdFound: r.householdFound } : { unknown: true } }))
         .catch(() => set({ match: { unknown: true } }));
     }, 300);
     return () => clearTimeout(h);
@@ -83,7 +83,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
   const back = { scan: 'welcome', scanned: 'scan', address: readdress ? null : 'welcome', email: qr ? 'scanned' : 'address', verify: readdress ? 'address' : 'email', letter: 'verify' }[scr];
   const addrShort = qr && inv ? `${inv.street} ${inv.nr}` : `${st.street.trim()} ${st.nr.trim()}`;
   const family = qr && inv ? inv.family : st.name.trim();
-  const sweepName = st.match?.sweep || 'Ihr Kaminfeger';
+  const sweepName = 'Ihr Kaminfeger';
 
   const sendCode = (email, purpose, after) => act.run(async () => {
     await api('/api/auth/code', { body: { email: email.trim(), role: 'customer', purpose } });
@@ -129,7 +129,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
     ? { label: 'Bestätigen', disabled: st.code.length < 6, onClick: register }
     : { label: 'Code senden', disabled: !emailOk, onClick: () => sendCode(st.email, 'register', { codeSent: true, code: '' }) };
   if (scr === 'verify') cta = st.method === 'number'
-    ? { label: 'Adresse prüfen', disabled: st.kdnr.trim().length < 6, onClick: verifyNumber }
+    ? { label: 'Adresse prüfen', disabled: st.kdnr.trim().length < 3, onClick: verifyNumber }
     : { label: 'Bestätigung anfragen', onClick: requestSweep };
   if (scr === 'letter') cta = { label: 'Zur App – Zeiten schon ansehen', onClick: onDone };
   if (scr === 'done') cta = { label: 'Zur App', onClick: onDone };
@@ -140,18 +140,17 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
 
   const sugg = st.picked === st.street ? [] : st.results;
   const methods = [
-    { id: 'number', title: 'Kundennummer eingeben', sub: 'Vom Feuerstättenbescheid', tag: 'sofort', tagCls: 'tag-accent' },
+    { id: 'number', title: 'Kundennummer eingeben', sub: 'Von der Rechnung Ihres Kaminfegers', tag: 'sofort', tagCls: 'tag-accent' },
     { id: 'letter', title: 'Vom Kaminfeger bestätigen lassen', sub: 'Bestätigung kommt per E-Mail – z. B. für Mieter', tag: '1–2 Tage', tagCls: 'tag-neutral' }
   ];
   const reg = st.reg || {};
   const verified = reg.status === 'verified';
-  const inDistrict = reg.inDistrict !== false;
   const checks = [
     { t: 'E-Mail bestätigt', s: st.email || st.lEmail, icon: 'ph-check' },
-    { t: inDistrict ? 'Adresse im Kehrbuch gefunden' : 'Adresse geprüft', s: addrShort + (qr && inv ? ' · Kehrbezirk ' + inv.bez : st.match?.no ? ' · Kehrbezirk ' + st.match.no : ', ' + st.plz + ' ' + st.ort), icon: 'ph-check' },
+    { t: verified ? 'Adresse bei Ihrem Kaminfeger gefunden' : 'Adresse erfasst', s: addrShort + (qr && inv ? (inv.sweep ? ' · ' + inv.sweep : '') : ', ' + st.plz + ' ' + st.ort), icon: 'ph-check' },
     verified
-      ? { t: 'Wohnsitz bestätigt', s: reg.method === 'invite' || qr ? 'per Einladungslink vom Kaminfeger' : reg.method === 'sweep' ? 'bestätigt vom Kaminfeger, per E-Mail' : 'per Kundennummer vom Feuerstättenbescheid', icon: 'ph-check' }
-      : { t: 'Wohnsitz wird später bestätigt', s: 'Sobald Ihr Kaminfeger die App nutzt – wir melden uns per E-Mail', icon: 'ph-hourglass-medium' }
+      ? { t: 'Wohnsitz bestätigt', s: reg.method === 'invite' || qr ? 'per Einladungslink vom Kaminfeger' : reg.method === 'sweep' ? 'bestätigt vom Kaminfeger, per E-Mail' : 'per Kundennummer von der Rechnung', icon: 'ph-check' }
+      : { t: 'Wohnsitz wird später bestätigt', s: 'Sobald Ihr Kaminfeger Ihre Adresse in der App führt – wir melden uns per E-Mail', icon: 'ph-hourglass-medium' }
   ];
 
   const top = (stepNo > 0 || scr === 'scan') ? <StepsBar onBack={() => back ? go(back) : onCancel && onCancel()} stepNo={stepNo} total={stepTotal} />
@@ -202,15 +201,15 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
       </>}
 
       {scr === 'scan' && <>
-        <Title title="Einladung öffnen" sub="Ihr Kaminfeger schickt die Einladung an die E-Mail-Adresse aus seinem Kehrbuch. Der Link darin bestätigt Ihre Adresse." />
+        <Title title="Einladung öffnen" sub="Ihr Kaminfeger schickt die Einladung an die E-Mail-Adresse aus seiner Kundenliste. Der Link darin bestätigt Ihre Adresse." />
         <div style={sx('margin:20px 16px 0;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:10px;font-size:14px')}>
           <span className="card-kicker">So geht's</span>
           <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>1</b><span style={sx('text-wrap:pretty')}>Öffnen Sie die E-Mail Ihres Kaminfegers in Ihrem Postfach.</span></div>
           <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>2</b><span style={sx('text-wrap:pretty')}>Tippen Sie dort auf <b style={sx('font-weight:500')}>„Einladung annehmen“</b> – die App öffnet sich mit Ihrer Adresse.</span></div>
           <div style={sx('display:flex;gap:10px')}><b style={sx('font-weight:500;color:var(--color-accent)')}>3</b><span style={sx('text-wrap:pretty')}>Klappt das nicht, kopieren Sie den Link aus der E-Mail und fügen ihn unten ein.</span></div>
         </div>
-        <MailPreview meta="E-Mail · von Ihrem Kaminfeger" subject="Einladung: Termin für die Feuerstättenschau wählen" onClick={() => document.getElementById('invite-link')?.focus()}
-          text="Guten Tag, ich komme zur Feuerstättenschau in Ihre Straße. Bitte wählen Sie Ihre Zeit in der App." action="Einladung annehmen" />
+        <MailPreview meta="E-Mail · von Ihrem Kaminfeger" subject="Einladung: Termin mit Ihrem Kaminfeger wählen" onClick={() => document.getElementById('invite-link')?.focus()}
+          text="Guten Tag, in Ihrer Straße steht an: Kehren und Überprüfen. Bitte wählen Sie Ihre Zeit in der App." action="Einladung annehmen" />
         <div style={sx('padding:16px 16px 0')}>
           <Field label="Link aus der E-Mail einfügen"><Input id="invite-link" value={st.paste} onChange={e => set({ paste: e.target.value })} placeholder="https://kaminfeger-verwaltung.com/kunde?einladung=…" autoComplete="off" /></Field>
         </div>
@@ -220,11 +219,11 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
       {scr === 'scanned' && inv && <>
         <Title title="Einladung erkannt" sub={inv.kind === 'member' ? 'Sie wurden als Mitbewohner eingeladen.' : 'Sind das Sie?'} />
         <div style={sx('margin:20px 16px 0;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700), 0 0 30px color-mix(in srgb, var(--color-accent) 14%, transparent);display:flex;flex-direction:column;gap:10px')}>
-          <span className="card-kicker">Aus dem Kehrbuch</span>
+          <span className="card-kicker">Von Ihrem Kaminfeger</span>
           <div style={sx('font-size:22px;font-weight:500;letter-spacing:-0.015em')}>Familie {inv.family}</div>
           <div style={sx('display:flex;flex-direction:column;gap:8px;font-size:14px')}>
             <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-map-pin" style={sx('font-size:18px;color:var(--color-neutral-500)')} /><span>{inv.street} {inv.nr}, {inv.plz} {inv.ort}</span></div>
-            <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-user" style={sx('font-size:18px;color:var(--color-neutral-500)')} /><span>Kehrbezirk {inv.bez} · {inv.sweep}</span></div>
+            <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-user" style={sx('font-size:18px;color:var(--color-neutral-500)')} /><span>{inv.sweep || 'Ihr Kaminfeger'}</span></div>
             <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-shield-check" style={sx('font-size:18px;color:var(--color-accent)')} /><span>Wohnsitz damit bestätigt</span></div>
           </div>
         </div>
@@ -233,7 +232,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
       </>}
 
       {scr === 'address' && <>
-        <Title title={readdress ? 'Ihre neue Adresse' : 'Wo wohnen Sie?'} sub="Wir ordnen Sie Ihrem Kehrbezirk zu." />
+        <Title title={readdress ? 'Ihre neue Adresse' : 'Wo wohnen Sie?'} sub="Wir schauen, ob Ihr Kaminfeger die App schon für Ihre Adresse nutzt." />
         <div style={sx('display:flex;flex-direction:column;gap:14px;padding:20px 16px 0')}>
           <Field label="Straße" style={sx('position:relative')}>
             <Input value={st.street} onChange={e => { const v = e.target.value; set({ street: v, picked: null }); search(v, st.plz, st.ort); }} placeholder="Straße eingeben" autoComplete="off" />
@@ -254,10 +253,14 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
           {st.plz && !plzValid && <div style={sx('padding:0 4px')}><ErrorLine text="Die PLZ hat 5 Ziffern." /></div>}
           <Field label="Familienname (wie auf dem Klingelschild)"><Input value={st.name} onChange={e => set({ name: e.target.value })} placeholder="z. B. Keller" /></Field>
         </div>
-        {st.match && !st.match.unknown && <div style={sx(`${card};box-shadow:0 0 0 1px var(--color-accent-800);display:flex;gap:12px;align-items:center`)}>
-          <Avatar ini={st.match.ini} />
-          <div style={sx('flex:1')}><div style={sx('font-size:12px;color:var(--color-accent-300)')}>Kehrbezirk {st.match.no} gefunden</div><div style={sx('font-size:14px')}>Ihr Kaminfeger: {st.match.sweep}</div></div>
+        {st.match?.known && st.match.householdFound && <div style={sx(`${card};box-shadow:0 0 0 1px var(--color-accent-800);display:flex;gap:12px;align-items:center`)}>
+          <Icon n="ph-seal-check" style={sx('font-size:24px;color:var(--color-accent)')} />
+          <div style={sx('flex:1')}><div style={sx('font-size:12px;color:var(--color-accent-300)')}>Adresse gefunden</div><div style={sx('font-size:14px;text-wrap:pretty')}>Ihr Kaminfeger nutzt die App für Ihre Adresse.</div></div>
           <Icon w="ph-bold" n="ph-check" style={sx('color:var(--color-accent)')} />
+        </div>}
+        {st.match?.known && !st.match.householdFound && <div style={sx(`${card};box-shadow:var(--shadow-sm);display:flex;gap:12px;align-items:flex-start`)}>
+          <Icon n="ph-map-pin-line" style={sx('font-size:20px;color:var(--color-accent);margin-top:1px')} />
+          <div style={sx('flex:1;display:flex;flex-direction:column;gap:2px')}><div style={sx('font-size:14px')}>Straße gefunden</div><div style={sx('font-size:12px;color:var(--color-neutral-400);text-wrap:pretty')}>{st.nr.trim() ? 'In Ihrer Straße nutzt ein Kaminfeger die App, Ihre Hausnummer steht aber noch nicht in seiner Kundenliste. Sie können sich trotzdem registrieren – wir melden uns per E-Mail.' : 'In Ihrer Straße nutzt ein Kaminfeger die App. Bitte noch die Hausnummer angeben.'}</div></div>
         </div>}
         {st.match?.unknown && <div style={sx(`${card};box-shadow:var(--shadow-sm);display:flex;gap:12px;align-items:flex-start`)}>
           <Icon n="ph-map-pin-line" style={sx('font-size:20px;color:var(--color-accent);margin-top:1px')} />
@@ -277,7 +280,7 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
       </>}
 
       {scr === 'verify' && <>
-        <Title title="Wohnen Sie wirklich hier?" sub={`Nur Bewohner dürfen Termine für ${addrShort} buchen. Wir gleichen mit dem Kehrbuch Ihres Kaminfegers ab.`} />
+        <Title title="Wohnen Sie wirklich hier?" sub={`Nur Bewohner dürfen Termine für ${addrShort} buchen. Wir gleichen mit der Kundenliste Ihres Kaminfegers ab.`} />
         <div style={sx('display:flex;flex-direction:column;gap:8px;padding:20px 16px 0')}>
           {methods.map(m => { const on = st.method === m.id; return (
             <button key={m.id} onClick={() => { act.setError(null); set({ method: m.id }); }} style={sx(`text-align:left;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:var(--radius-lg);background:${on ? 'var(--color-accent-900)' : 'var(--color-surface)'};border:1px solid ${on ? 'var(--color-accent)' : 'transparent'};color:inherit;font:inherit;cursor:pointer`)}>
@@ -290,8 +293,8 @@ export default function Onboarding({ start = 'welcome', invite, readdress, onDon
         {st.method === 'number' ? (
           <div style={sx('margin:14px 16px 20px;padding:14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:grid;grid-template-columns:minmax(0, 1fr) 76px;gap:14px;align-items:start')}>
             <Field label="Kundennummer">
-              <Input value={st.kdnr} onChange={e => set({ kdnr: e.target.value })} placeholder="z. B. KF-14-0007" autoComplete="off" style="letter-spacing:0.04em;text-transform:uppercase" />
-              <div style={sx('font-size:12px;color:var(--color-neutral-500);margin-top:6px;text-wrap:pretty')}>Steht oben rechts auf Ihrem letzten Feuerstättenbescheid.</div>
+              <Input value={st.kdnr} onChange={e => set({ kdnr: e.target.value })} placeholder="z. B. K-10482" autoComplete="off" style="letter-spacing:0.04em;text-transform:uppercase" />
+              <div style={sx('font-size:12px;color:var(--color-neutral-500);margin-top:6px;text-wrap:pretty')}>Steht auf der letzten Rechnung Ihres Kaminfegers – meist oben rechts.</div>
             </Field>
             <div aria-hidden="true" style={sx('height:100px;border-radius:4px;background:var(--color-neutral-200);padding:8px 7px;display:flex;flex-direction:column;gap:4px;margin-top:18px')}>
               <div style={sx('align-self:flex-end;width:30px;height:9px;border-radius:2px;box-shadow:0 0 0 2px var(--color-accent);background:var(--color-accent-300)')} />

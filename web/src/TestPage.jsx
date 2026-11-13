@@ -5,15 +5,14 @@ import { sx, api, useData, fmtAt } from './lib/core.js';
 import { Icon, Loading } from './ui.jsx';
 
 const STEPS = [
-  { who: 'O', title: 'Bezirksverzeichnis importieren', tag: ['tag-outline', 'Betreiber'], hint: <>Admin-E-Mail aus <b>ADMIN_EMAILS</b> eingeben → Code aus dem Postfach → Tab <b>Verzeichnis</b> → CSV importieren (Vorlage dort).</> },
-  { who: 'S', title: 'Kaminfeger registrieren', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Registrieren → Name <b>wie im Verzeichnis</b>, Betriebsadresse, E-Mail → Code aus dem Postfach → Bezirk wählen → Urkunde und Ausweis hochladen, Häkchen → <b>Zur Prüfung senden</b>.</> },
-  { who: 'O', title: 'Prüfen & freigeben', tag: ['tag-outline', 'Betreiber'], hint: <>Kaminfeger öffnen → Dokumente ansehen → alle 4 Punkte abhaken → <b>Freigeben</b>.</> },
-  { who: 'S', title: 'Bezirk freischalten', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Im Postfach die Mail an die <b>Verzeichnis-Adresse</b> → <b>Link öffnen</b> → Zur App.</> },
-  { who: 'S', title: 'Kehrbuch importieren', tag: ['tag-neutral', 'Kaminfeger'], hint: <><b>Kehrbuch importieren</b> → CSV mit Straße, Hausnummer, PLZ, Ort, Eigentümer, Kundennummer (Vorlage dort).</> },
-  { who: 'S', title: 'Zeitfenster senden', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Straße → <b>Zeitfenster anlegen</b> → Tag und Uhrzeit → <b>Speichern &amp; senden</b>. Haushalte mit E-Mail im Kehrbuch bekommen eine Einladung.</> },
-  { who: 'K', title: 'Familie registrieren', tag: ['tag-accent', 'Kunde'], hint: <>Registrieren → Adresse <b>aus dem Kehrbuch</b> → E-Mail + Code → Kundennummer aus dem Kehrbuch → Zur App. (Oder Einladungslink aus dem Postfach öffnen.)</> },
+  { who: 'S', title: 'Betrieb registrieren', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Registrieren → Name, Betrieb und Betriebsadresse (zum Testen <b>PLZ 99999</b>), E-Mail → Code aus dem Postfach.</> },
+  { who: 'S', title: 'Nachweis einreichen', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Als Nachweis ein <b>beliebiges Foto oder PDF</b> hochladen (kein echtes Dokument nötig), Häkchen setzen → <b>Zur Prüfung senden</b>.</> },
+  { who: 'O', title: 'Prüfen & freischalten', tag: ['tag-outline', 'Betreiber'], hint: <>Admin-E-Mail aus <b>ADMIN_EMAILS</b> → Code aus dem Postfach → Betrieb öffnen → Nachweis ansehen → alle 3 Punkte abhaken → <b>Betrieb freischalten</b>. Der Kaminfeger ist sofort drin.</> },
+  { who: 'S', title: 'Kundenliste importieren', tag: ['tag-neutral', 'Kaminfeger'], hint: <><b>Kundenliste importieren</b> → bestätigen, dass es eigene Kundendaten sind → CSV mit Straße, Hausnummer, PLZ, Ort, Kunde, Kundennummer (Vorlage dort, Beispiel in <b>testdaten/</b>).</> },
+  { who: 'S', title: 'Zeitfenster senden', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Straße → <b>Zeitfenster anlegen</b> → wählen, was ansteht (z. B. Kehren) → Tag und Uhrzeit → <b>Speichern &amp; senden</b>. Haushalte mit E-Mail in der Kundenliste bekommen eine Einladung.</> },
+  { who: 'K', title: 'Familie registrieren', tag: ['tag-accent', 'Kunde'], hint: <>Registrieren → Adresse <b>aus der Kundenliste</b> → E-Mail + Code → Kundennummer aus der Kundenliste → Zur App. (Oder Einladungslink aus dem Postfach öffnen.)</> },
   { who: 'K', title: 'Zeit buchen', tag: ['tag-accent', 'Kunde'], hint: <>Zeit wählen → Tag → freien Slot → optional „Schlüssel beim Nachbarn“ → verbindlich bestätigen.</> },
-  { who: 'S', title: 'Route starten', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Unten Tab <b>Route</b> → Tag wählen → <b>Route starten</b>. Im Testmodus geht das auch vor dem Termintag.</> },
+  { who: 'S', title: 'Route starten', tag: ['tag-neutral', 'Kaminfeger'], hint: <>Unten Tab <b>Termine</b> → Tag wählen → <b>Route starten</b>. Im Testmodus geht das auch vor dem Termintag.</> },
   { who: 'S', title: 'Häuser abhaken', tag: ['tag-neutral', 'Kaminfeger'], hint: <>„Erledigt“ tippen und dabei den Kunden beobachten: <b>„2 Häuser entfernt“ → „Als Nächstes dran“</b>. Beim Kunden „Erledigt“ oder „Niemand da“.</> }
 ];
 const PHONES = [
@@ -51,7 +50,7 @@ export default function TestPage() {
     else window.open(p, '_blank');
   };
   const reset = async () => {
-    if (!confirm('Wirklich alle Daten löschen? Konten, Verzeichnis, Kehrbuch und Buchungen sind danach weg.')) return;
+    if (!confirm('Wirklich alle Daten löschen? Konten, Kundenlisten und Buchungen sind danach weg.')) return;
     await api('/api/test/reset', { body: {} });
     setSrc({ S: '/kaminfeger?embed', O: '/betreiber?embed', K: '/kunde?embed' });
     setKeys(k => ({ S: k.S + 1, O: k.O + 1, K: k.K + 1 }));
@@ -65,7 +64,7 @@ export default function TestPage() {
         <div style={sx('display:flex;flex-direction:column;gap:8px;max-width:720px')}>
           <span className="card-kicker">Testmodus · 3 Apps, live verbunden</span>
           <h1 style={sx('margin:0;font-size:40px;font-weight:500;letter-spacing:-0.02em;text-wrap:pretty')}>Kaminfeger Verwaltung testen</h1>
-          <p style={sx('margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Echte Abläufe mit echter Datenbank – ohne Beispieldaten. E-Mails landen im Postfach links, statt verschickt zu werden. Verzeichnis und Kehrbuch laden Sie als CSV hoch.</p>
+          <p style={sx('margin:0;font-size:15px;color:var(--color-neutral-400);text-wrap:pretty')}>Echte Abläufe mit echter Datenbank – ohne Beispieldaten. E-Mails landen im Postfach links, statt verschickt zu werden. Die Kundenliste laden Sie als CSV hoch.</p>
         </div>
         <div style={sx('display:flex;gap:8px;align-items:center')}>
           <span style={sx('font-size:13px;color:var(--color-neutral-400);font-variant-numeric:tabular-nums')}>{done.filter(Boolean).length} von {STEPS.length} erledigt</span>

@@ -26,7 +26,7 @@ export default function Landing() {
     }>
       <div style={sx('position:relative;min-height:100%;display:flex;flex-direction:column')}>
         <div style={sx('position:relative;padding:36px 26px 0;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center')}>
-          <Logo size={92} stacked sub="Für Kaminfeger und Bewohner des Bezirks" />
+          <Logo size={92} stacked sub="Für Kaminfeger und ihre Kunden" />
           {cfg?.restricted && <span className="tag tag-outline">Testbetrieb · nur für eingeladene Personen</span>}
           <div style={sx('font-size:15px;color:var(--color-neutral-200);text-wrap:pretty;max-width:320px;margin-top:6px')}>Der Kaminfeger kommt, wenn Sie zu Hause sind: Sie wählen die halbe Stunde, die passt.</div>
         </div>
@@ -37,9 +37,9 @@ export default function Landing() {
 
 const FEATURES = [['ph-calendar-check', 'Zeit selbst wählen'], ['ph-map-pin-line', 'Live sehen, wie weit er noch weg ist'], ['ph-shield-check', 'Nur verifizierte Bewohner und Kaminfeger']];
 const ENTRIES = [
-  ['/kunde', 'ph-house-line', 'Ich bin Bewohner', 'Termin für die Feuerstättenschau wählen, verschieben oder absagen.'],
-  ['/kaminfeger', 'ph-path', 'Ich bin Kaminfeger', 'Kehrbuch importieren, Zeitfenster pro Straße freigeben, Tagesroute.'],
-  ['/betreiber', 'ph-seal-check', 'Betreiber-Zugang', 'Kaminfeger und Bewohner prüfen, Bezirksverzeichnis pflegen.']
+  ['/kunde', 'ph-house-line', 'Ich bin Bewohner', 'Termin mit dem Kaminfeger wählen, verschieben oder absagen.'],
+  ['/kaminfeger', 'ph-path', 'Ich bin Kaminfeger', 'Kundenliste importieren, Zeitfenster pro Straße freigeben, Tagesroute.'],
+  ['/betreiber', 'ph-seal-check', 'Betreiber-Zugang', 'Kaminfeger-Betriebe und Bewohner prüfen.']
 ];
 
 /** Startseite ab 1024 px: Text links, Einstiege rechts. */
@@ -53,7 +53,7 @@ function Desktop({ cfg, go }) {
       </header>
       <main style={sx('position:relative;flex:1;display:grid;grid-template-columns:minmax(0, 1.1fr) minmax(0, 1fr);gap:64px;align-items:center;max-width:1180px;width:100%;margin:0 auto;padding:24px 48px 48px')}>
         <div style={sx('display:flex;flex-direction:column;gap:18px;text-shadow:0 2px 18px rgba(30,10,4,0.45)')}>
-          <span className="card-kicker">Feuerstättenschau ohne verschlossene Türen</span>
+          <span className="card-kicker">Kehren, Überprüfen, Messen – ohne verschlossene Türen</span>
           <h1 style={sx('margin:0;font-size:54px;font-weight:700;letter-spacing:-0.03em;line-height:1.04;text-wrap:balance')}>Der Kaminfeger kommt, wenn Sie zu Hause sind.</h1>
           <p style={sx('margin:0;font-size:18px;color:var(--color-neutral-200);max-width:34em;text-wrap:pretty')}>Ihr Kaminfeger gibt Zeitfenster für Ihre Straße frei – Sie wählen die halbe Stunde, die passt. Weniger verschlossene Türen, weniger Nachtermine.</p>
           <div style={sx('display:flex;flex-direction:column;gap:14px;padding-top:18px;font-size:15px')}>

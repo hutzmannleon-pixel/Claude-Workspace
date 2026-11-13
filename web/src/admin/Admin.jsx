@@ -1,16 +1,16 @@
 // Betreiber-App – nach „BetreiberApp“ (Claude Design), angebunden an /api/admin/*.
 import { Fragment, lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { sx, api, upload, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
+import { sx, api, useData, useAction, useWide, since, fmtAt, EMAIL_RE } from '../lib/core.js';
 import { LogoMark } from '../brand.jsx';
 import { loginPasskey, passkeySupported } from '../lib/passkey.js';
-import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, codeSuccess, Input, Field, CheckRow, FilePick, EmptyPane, DIV_BOTTOM, bubble } from '../ui.jsx';
+import { Shell, GLOW, Icon, HomeBack, PasskeyLogin, PasskeyPanel, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, CodeInput, codeSuccess, Input, Field, CheckRow, EmptyPane, DIV_BOTTOM, bubble } from '../ui.jsx';
 
 const PdfView = lazy(() => import('./PdfView.jsx'));
 const TAG = { pending: ['offen', 'tag-accent'], query: ['Rückfrage', 'tag-outline'], approved: ['freigegeben', 'tag-neutral'], rejected: ['abgelehnt', 'tag-neutral'],
   asked: ['beim Kaminfeger', 'tag-outline'], letter: ['E-Mail gesendet', 'tag-outline'], dismissed: ['verworfen', 'tag-neutral'] };
-const CH_BAFA = ['bafa', 'Im Schornsteinfegerregister: Name, Kehrbezirk und Bestellungsdatum stimmen'];
-const CH = [['name', 'Name auf der Urkunde = Konto-Name'], ['nr', 'Bezirksnummer auf der Urkunde stimmt'], ['valid', 'Bestellung gültig, nicht abgelaufen'], ['id', 'Ausweis lesbar und passt zur Urkunde']];
-const REASONS = ['Urkunde unleserlich – bitte neu hochladen', 'Name passt nicht zur Urkunde', 'Bezirk gehört einer anderen Person', 'Verdacht auf gefälschte Unterlagen'];
+// Geprüft wird gegen das Schornsteinfegerregister des BAFA: Dort steht jeder Betrieb, der Schornsteinfegerarbeiten ausführen darf.
+const CH = [['bafa', 'Betrieb steht im Schornsteinfegerregister – Name und Anschrift stimmen'], ['leiter', 'Inhaberin / Betriebsleiter laut Register = Name im Konto'], ['id', 'Nachweis ist lesbar und passt zum Betrieb']];
+const REASONS = ['Nachweis unleserlich – bitte neu hochladen', 'Betrieb nicht im Schornsteinfegerregister gefunden', 'Name oder Anschrift passen nicht zum Register', 'Verdacht auf gefälschte Unterlagen'];
 const isOpen = s => s === 'pending' || s === 'query';
 const autoRow = a => ({ text: a[1], icon: a[0] === 'ok' ? 'ph-check' : a[0] === 'warn' ? 'ph-warning' : 'ph-info',
   fg: a[0] === 'ok' ? 'var(--color-accent)' : a[0] === 'warn' ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', tfg: a[0] === 'warn' ? 'var(--color-accent-200)' : 'var(--color-text)' });
@@ -69,7 +69,7 @@ function Lock({ onUnlock }) {
 }
 
 function AdminApp({ me, onLock }) {
-  const [ui, setUi] = useState({ screen: 'queue', kind: 'sweep', sel: null, overlay: null, checks: {}, reason: null, queryText: '', toast: null, result: null, docId: null, dir: null });
+  const [ui, setUi] = useState({ screen: 'queue', kind: 'sweep', sel: null, overlay: null, checks: {}, reason: null, queryText: '', toast: null, result: null, docId: null });
   const set = p => setUi(u => ({ ...u, ...p }));
   const act = useAction();
   const wide = useWide();
@@ -78,12 +78,11 @@ function AdminApp({ me, onLock }) {
   const detailPath = ui.sel ? `/api/admin/${ui.sel.kind === 'sweep' ? 'sweeps' : 'residents'}/${ui.sel.id}` : null;
   const det = useData(detailPath, { enabled: !!ui.sel && (scr === 'detail' || scr === 'result') });
   const log = useData('/api/admin/log', { enabled: scr === 'log' });
-  const dir = useData('/api/admin/directory', { enabled: scr === 'dir' });
   const fb = useData('/api/admin/feedback');
   const lock = async () => { await api('/api/admin/logout', { body: {} }).catch(() => {}); onLock(); };
 
   // Sperre bei 401 (Server-Timeout) und nach 5 Minuten ohne Eingabe
-  useEffect(() => { if ([q.error, det.error, log.error, dir.error, fb.error].some(e => e?.status === 401)) onLock(); }, [q.error, det.error, log.error, dir.error, fb.error]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if ([q.error, det.error, log.error, fb.error].some(e => e?.status === 401)) onLock(); }, [q.error, det.error, log.error, fb.error]); // eslint-disable-line react-hooks/exhaustive-deps
   const idle = useRef(null);
   useEffect(() => {
     const reset = () => { clearTimeout(idle.current); idle.current = setTimeout(lock, 5 * 60000); };
@@ -101,7 +100,7 @@ function AdminApp({ me, onLock }) {
   const x = det.data && ui.sel && det.data.id === ui.sel.id && det.data.kind === ui.sel.kind ? det.data : null;
   const decided = x ? !(isOpen(x.status) || (x.kind === 'res' && ['letter', 'asked'].includes(x.status))) : false;
   const mine = x ? ui.checks[x.id] || [] : [];
-  const needed = x?.manual ? [CH_BAFA, ...CH] : CH;
+  const needed = CH;
   const toQueue = () => { act.setError(null); set({ screen: 'queue', overlay: null, result: null, sel: null }); };
   const decide = (path, body, after) => act.run(async () => { const r = await api(path, { body }); after(r || {}); q.reload(); det.reload(); });
 
@@ -118,18 +117,16 @@ function AdminApp({ me, onLock }) {
   let resTitle = '', resSub = '', resSteps = [], resIcon = 'ph-seal-check', muted = false;
   if (res && x) {
     if (res.type === 'approved') {
-      resTitle = `${x.name} freigegeben`; resSub = `Kehrbezirk ${x.bez} wird freigeschaltet, sobald der Link in der E-Mail geöffnet ist.`;
+      resTitle = `${x.name} freigeschaltet`; resSub = 'Der Betrieb kann ab sofort seine Kundenliste importieren und Termine anbieten.';
       resSteps = [
-        { icon: 'ph-envelope-simple', t: 'Freischaltlink per E-Mail gesendet', s: res.fromList === false ? `An ${res.sentTo} (E-Mail der Registrierung)` : `An ${res.sentTo} – die Adresse aus dem Bezirksverzeichnis, nicht die vom Kaminfeger angegebene` },
-        ...(res.fromList === false ? [{ icon: 'ph-list-plus', t: `Kehrbezirk ${x.bez} ins Verzeichnis übernommen`, s: 'Mit Name und Betriebsadresse, nach dem Abgleich im Schornsteinfegerregister' }] : []),
-        { icon: 'ph-trash-simple', t: 'Bestellungsurkunde gelöscht', s: 'Datei endgültig entfernt' },
-        { icon: 'ph-trash-simple', t: 'Ausweisfoto gelöscht', s: 'Datei endgültig entfernt' },
+        { icon: 'ph-envelope-simple', t: 'E-Mail „Ihr Betrieb ist freigeschaltet“ gesendet', s: `An ${res.sentTo}` },
+        { icon: 'ph-trash-simple', t: 'Nachweis gelöscht', s: 'Datei endgültig entfernt' },
         { icon: 'ph-list-checks', t: 'Protokolliert', s: 'Prüfer, Zeitpunkt, Ergebnis – keine Dokumente' }];
     } else {
-      resTitle = 'Abgelehnt'; resSub = `${x.name} wurde per E-Mail informiert und kann neue Unterlagen einreichen.`; resIcon = 'ph-x'; muted = true;
+      resTitle = 'Abgelehnt'; resSub = `${x.name} wurde per E-Mail informiert und kann einen neuen Nachweis einreichen.`; resIcon = 'ph-x'; muted = true;
       resSteps = [
         { icon: 'ph-envelope-simple', t: 'E-Mail an den Kaminfeger', s: 'Grund: ' + res.reason },
-        { icon: 'ph-trash-simple', t: 'Urkunde und Ausweis gelöscht', s: 'Bei neuer Einreichung wird neu hochgeladen' },
+        { icon: 'ph-trash-simple', t: 'Nachweis gelöscht', s: 'Bei neuer Einreichung wird neu hochgeladen' },
         { icon: 'ph-list-checks', t: 'Protokolliert', s: 'Prüfer, Zeitpunkt, Grund' }];
     }
   }
@@ -137,7 +134,6 @@ function AdminApp({ me, onLock }) {
   const tabs = [
     { label: 'Prüfungen', icon: 'ph-seal-check', on: scr === 'queue', onClick: toQueue, badge: cnt('sweep') + cnt('res') },
     { label: 'Protokoll', icon: 'ph-list-checks', on: scr === 'log', onClick: () => set({ screen: 'log', toast: null }) },
-    { label: 'Verzeichnis', icon: 'ph-book-open', on: scr === 'dir', onClick: () => set({ screen: 'dir', toast: null, dir: null }) },
     { label: 'Vorschau', icon: 'ph-eye', on: scr === 'demo', onClick: () => set({ screen: 'demo', toast: null }) },
     { label: 'Feedback', icon: 'ph-chat-circle-dots', on: scr === 'feedback', onClick: () => set({ screen: 'feedback', toast: null }), badge: (fb.data?.items || []).filter(f => f.status === 'open').length }
   ];
@@ -152,9 +148,9 @@ function AdminApp({ me, onLock }) {
   const fbAct = (id, action) => act.run(async () => { await api(`/api/admin/feedback/${id}`, { body: { action } }); fb.reload(); });
   const fbImg = (fb.data?.items || []).find(f => f.id === ui.fbId);
   const mailto = to => {
-    const subject = `Bestätigung Kehrbezirk ${x.bez}`;
+    const subject = `Nachfrage zum Betrieb ${x.name}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(ui.queryText)}`, '_blank');
-    decide(`/api/admin/sweeps/${x.id}/query`, { to }, () => set({ overlay: null, screen: 'queue', sel: null, toast: `Rückfrage an ${to === 'innung' ? 'Innung' : 'Behörde'} protokolliert – die E-Mail öffnet sich in deinem Mailprogramm.` }));
+    decide(`/api/admin/sweeps/${x.id}/query`, { to }, () => set({ overlay: null, screen: 'queue', sel: null, toast: `Rückfrage an ${to === 'innung' ? 'Innung' : 'Handwerkskammer'} protokolliert – die E-Mail öffnet sich in deinem Mailprogramm.` }));
   };
 
   const bottom = <>
@@ -162,7 +158,7 @@ function AdminApp({ me, onLock }) {
   </>;
   const overlay = <>
     {ui.overlay === 'doc' && doc && <div style={sx('position:absolute;inset:0;z-index:5;background:color-mix(in srgb, var(--color-bg) 92%, transparent);display:flex;flex-direction:column;padding:24px 16px 24px;gap:14px')}>
-      <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:17px;font-weight:500;flex:1')}>{doc.kind === 'urkunde' ? 'Bestellungsurkunde' : 'Ausweis'}</span><button className="btn btn-secondary btn-icon" onClick={() => set({ overlay: null })} style={sx('width:44px;height:44px')} aria-label="Schließen"><Icon n="ph-x" style={sx('font-size:18px')} /></button></div>
+      <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:17px;font-weight:500;flex:1')}>Nachweis</span><button className="btn btn-secondary btn-icon" onClick={() => set({ overlay: null })} style={sx('width:44px;height:44px')} aria-label="Schließen"><Icon n="ph-x" style={sx('font-size:18px')} /></button></div>
       <div onContextMenu={e => e.preventDefault()} style={sx('flex:1;border-radius:var(--radius-md);background:var(--color-neutral-200);position:relative;overflow:hidden;display:grid;place-items:center;color:var(--color-neutral-600);font-size:13px;text-align:center')}>
         {doc.mime === 'application/pdf'
           ? <Suspense fallback={<span>Dokument lädt …</span>}><PdfView url={`/api/admin/documents/${doc.id}`} /></Suspense>
@@ -182,11 +178,11 @@ function AdminApp({ me, onLock }) {
     </Sheet>}
     {ui.overlay === 'query' && x && <Sheet>
       <div style={sx('font-size:20px;font-weight:500')}>Rückfrage stellen</div>
-      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Zuständig für Kehrbezirk {x.bez}: die Schornsteinfeger-Aufsicht der Stadt bzw. des Landkreises – oder die Innung. Die E-Mail öffnet sich in deinem Mailprogramm.</div>
+      <div style={sx('font-size:14px;color:var(--color-neutral-300);text-wrap:pretty')}>Steht der Betrieb nicht eindeutig im Register, hilft die Handwerkskammer (Handwerksrolle) oder die Schornsteinfeger-Innung für {x.where}. Die E-Mail öffnet sich in deinem Mailprogramm.</div>
       <div className="field"><label>Anfrage (Vorlage)</label><textarea className="input" value={ui.queryText} onChange={e => set({ queryText: e.target.value })} style={sx('min-height:96px;font-size:14px')} /></div>
       {act.error && <ErrorLine text={act.error} />}
       <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
-        <button className="btn btn-primary" disabled={act.busy} onClick={() => mailto('behoerde')} style={sx('min-height:46px')}><Icon n="ph-envelope-simple" />An Behörde</button>
+        <button className="btn btn-primary" disabled={act.busy} onClick={() => mailto('kammer')} style={sx('min-height:46px')}><Icon n="ph-envelope-simple" />An Kammer</button>
         <button className="btn btn-secondary" disabled={act.busy} onClick={() => mailto('innung')} style={sx('min-height:46px')}><Icon n="ph-users-three" />An Innung</button>
       </div>
       <button className="btn btn-ghost" onClick={() => set({ overlay: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Abbrechen</button>
@@ -219,16 +215,16 @@ function AdminApp({ me, onLock }) {
               <Avatar ini={it.ini} />
               <div style={sx('flex:1;min-width:0;display:flex;flex-direction:column;gap:1px')}>
                 <div style={sx('display:flex;gap:8px;align-items:center')}><span style={sx(`font-size:15px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${op ? 'var(--color-text)' : 'var(--color-neutral-400)'}`)}>{it.name}</span><span className={`tag ${tg[1]}`}>{tg[0]}</span></div>
-                <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{it.kind === 'sweep' ? `Kehrbezirk ${it.bez}` : it.addr} · {since(it.since)}</div>
+                <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{it.kind === 'sweep' ? `${it.person !== it.name ? it.person + ' · ' : ''}${it.where}` : it.addr} · {since(it.since)}</div>
                 <div style={sx(`font-size:12px;color:${op ? f.fg : 'var(--color-neutral-500)'};display:flex;gap:5px;align-items:center`)}><Icon n={f.icon} /><span>{f.t}</span></div>
               </div>
             </button>
           ); })}
         </div>
-        <div style={sx('margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-trash-simple" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Urkunden und Ausweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
+        <div style={sx('margin:16px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-trash-simple" style={sx('font-size:15px;margin-top:1px')} /><span style={sx('text-wrap:pretty')}>Nachweise werden nach deiner Entscheidung automatisch gelöscht, spätestens nach 14 Tagen.</span></div>
   </>;
   const inQueue = ['queue', 'detail', 'result'].includes(scr);
-  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'dir', 'feedback', 'demo'].includes(scr),
+  const nav = { title: 'Betreiber', sub: me.email, tabs, bar: ['queue', 'log', 'feedback', 'demo'].includes(scr),
     footer: <button className="btn btn-secondary" onClick={lock} style={sx('min-height:44px')}><Icon n="ph-lock-simple" />Sperren</button> };
 
   return (
@@ -236,45 +232,41 @@ function AdminApp({ me, onLock }) {
       {scr === 'queue' && (wide ? <EmptyPane icon="ph-seal-check" text="Wählen Sie links einen Eintrag zum Prüfen." /> : queueView)}
 
       {scr === 'detail' && (!x ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
-        <BackHeader onBack={toQueue} title={x.kind === 'sweep' ? 'Kaminfeger prüfen' : 'Bewohner prüfen'} sub={`eingereicht ${since(x.since)}`} right={<span className={`tag ${(TAG[x.status] || TAG.pending)[1]}`} style={sx('margin-right:10px')}>{(TAG[x.status] || TAG.pending)[0]}</span>} />
+        <BackHeader onBack={toQueue} title={x.kind === 'sweep' ? 'Betrieb prüfen' : 'Bewohner prüfen'} sub={`eingereicht ${since(x.since)}`} right={<span className={`tag ${(TAG[x.status] || TAG.pending)[1]}`} style={sx('margin-right:10px')}>{(TAG[x.status] || TAG.pending)[0]}</span>} />
         <div style={sx('margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;gap:12px;align-items:center')}>
           <Avatar ini={x.ini} size={44} fs={15} />
-          <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:17px;font-weight:500')}>{x.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{x.kind === 'sweep' ? `Kehrbezirk ${x.bez}` : x.addr}</div></div>
+          <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:17px;font-weight:500')}>{x.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{x.kind === 'sweep' ? `${x.person !== x.name ? x.person + ' · ' : ''}${x.where}` : x.addr}</div></div>
         </div>
         <SectionLabel pad="20px 22px 6px">Automatisch geprüft</SectionLabel>
         <div style={sx('margin:0 16px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:4px 14px')}>
           {x.auto.map(autoRow).map((a, i) => <div key={i} style={sx('display:flex;gap:10px;align-items:flex-start;padding:9px 0;font-size:13px')}><Icon w="ph-bold" n={a.icon} style={sx(`color:${a.fg};margin-top:2px`)} /><span style={sx(`flex:1;text-wrap:pretty;color:${a.tfg}`)}>{a.text}</span></div>)}
         </div>
         {x.kind === 'sweep' && <>
-          <SectionLabel pad="20px 22px 6px" right={<span style={sx('font-size:11px;color:var(--color-neutral-500)')}>{x.docs.length ? 'werden nach Entscheidung gelöscht' : 'bereits gelöscht'}</span>}>Dokumente</SectionLabel>
+          <SectionLabel pad="20px 22px 6px" right={<span style={sx('font-size:11px;color:var(--color-neutral-500)')}>{x.docs.length ? 'wird nach Entscheidung gelöscht' : 'bereits gelöscht'}</span>}>Nachweis</SectionLabel>
           {x.docs.length > 0 && <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px')}>
             {x.docs.map(dc => (
               <button key={dc.id} onClick={() => set({ overlay: 'doc', docId: dc.id })} style={sx('padding:10px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px;text-align:left')}>
-                {dc.kind === 'urkunde' ? <div aria-hidden="true" style={sx('height:118px;border-radius:4px;background:var(--color-neutral-200);padding:10px 12px;display:flex;flex-direction:column;gap:5px;position:relative;overflow:hidden')}>
-                  <div style={sx('height:5px;width:55%;background:var(--color-neutral-500);align-self:center')} />
-                  <div style={sx('height:3px;width:80%;background:var(--color-neutral-400);margin-top:8px')} /><div style={sx('height:3px;width:90%;background:var(--color-neutral-400)')} /><div style={sx('height:3px;width:70%;background:var(--color-neutral-400)')} />
-                  <div style={sx('position:absolute;right:12px;bottom:12px;width:26px;height:26px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--color-accent-600)')} />
-                </div> : <div aria-hidden="true" style={sx('height:118px;display:grid;place-items:center')}>
+                <div aria-hidden="true" style={sx('height:118px;display:grid;place-items:center')}>
                   <div style={sx('width:100%;aspect-ratio:1.58;border-radius:6px;background:var(--color-neutral-300);padding:8px;display:flex;gap:8px')}>
                     <div style={sx('width:32%;border-radius:3px;background:var(--color-neutral-500)')} />
                     <div style={sx('flex:1;display:flex;flex-direction:column;gap:5px;padding-top:4px')}><div style={sx('height:4px;width:80%;background:var(--color-neutral-600)')} /><div style={sx('height:3px;width:60%;background:var(--color-neutral-500)')} /><div style={sx('height:3px;width:70%;background:var(--color-neutral-500)')} /></div>
                   </div>
-                </div>}
-                <div style={sx('font-size:13px;display:flex;gap:6px;align-items:center')}><Icon n={dc.kind === 'urkunde' ? 'ph-file-text' : 'ph-identification-card'} style={sx('color:var(--color-neutral-400)')} /><span>{dc.kind === 'urkunde' ? 'Bestellungsurkunde' : 'Ausweis'}</span></div>
+                </div>
+                <div style={sx('font-size:13px;display:flex;gap:6px;align-items:center')}><Icon n="ph-identification-card" style={sx('color:var(--color-neutral-400)')} /><span style={sx('overflow:hidden;text-overflow:ellipsis;white-space:nowrap')}>Handwerkskarte / Ausweis</span></div>
               </button>
             ))}
           </div>}
-          {!decided && x.manual && x.register && <>
+          {!decided && x.register && <>
             <SectionLabel pad="20px 22px 6px">Schornsteinfegerregister</SectionLabel>
             <div style={sx('margin:0 16px;padding:14px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:10px')}>
-              <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>Der Bezirk steht noch nicht im Verzeichnis. Suche den Betrieb in der Registerauskunft des BAFA und vergleiche:</div>
+              <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>Suche den Betrieb in der Registerauskunft des BAFA und vergleiche mit diesen Angaben:</div>
               <div style={sx('display:grid;grid-template-columns:auto minmax(0, 1fr);gap:4px 12px;font-size:13px')}>
-                {[['Name', x.register.name], ['Betrieb', x.register.address], ['Kehrbezirk', `${x.register.kreis} ${x.register.bez}`], ['Bundesland', x.register.land]].map(([k, v]) => <Fragment key={k}>
+                {[['Betrieb', x.register.company], ['Inhaber/in', x.register.name], ['Anschrift', x.register.address]].map(([k, v]) => <Fragment key={k}>
                   <span style={sx('color:var(--color-neutral-500)')}>{k}</span><span style={sx('user-select:all;overflow-wrap:anywhere')}>{v}</span>
                 </Fragment>)}
               </div>
               <a className="btn btn-secondary" href={x.register.url} target="_blank" rel="noopener noreferrer" style={sx('min-height:44px;text-decoration:none')}><Icon n="ph-magnifying-glass" />Im BAFA-Register prüfen<Icon n="ph-arrow-square-out" /></a>
-              <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Bei der Freigabe wird der Bezirk ins Verzeichnis übernommen. Der Freischaltlink geht an die E-Mail der Registrierung.</div>
+              <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Ein Kehrbezirk ist nicht nötig: Die App ist für freie Arbeiten (Kehren, Überprüfen, Messen). Mit der Freigabe ist der Betrieb sofort freigeschaltet.</div>
             </div>
           </>}
           {!decided && <>
@@ -284,9 +276,9 @@ function AdminApp({ me, onLock }) {
             </div>
             <div style={sx('display:flex;flex-direction:column;gap:8px;padding:16px 16px 20px')}>
               {act.error && <ErrorLine text={act.error} />}
-              <button className="btn btn-primary" disabled={!needed.every(ch => mine.includes(ch[0])) || act.busy} onClick={() => decide(`/api/admin/sweeps/${x.id}/approve`, { checks: mine }, r => set({ screen: 'result', result: { type: 'approved', sentTo: r.sentTo, fromList: r.fromList } }))} style={sx('min-height:50px;font-size:15px')}><Icon n="ph-seal-check" />{x.manual ? 'Freigeben, Bezirk übernehmen & Link senden' : 'Freigeben & Link per E-Mail'}</button>
+              <button className="btn btn-primary" disabled={!needed.every(ch => mine.includes(ch[0])) || act.busy} onClick={() => decide(`/api/admin/sweeps/${x.id}/approve`, { checks: mine }, r => set({ screen: 'result', result: { type: 'approved', sentTo: r.sentTo } }))} style={sx('min-height:50px;font-size:15px')}><Icon n="ph-seal-check" />Betrieb freischalten</button>
               <div style={sx('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
-                <button className="btn btn-secondary" onClick={() => set({ overlay: 'query', queryText: `Guten Tag, bitte bestätigen Sie uns: Ist ${x.name} bevollmächtigte/r Bezirksschornsteinfeger/in für den Kehrbezirk ${x.bez}? Vielen Dank.` })} style={sx('min-height:44px')}><Icon n="ph-phone-call" />Rückfrage</button>
+                <button className="btn btn-secondary" onClick={() => set({ overlay: 'query', queryText: `Guten Tag, bitte bestätigen Sie uns: Ist der Betrieb „${x.name}“ (${x.register?.address || x.where}, Inhaber/in ${x.person}) als Schornsteinfegerbetrieb eingetragen? Vielen Dank.` })} style={sx('min-height:44px')}><Icon n="ph-phone-call" />Rückfrage</button>
                 <button className="btn btn-secondary" onClick={() => set({ overlay: 'reject', reason: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Ablehnen</button>
               </div>
             </div>
@@ -335,7 +327,7 @@ function AdminApp({ me, onLock }) {
       {scr === 'demo' && <>
         <div style={sx('padding:10px 22px 4px')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Vorschau</div><div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Die Apps mit Beispieldaten ansehen und ausprobieren – zum Zeigen oder Testen.</div></div>
         <div style={sx('display:flex;flex-direction:column;gap:10px;padding:12px 16px 0')}>
-          {[['sweep', 'ph-hard-hat', 'Kaminfeger-App ansehen', 'Als „Max Muster“, Kehrbezirk Musterstadt 1 · 3 Straßen, laufende Runde mit Terminen heute'],
+          {[['sweep', 'ph-hard-hat', 'Kaminfeger-App ansehen', 'Als Betrieb „Kaminfeger Muster“ · 3 Straßen, laufende Runde mit Terminen heute'],
             ['customer', 'ph-house-line', 'Bewohner-App ansehen', 'Als Familie Engel, Lindenweg 5 · Termin heute, Live-Anzeige sobald die Route läuft']].map(([as, icon, t, sub]) => (
             <button key={as} disabled={act.busy} onClick={() => openDemo(as)} style={sx('text-align:left;padding:16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;gap:14px;align-items:center')}>
               <span style={sx('width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;' + bubble(as === 'sweep' ? '#ff7a2f' : '#ffbd3f'))}><Icon w="ph-fill" n={icon} style={sx('font-size:22px')} /></span>
@@ -346,7 +338,7 @@ function AdminApp({ me, onLock }) {
           {act.error && <ErrorLine text={act.error} />}
           <button className="btn btn-ghost" disabled={act.busy} onClick={() => openDemo('sweep', true)} style={sx('min-height:44px;align-self:flex-start;color:var(--color-neutral-300)')}><Icon n="ph-arrow-counter-clockwise" />Beispieldaten zurücksetzen und Kaminfeger-App öffnen</button>
         </div>
-        <div style={sx('margin:12px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-shield-check" style={sx('font-size:15px;margin-top:1px;flex:none')} /><span style={sx('text-wrap:pretty')}>Der Demo-Bezirk ist für echte Nutzer unsichtbar, und es gehen keine E-Mails raus. Die Vorschau öffnet sich in einem neuen Tab. Ein eigenes Kaminfeger- oder Bewohner-Konto in diesem Browser wird dabei abgemeldet. Die Beispieldaten erneuern sich jeden Tag.</span></div>
+        <div style={sx('margin:12px 22px 20px;display:flex;gap:8px;font-size:12px;color:var(--color-neutral-500)')}><Icon n="ph-shield-check" style={sx('font-size:15px;margin-top:1px;flex:none')} /><span style={sx('text-wrap:pretty')}>Der Beispiel-Betrieb ist für echte Nutzer unsichtbar, und es gehen keine E-Mails raus. Die Vorschau öffnet sich in einem neuen Tab. Ein eigenes Kaminfeger- oder Bewohner-Konto in diesem Browser wird dabei abgemeldet. Die Beispieldaten erneuern sich jeden Tag.</span></div>
       </>}
 
       {scr === 'feedback' && <>
@@ -375,24 +367,6 @@ function AdminApp({ me, onLock }) {
         </div>
       </>}
 
-      {scr === 'dir' && <>
-        <div style={sx('padding:10px 22px 4px')}><div style={sx('font-size:23px;font-weight:500;letter-spacing:-0.015em')}>Bezirksverzeichnis</div><div style={sx('font-size:12px;color:var(--color-neutral-500)')}>{dir.data ? `${dir.data.count} Kehrbezirke` : 'Lädt …'} · Grundlage für die Prüfung der Kaminfeger</div></div>
-        <div style={sx('margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:10px')}>
-          <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>CSV mit den Spalten <b style={sx('font-weight:500')}>bundesland, kreis, bezirk, name, email</b>, optional betriebsadresse und bestellt_bis (JJJJ-MM-TT). An die E-Mail aus dem Verzeichnis geht der Freischaltlink – nicht an die Adresse, die der Kaminfeger selbst angibt.</div>
-          <a href="/vorlagen/bezirksverzeichnis.csv" download style={sx('font-size:13px;display:flex;gap:6px;align-items:center')}><Icon n="ph-download-simple" />Vorlage herunterladen</a>
-          {ui.dir && <div style={sx('font-size:13px;display:flex;flex-direction:column;gap:4px')}><span><Icon n="ph-check-circle" style={sx('color:var(--color-accent)')} /> {ui.dir.added} neu · {ui.dir.updated} aktualisiert</span>{ui.dir.errorCount > 0 && <span style={sx('color:var(--color-accent-300)')}>{ui.dir.errorCount} Zeilen übersprungen: {ui.dir.errors.slice(0, 3).join(' · ')}</span>}</div>}
-          {act.error && <ErrorLine text={act.error} />}
-          <FilePick className="btn btn-primary" accept=".csv,text/csv" disabled={act.busy} onFile={f => act.run(async () => { const r = await upload('/api/admin/directory', f); set({ dir: r }); dir.reload(); })} style={sx('min-height:46px')}><Icon n="ph-upload-simple" />{act.busy ? 'Wird importiert …' : 'CSV importieren'}</FilePick>
-        </div>
-        <div style={sx('display:flex;flex-direction:column;padding:12px 16px 20px')}>
-          {(dir.data?.rows || []).map(r => (
-            <div key={r.id} style={sx(`display:flex;flex-direction:column;gap:2px;padding:10px 4px;background:${DIV_BOTTOM}`)}>
-              <div style={sx('display:flex;gap:8px')}><span style={sx('font-size:14px;flex:1')}>{r.kreis} {r.number}</span><span style={sx('font-size:12px;color:var(--color-neutral-500)')}>{r.land}</span></div>
-              <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{r.holder_name} · {r.official_email}{r.appointed_until ? ' · bis ' + r.appointed_until.split('-').reverse().join('.') : ''}</div>
-            </div>
-          ))}
-        </div>
-      </>}
     </Shell>
   );
 }
