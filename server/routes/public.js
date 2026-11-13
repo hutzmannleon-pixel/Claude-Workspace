@@ -4,7 +4,7 @@ import { config } from '../config.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
 import { requestCode, checkCode, startSession, endSession, currentUser, COOKIE } from '../auth.js';
-import { readLink, useLink, activeSweepForDistrict, adminLog } from '../domain.js';
+import { readLink, useLink, adminLog } from '../domain.js';
 import { queueMail } from '../mail.js';
 import { HttpError, bad, notFound, nowIso, normEmail, limited } from '../util.js';
 
@@ -69,13 +69,6 @@ export default async function publicRoutes(app) {
     return { user: u ? { email: u.email, role: u.role, passkeys: get('SELECT COUNT(*) n FROM passkeys WHERE user_id = ?', u.id).n, passkeyRequired: u.role === 'admin' && config.adminPasskeyRequired } : null };
   });
 
-  // ---------- Bezirksverzeichnis (Auswahllisten) ----------
-  app.get('/api/directory/options', async () => {
-    const rows = all('SELECT DISTINCT land, kreis FROM districts WHERE demo = 0 ORDER BY land, kreis');
-    const lands = [...new Set(rows.map(r => r.land))];
-    return { lands, kreise: Object.fromEntries(lands.map(l => [l, rows.filter(r => r.land === l).map(r => r.kreis)])) };
-  });
-
   // ---------- Eigentümer bestätigt Mieter per E-Mail-Link ----------
   const ownerCtx = token => {
     const l = readLink('owner', token);
@@ -105,20 +98,8 @@ export default async function publicRoutes(app) {
     return { ok: true };
   });
 
-  // ---------- Kaminfeger: Freischaltlink aus der E-Mail ----------
-  app.get('/aktivieren/:token', async (req, reply) => {
-    const l = readLink('activate', req.params.token);
-    const s = l && get('SELECT * FROM sweeps WHERE id = ?', l.ref_id);
-    if (!l || !s || s.status !== 'approved') return reply.redirect('/kaminfeger?link=ungueltig');
-    const other = activeSweepForDistrict(s.district_id);
-    if (other && other.id !== s.id) return reply.redirect('/kaminfeger?link=ungueltig');
-    tx(() => {
-      useLink(req.params.token);
-      run(`UPDATE sweeps SET status = 'active' WHERE id = ?`, s.id);
-    });
-    live.bump();
-    return reply.redirect('/kaminfeger?aktiviert=1');
-  });
+  // Alte Freischaltlinks aus E-Mails: Die Freigabe durch den Betreiber schaltet inzwischen direkt frei
+  app.get('/aktivieren/:token', async (req, reply) => reply.redirect('/kaminfeger'));
 
   // ---------- Test-Postfach (nur im Testmodus) ----------
   if (config.testMode) {

@@ -5,7 +5,8 @@ import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import fstatic from '@fastify/static';
 import { config } from './config.js';
-import { wipe } from './db.js';
+import { wipe, rebuilt } from './db.js';
+import { wipeDemo } from './demo.js';
 import { live } from './live.js';
 import { startJobs } from './jobs.js';
 import { testStatus } from './testmode.js';
@@ -73,6 +74,8 @@ export async function build({ logger = !config.testMode } = {}) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  // Nach dem Umbau der Datenbank die Vorschau verwerfen – sie wird beim nächsten Öffnen mit aktuellen Beispieltexten neu angelegt
+  if (rebuilt) wipeDemo();
   const app = await build();
   startJobs();
   await app.listen({ port: config.port, host: config.host });

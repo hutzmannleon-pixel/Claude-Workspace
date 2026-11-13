@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { get, all, run } from './db.js';
 import { config } from './config.js';
 import { hmac, randomToken, isoIn, nowIso, dayLabel, slotsOf, toMin, fmtMin, today, bad } from './util.js';
@@ -16,21 +18,45 @@ export function readLink(kind, raw) {
 export const useLink = raw => run('UPDATE tokens SET used_at = ? WHERE hash = ?', nowIso(), hmac(raw));
 export const revokeLinks = (kind, refId) => run('UPDATE tokens SET used_at = ? WHERE kind = ? AND ref_id = ? AND used_at IS NULL', nowIso(), kind, refId);
 
-// ---------- Kaminfeger ----------
+// ---------- Kaminfeger-Betriebe ----------
+// Die App ist für die freien Arbeiten (Kehren, Überprüfen, Messen) da, die jeder zugelassene Betrieb ausführen darf.
+// Hoheitliche Aufgaben des Bezirkskaminfegers – allen voran die Feuerstättenschau – laufen nicht über die App.
 export function sweepByUser(userId) {
-  return get(`SELECT s.*, u.email, d.land, d.kreis, d.number AS bez, d.holder_name, d.official_email, d.business_address, d.appointed_until
-    FROM sweeps s JOIN users u ON u.id = s.user_id LEFT JOIN districts d ON d.id = s.district_id WHERE s.user_id = ?`, userId);
+  return get(`SELECT s.*, u.email FROM sweeps s JOIN users u ON u.id = s.user_id WHERE s.user_id = ?`, userId);
 }
-export const activeSweepForDistrict = districtId =>
-  get(`SELECT s.*, u.email FROM sweeps s JOIN users u ON u.id = s.user_id WHERE s.district_id = ? AND s.status = 'active'`, districtId);
+/** Der Betrieb, sofern er freigeschaltet ist */
+export const activeSweep = sweepId =>
+  get(`SELECT s.*, u.email FROM sweeps s JOIN users u ON u.id = s.user_id WHERE s.id = ? AND s.status = 'active'`, sweepId);
 export const sweepName = s => s ? `${s.first} ${s.last}` : '';
-export const LAENDER = ['Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen', 'Mecklenburg-Vorpommern', 'Niedersachsen',
-  'Nordrhein-Westfalen', 'Rheinland-Pfalz', 'Saarland', 'Sachsen', 'Sachsen-Anhalt', 'Schleswig-Holstein', 'Thüringen'];
-/** Bezirk im Verzeichnis suchen (Kreis ohne Groß-/Kleinschreibung, Nummer ohne führende Nullen) */
-export const findDistrict = (land, kreis, bez) =>
-  get(`SELECT * FROM districts WHERE demo = 0 AND land = ? AND lower(kreis) = lower(?) AND ltrim(number, '0') = ?`, land, kreis, String(bez).replace(/^0+(?=\d)/, ''));
-/** Bezirk des Kaminfegers als Text – aus dem Verzeichnis oder selbst angegeben */
-export const sweepBez = s => s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez ?? s.number } : s.req_bez ? { land: s.req_land, kreis: s.req_kreis, bez: s.req_bez, manual: true } : null;
+/** Name des Betriebs, wie ihn Kunden sehen – ohne eigene Angabe der Name der Inhaberin / des Inhabers */
+export const companyName = s => s ? (s.company || sweepName(s)) : '';
+
+/** Arten der Arbeit für eine Runde. Eigener Text ist möglich – nur nichts Hoheitliches. */
+export const WORK_KINDS = ['Kehren und Überprüfen', 'Kehren', 'Überprüfen', 'Messen'];
+export const WORK_DEFAULT = WORK_KINDS[0];
+const SOVEREIGN_RE = /feuerst(ä|ae)tten\s*-?\s*(schau|bescheid)|bauabnahme/i;
+export function cleanWork(raw) {
+  const w = String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!w) throw bad('Bitte angeben, welche Arbeit ansteht.', 'work');
+  if (SOVEREIGN_RE.test(w)) throw bad('Feuerstättenschau, Feuerstättenbescheid und Bauabnahme sind amtliche Aufgaben des Bezirkskaminfegers und laufen nicht über diese App.', 'work');
+  return w;
+}
+
+/** Löscht alles, was einem Betrieb gehört: Kundenliste, Runden, Termine, Nachrichten, Chats, Dokumente. Bewohner-Konten bleiben, verlieren aber die Zuordnung. */
+export function deleteSweepData(sweepId) {
+  const inSweep = '(SELECT id FROM households WHERE sweep_id = ?)';
+  for (const d of all('SELECT stored FROM documents WHERE sweep_id = ?', sweepId)) fs.rmSync(path.join(config.dataDir, 'uploads', d.stored), { force: true });
+  run('DELETE FROM documents WHERE sweep_id = ?', sweepId);
+  run(`DELETE FROM message_recipients WHERE household_id IN ${inSweep}`, sweepId);
+  run('DELETE FROM messages WHERE sweep_id = ? OR campaign_id IN (SELECT id FROM campaigns WHERE sweep_id = ?)', sweepId, sweepId);
+  run(`DELETE FROM chat_messages WHERE household_id IN ${inSweep}`, sweepId);
+  run(`DELETE FROM bookings WHERE household_id IN ${inSweep} OR campaign_id IN (SELECT id FROM campaigns WHERE sweep_id = ?)`, sweepId, sweepId);
+  run('DELETE FROM campaigns WHERE sweep_id = ?', sweepId); // Zeitfenster per CASCADE
+  run('DELETE FROM route_days WHERE sweep_id = ?', sweepId);
+  run(`DELETE FROM tokens WHERE (kind IN ('invite','member') AND ref_id IN ${inSweep}) OR (kind = 'owner' AND ref_id IN (SELECT id FROM residents WHERE household_id IN ${inSweep}))`, sweepId, sweepId);
+  run(`UPDATE residents SET household_id = NULL, status = CASE WHEN status = 'moved' THEN 'moved' ELSE 'unverified' END, method = NULL, is_member = 0, verified_at = NULL WHERE household_id IN ${inSweep}`, sweepId);
+  run('DELETE FROM households WHERE sweep_id = ?', sweepId);
+}
 export const initials = name => String(name || '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 // ---------- Haushalte & Namen ----------
@@ -38,7 +64,7 @@ export function householdName(h) {
   const r = get(`SELECT family_name FROM residents WHERE household_id = ? AND status = 'verified' AND is_member = 0 ORDER BY id DESC LIMIT 1`, h.id);
   return r ? r.family_name : h.owner_name.replace(/^(fam\.?|familie)\s+/i, '');
 }
-export const streetHouseholds = c => all(`SELECT * FROM households WHERE district_id = ? AND street_key = ? AND plz = ?`, c.district_id, c.street_key, c.plz)
+export const streetHouseholds = c => all(`SELECT * FROM households WHERE sweep_id = ? AND street_key = ? AND plz = ?`, c.sweep_id, c.street_key, c.plz)
   .sort((a, b) => parseInt(a.nr) - parseInt(b.nr) || a.nr.localeCompare(b.nr));
 
 // ---------- Kampagnen (Zeitfenster pro Straße) ----------
@@ -60,17 +86,17 @@ export function houseRows(c) {
   });
 }
 
-/** Laufende (nicht abgeschlossene) Runden eines Bezirks */
-export function campaignsOfDistrict(districtId) {
-  return all('SELECT * FROM campaigns WHERE district_id = ? AND closed_at IS NULL ORDER BY id DESC', districtId);
+/** Laufende (nicht abgeschlossene) Runden eines Betriebs */
+export function campaignsOfSweep(sweepId) {
+  return all('SELECT * FROM campaigns WHERE sweep_id = ? AND closed_at IS NULL ORDER BY id DESC', sweepId);
 }
-export const closedCampaigns = districtId => all('SELECT * FROM campaigns WHERE district_id = ? AND closed_at IS NOT NULL ORDER BY closed_at DESC, id DESC', districtId);
+export const closedCampaigns = sweepId => all('SELECT * FROM campaigns WHERE sweep_id = ? AND closed_at IS NOT NULL ORDER BY closed_at DESC, id DESC', sweepId);
 /** Alle Häuser erledigt (oder ausgezogen)? Dann darf die Straße abgeschlossen werden. */
 export const campaignDone = rows => rows.length > 0 && rows.every(r => r.moved || (r.booking && r.booking.visit === 'done'));
 
 /** Für einen Haushalt: die laufende Kampagne seiner Straße (abgeschlossene zählen nicht mehr). */
 export function campaignForHousehold(h) {
-  return get(`SELECT * FROM campaigns WHERE district_id = ? AND street_key = ? AND plz = ? AND sent_at IS NOT NULL AND closed_at IS NULL ORDER BY id DESC LIMIT 1`, h.district_id, h.street_key, h.plz);
+  return get(`SELECT * FROM campaigns WHERE sweep_id = ? AND street_key = ? AND plz = ? AND sent_at IS NOT NULL AND closed_at IS NULL ORDER BY id DESC LIMIT 1`, h.sweep_id, h.street_key, h.plz);
 }
 
 export function freeCount(campaign, w, exceptHouseholdId) {
@@ -92,23 +118,23 @@ export function validateWindows(windows, slotLen) {
 }
 
 // ---------- Tagesroute ----------
-export function routeFor(districtId, date) {
+export function routeFor(sweepId, date) {
   const rows = all(`SELECT b.*, h.nr, h.id AS hid, h.owner_name, w.date, c.slot_len
     FROM bookings b JOIN windows w ON w.id = b.window_id JOIN campaigns c ON c.id = b.campaign_id JOIN households h ON h.id = b.household_id
-    WHERE c.district_id = ? AND w.date = ? AND b.status = 'booked'`, districtId, date);
+    WHERE c.sweep_id = ? AND w.date = ? AND b.status = 'booked'`, sweepId, date);
   rows.sort((a, b) => toMin(a.time) - toMin(b.time) || parseInt(a.nr) - parseInt(b.nr));
   return rows.map(r => ({ id: r.id, householdId: r.hid, campaignId: r.campaign_id, nr: r.nr, street: get('SELECT street FROM campaigns WHERE id = ?', r.campaign_id).street,
     name: householdName({ id: r.hid, owner_name: r.owner_name }), t: r.time, end: fmtMin(toMin(r.time) + r.slot_len), key: r.key_note, visit: r.visit, src: r.source }));
 }
-export const routeStarted = (districtId, date) => !!get('SELECT 1 x FROM route_days WHERE district_id = ? AND date = ?', districtId, date);
+export const routeStarted = (sweepId, date) => !!get('SELECT 1 x FROM route_days WHERE sweep_id = ? AND date = ?', sweepId, date);
 
-export function routeDates(districtId) {
+export function routeDates(sweepId) {
   return all(`SELECT DISTINCT w.date FROM bookings b JOIN windows w ON w.id = b.window_id JOIN campaigns c ON c.id = b.campaign_id
-    WHERE c.district_id = ? AND b.status = 'booked' ORDER BY w.date`, districtId).map(r => r.date);
+    WHERE c.sweep_id = ? AND b.status = 'booked' ORDER BY w.date`, sweepId).map(r => r.date);
 }
 /** Heute, falls Termine – sonst der nächste Tag mit Terminen (oder der letzte). */
-export function defaultRouteDate(districtId) {
-  const ds = routeDates(districtId), t = today();
+export function defaultRouteDate(sweepId) {
+  const ds = routeDates(sweepId), t = today();
   return ds.find(d => d >= t) || ds[ds.length - 1] || t;
 }
 

@@ -4,6 +4,9 @@ import { sx, api, upload, useData, useAction, useWide, fmtAt, endOf, short, slot
 import { Shell, GLOW, Icon, BackHeader, SectionLabel, Sheet, Seg, Avatar, Toast, ErrorLine, Loading, FilePick, Hero, DeleteSheet, EmptyPane, DemoBadge, DatePicker, AppHeader, Greeting, NextCard, Tiles, InfoCard, ListCard, SearchField, PageHead, PasskeyPanel, PasskeyOffer, ChatThread, ChatComposer, DIV_BOTTOM } from '../ui.jsx';
 
 const PRE = [['Vormittag', '08:00', '12:00'], ['Nachmittag', '13:00', '17:00'], ['Ganzer Tag', '08:00', '16:00']];
+// Art der Arbeit je Runde (wie auf dem Server). Amtliche Aufgaben des Bezirkskaminfegers laufen nicht über die App.
+const WORK = ['Kehren und Überprüfen', 'Kehren', 'Überprüfen', 'Messen'];
+const OFFICIAL = /feuerst(ä|ae)tten\s*-?\s*(schau|bescheid)|bauabnahme/i;
 const chip = on => ({ bd: on ? 'var(--color-accent)' : 'var(--color-neutral-700)', bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-text)' });
 const nextWorkday = iso => { let d = iso; while (parseDate(d).getDay() === 0) d = addDays(d, 1); return d; };
 
@@ -39,10 +42,11 @@ export default function SweepApp({ onLogout }) {
     act.setError(null);
     if (target.campaign) {
       const src = target.campaign;
-      set({ screen: 'setup', target, toast: null, draft: { windows: src.windows.map(w => ({ id: w.id, date: w.date, label: w.label, start: w.start, end: w.end })), slotLen: src.slotLen, deadline: src.deadline } });
+      set({ screen: 'setup', target, toast: null, draft: { windows: src.windows.map(w => ({ id: w.id, date: w.date, label: w.label, start: w.start, end: w.end })), slotLen: src.slotLen, deadline: src.deadline,
+        work: src.work || WORK[0], ownWork: !WORK.includes(src.work || WORK[0]) } });
     } else {
       const d1 = nextWorkday(addDays(todayIso(), 14));
-      set({ screen: 'setup', target, toast: null, draft: { windows: [{ id: 'n1', date: d1, label: dayLabel(d1), start: '08:00', end: '12:00' }], slotLen: 30, deadline: nextWorkday(addDays(d1, -4)) } });
+      set({ screen: 'setup', target, toast: null, draft: { windows: [{ id: 'n1', date: d1, label: dayLabel(d1), start: '08:00', end: '12:00' }], slotLen: 30, deadline: nextWorkday(addDays(d1, -4)), work: WORK[0], ownWork: false } });
     }
   };
   const d = ui.draft;
@@ -60,7 +64,7 @@ export default function SweepApp({ onLogout }) {
   }) : [];
   const cap = draftWins.reduce((a, w) => a + w.times.length, 0), capOk = cap >= nHouses;
   const saveSetup = () => act.run(async () => {
-    const body = { id: ui.target.campaign?.id, street: ui.target.street, plz: ui.target.plz, slotLen: d.slotLen, deadline: d.deadline,
+    const body = { id: ui.target.campaign?.id, street: ui.target.street, plz: ui.target.plz, work: d.work.trim(), slotLen: d.slotLen, deadline: d.deadline,
       windows: d.windows.slice().sort((a, b) => a.date < b.date ? -1 : 1).map(w => ({ id: typeof w.id === 'number' ? w.id : undefined, date: w.date, start: w.start, end: w.end })) };
     const r = await api('/api/sweep/campaigns', { body });
     const toast = `Zeitfenster für ${ui.target.street} an ${plural(r.households, 'Haushalt', 'Haushalte')} gesendet.` + (r.dropped ? ` ${plural(r.dropped, 'Termin passt', 'Termine passen')} nicht mehr – die Haushalte wählen neu.` : '');
@@ -116,7 +120,7 @@ export default function SweepApp({ onLogout }) {
   const rcptN = mc ? mc.n[ui.rcpt] : 0;
   const templates = mc ? [
     { label: 'Komme ca. 15 Min. später', text: 'Ich bin heute leider ca. 15 Minuten später dran. Danke für Ihre Geduld!' },
-    { label: 'Bitte Zeit wählen', text: `Kurze Erinnerung: Bitte wählen Sie bis ${mc.deadlineLabel} in der App eine Zeit für die Feuerstättenschau.` },
+    { label: 'Bitte Zeit wählen', text: `Kurze Erinnerung: Bitte wählen Sie bis ${mc.deadlineLabel} in der App eine Zeit für meinen Besuch (${mc.work}).` },
     { label: 'Heute kurzfristig frei', text: 'Heute sind noch Slots frei. Wenn es Ihnen passt, buchen Sie direkt in der App.' },
     { label: 'Zugang freihalten', text: 'Bitte halten Sie den Zugang zu Heizraum und Dachboden frei. Vielen Dank!' }
   ] : [];
@@ -134,7 +138,9 @@ export default function SweepApp({ onLogout }) {
   const openBell = () => { set({ sheet: 'bell' }); const now = new Date().toISOString(); setSeen(now); try { localStorage.setItem('kf-sweep-seen', now); } catch { /* egal */ } };
   const tenant = ui.tenantId ? o.tenants.find(t => t.id === ui.tenantId) : null;
   const answerTenant = answer => act.run(async () => { const r = await api(`/api/sweep/tenant/${tenant.id}`, { body: { answer } }); set({ tenantId: null, toast: r.toast }); ov.reload(); });
-  const importKb = file => act.run(async () => { const r = await upload('/api/sweep/kehrbuch', file); set({ kb: r }); ov.reload(); });
+  // Nur eigene Kundendaten – das bestätigt der Betrieb vor jedem Import (Kehrbuch-Daten sind für amtliche Aufgaben reserviert)
+  const importKb = file => act.run(async () => { const r = await upload('/api/sweep/kunden?eigene=1', file); set({ kb: r }); ov.reload(); cust.reload(); });
+  const openImport = () => { act.setError(null); set({ sheet: 'kunden', kb: null, kbOwn: false }); };
 
   // ---------- Messenger ----------
   const openChat = id => { act.setError(null); set({ custId: null, sheet: null, screen: 'chat', chatId: id, toast: null }); };
@@ -145,7 +151,7 @@ export default function SweepApp({ onLogout }) {
     {scr === 'chat' && th?.hasApp && <ChatComposer onSend={sendChat} busy={act.busy} error={act.error} placeholder={`Nachricht an Familie ${th.name} …`} />}
     {scr === 'setup' && <div style={sx('flex:none;padding:10px 16px 6px;position:relative;z-index:2')}>
       {act.error && <div style={sx('padding:0 4px 8px')}><ErrorLine text={act.error} /></div>}
-      <button className="btn btn-primary" onClick={saveSetup} disabled={act.busy} style={sx('width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)')}><Icon n="ph-paper-plane-tilt" />{act.busy ? 'Wird gesendet …' : `Speichern & an ${plural(nHouses, 'Haushalt', 'Haushalte')} senden`}</button>
+      <button className="btn btn-primary" onClick={saveSetup} disabled={act.busy || !d.work.trim() || OFFICIAL.test(d.work)} style={sx('width:100%;min-height:50px;font-size:15px;box-shadow:0 0 28px color-mix(in srgb, var(--color-accent) 22%, transparent)')}><Icon n="ph-paper-plane-tilt" />{act.busy ? 'Wird gesendet …' : `Speichern & an ${plural(nHouses, 'Haushalt', 'Haushalte')} senden`}</button>
     </div>}
   </>;
 
@@ -209,7 +215,7 @@ export default function SweepApp({ onLogout }) {
       <span className="card-kicker">Bewohner bestätigen</span>
       <div style={sx('font-size:20px;font-weight:500;line-height:1.2')}>Wohnt {tenant.name} in der {tenant.street} {tenant.nr}?</div>
       <div style={sx('display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--color-neutral-300);margin-top:4px')}>
-        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-buildings" style={sx('font-size:17px;color:var(--color-neutral-500)')} /><span>Eigentümer laut Kehrbuch: {tenant.owner}</span></div>
+        <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-buildings" style={sx('font-size:17px;color:var(--color-neutral-500)')} /><span>In Ihrer Kundenliste: {tenant.owner}</span></div>
         <div style={sx('display:flex;gap:10px;align-items:center')}><Icon n="ph-envelope-simple" style={sx('font-size:17px;color:var(--color-neutral-500)')} /><span>E-Mail bestätigt · Bewohner laut eigener Angabe</span></div>
       </div>
       <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Nur bestätigen, wenn Sie es wissen – z. B. vom Klingelschild oder vom letzten Besuch. Sonst fragen wir den Eigentümer per E-Mail.</div>
@@ -274,7 +280,7 @@ export default function SweepApp({ onLogout }) {
     {callH && <Sheet scroll>
       <div style={sx('display:flex;align-items:center;gap:12px')}>
         <div style={sx('width:44px;height:44px;border-radius:var(--radius-md);background:var(--color-bg);display:grid;place-items:center;font-size:16px;font-weight:500')}>{callH.nr}</div>
-        <div style={sx('flex:1')}><div style={sx('font-size:18px;font-weight:500')}>Familie {callH.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400);font-variant-numeric:tabular-nums')}>{callH.phone || 'keine Nummer im Kehrbuch'} · {callWhy(callH)}</div></div>
+        <div style={sx('flex:1')}><div style={sx('font-size:18px;font-weight:500')}>Familie {callH.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400);font-variant-numeric:tabular-nums')}>{callH.phone || 'keine Nummer in der Kundenliste'} · {callWhy(callH)}</div></div>
       </div>
       {callH.phone ? <a className="btn btn-primary" href={`tel:${callH.phone.replace(/[^\d+]/g, '')}`} style={sx('min-height:48px')}><Icon n="ph-phone" />Jetzt anrufen</a>
         : <button className="btn btn-secondary" disabled style={sx('min-height:48px')}><Icon n="ph-phone-slash" />Keine Telefonnummer</button>}
@@ -293,10 +299,10 @@ export default function SweepApp({ onLogout }) {
     {ui.sheet === 'account' && <Sheet>
       <div style={sx('display:flex;align-items:center;gap:12px')}>
         <Avatar ini={o.ini} size={44} fs={15} />
-        <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:18px;font-weight:500')}>{o.name}</div><div style={sx('font-size:13px;color:var(--color-neutral-400)')}>Kehrbezirk {o.bez} · {o.kreis}</div></div>
+        <div style={sx('flex:1;min-width:0')}><div style={sx('font-size:18px;font-weight:500')}>{o.company}</div><div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{o.company !== o.name ? `${o.name} · ` : ''}{o.ort}</div></div>
       </div>
-      <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch</div>
-      <button className="btn btn-secondary" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:46px;margin-top:4px')}><Icon n="ph-upload-simple" />Kehrbuch importieren</button>
+      <div style={sx('font-size:13px;color:var(--color-neutral-400)')}>{plural(o.households, 'Haushalt', 'Haushalte')} in Ihrer Kundenliste</div>
+      <button className="btn btn-secondary" onClick={openImport} style={sx('min-height:46px;margin-top:4px')}><Icon n="ph-upload-simple" />Kundenliste importieren</button>
       <button className="btn btn-secondary" onClick={() => set({ sheet: 'passkeys' })} style={sx('min-height:46px')}><Icon n="ph-fingerprint" />Anmeldung mit Passkey</button>
       <button className="btn btn-secondary" onClick={async () => { await api('/api/sweep/logout', { body: {} }).catch(() => {}); onLogout(); }} style={sx('min-height:46px')}><Icon n="ph-sign-out" />Abmelden</button>
       <button className="btn btn-ghost" onClick={() => { act.setError(null); set({ sheet: 'delete' }); }} style={sx('min-height:40px;color:var(--color-neutral-500)')}><Icon n="ph-trash" />Konto löschen</button>
@@ -304,20 +310,25 @@ export default function SweepApp({ onLogout }) {
       <button className="btn btn-ghost" onClick={() => set({ sheet: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Schließen</button>
     </Sheet>}
     {ui.sheet === 'delete' && <DeleteSheet busy={act.busy} error={act.error} onClose={() => set({ sheet: 'account' })}
-      text="Ihr Kaminfeger-Konto wird gelöscht, samt gesendeten Nachrichten. Kehrbuch, Zeitfenster und Termine bleiben beim Bezirk, damit Ihre Kunden ihre Termine behalten. Das lässt sich nicht rückgängig machen."
+      text="Ihr Konto wird gelöscht – zusammen mit Ihrer Kundenliste, allen Zeitfenstern, Terminen, Nachrichten und Chats. Ihre Kunden behalten ihr eigenes Konto, sehen aber keine Termine mehr von Ihnen. Das lässt sich nicht rückgängig machen."
       onDelete={c => act.run(async () => { await api('/api/sweep/delete', { body: { confirm: c } }); onLogout(); })} />}
-    {ui.sheet === 'kehrbuch' && <Sheet scroll>
-      <span className="card-kicker">Kehrbuch</span>
-      <div style={sx('font-size:20px;font-weight:500;line-height:1.2')}>Kehrbuch importieren</div>
-      <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>CSV-Datei mit einer Zeile pro Liegenschaft (Trennzeichen Semikolon oder Komma). Spalten: <b style={sx('font-weight:500')}>strasse, hausnummer, plz, ort, eigentuemer</b>, optional kundennummer, email, telefon. Vorhandene Einträge werden aktualisiert.</div>
-      <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Mit Kundennummer bestätigen Bewohner ihren Wohnsitz sofort. An die E-Mail-Adresse geht beim Senden der Zeitfenster eine Einladung.</div>
-      <a href="/vorlagen/kehrbuch.csv" download style={sx('font-size:13px;display:flex;gap:6px;align-items:center')}><Icon n="ph-download-simple" />Vorlage herunterladen</a>
+    {ui.sheet === 'kunden' && <Sheet scroll>
+      <span className="card-kicker">Kundenliste</span>
+      <div style={sx('font-size:20px;font-weight:500;line-height:1.2')}>Kundenliste importieren</div>
+      <div style={sx('font-size:13px;color:var(--color-neutral-300);text-wrap:pretty')}>CSV-Datei mit einer Zeile pro Haushalt (Trennzeichen Semikolon oder Komma). Spalten: <b style={sx('font-weight:500')}>strasse, hausnummer, plz, ort, kunde</b>, optional kundennummer, email, telefon. Vorhandene Einträge werden aktualisiert.</div>
+      <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Mit der Kundennummer von Ihrer Rechnung bestätigen Bewohner ihren Wohnsitz sofort. An die E-Mail-Adresse geht beim Senden der Zeitfenster eine Einladung.</div>
+      <a href="/vorlagen/kundenliste.csv" download style={sx('font-size:13px;display:flex;gap:6px;align-items:center')}><Icon n="ph-download-simple" />Vorlage herunterladen</a>
       {ui.kb && <div style={sx('padding:12px 14px;border-radius:var(--radius-md);box-shadow:0 0 0 1px var(--color-accent-700);font-size:13px;display:flex;flex-direction:column;gap:4px')}>
         <span><Icon n="ph-check-circle" style={sx('color:var(--color-accent)')} /> {ui.kb.added} neu · {ui.kb.updated} aktualisiert</span>
         {ui.kb.errorCount > 0 && <span style={sx('color:var(--color-accent-300)')}>{ui.kb.errorCount} Zeilen übersprungen: {ui.kb.errors.slice(0, 3).join(' · ')}</span>}
       </div>}
+      <label className="radio" style={sx('align-items:flex-start;font-size:13px;color:var(--color-neutral-300);line-height:1.45;padding:12px 14px;border-radius:var(--radius-md);background:var(--color-surface)')}>
+        <input type="checkbox" checked={!!ui.kbOwn} onChange={() => set({ kbOwn: !ui.kbOwn })} />
+        <span className="dot" style={sx(`border-radius:4px;margin-top:1px;background:${ui.kbOwn ? 'var(--color-accent)' : 'transparent'};border-color:${ui.kbOwn ? 'var(--color-accent)' : 'var(--color-divider)'};box-shadow:none;display:grid;place-items:center;color:var(--color-bg);font-size:11px`)}><Icon w="ph-bold" n="ph-check" /></span>
+        <span style={sx('text-wrap:pretty')}>Das sind die Kundendaten meines eigenen Betriebs – <b style={sx('font-weight:500')}>nicht das Kehrbuch eines Kehrbezirks</b>. Kehrbuch-Daten dürfen nur für amtliche Aufgaben verwendet werden.</span>
+      </label>
       {act.error && <ErrorLine text={act.error} />}
-      <FilePick className="btn btn-primary" accept=".csv,text/csv" onFile={importKb} disabled={act.busy} style={sx('min-height:48px;margin-top:4px')}><Icon n="ph-upload-simple" />{act.busy ? 'Wird importiert …' : 'CSV-Datei wählen'}</FilePick>
+      <FilePick className="btn btn-primary" accept=".csv,text/csv" onFile={importKb} disabled={act.busy || !ui.kbOwn} style={sx(`min-height:48px;margin-top:4px;${ui.kbOwn ? '' : 'opacity:0.5'}`)}><Icon n="ph-upload-simple" />{act.busy ? 'Wird importiert …' : 'CSV-Datei wählen'}</FilePick>
       <button className="btn btn-ghost" onClick={() => set({ sheet: null })} style={sx('min-height:44px;color:var(--color-neutral-400)')}>Schließen</button>
     </Sheet>}
   </>;
@@ -327,11 +338,11 @@ export default function SweepApp({ onLogout }) {
         <Toast text={wide && scr !== 'streets' ? null : ui.toast} icon="ph-paper-plane-tilt" />
         {!o.streets.length && <div style={sx('margin:16px 16px 0;padding:16px;border-radius:var(--radius-lg);box-shadow:0 0 0 1px var(--color-accent-800);display:flex;flex-direction:column;gap:6px')}>
           <span className="card-kicker">Erster Schritt</span>
-          <div style={sx('font-size:18px;font-weight:500')}>Kehrbuch importieren</div>
-          <div style={sx('font-size:13px;color:var(--color-neutral-400);text-wrap:pretty')}>Laden Sie Ihre Liegenschaften als CSV-Datei hoch. Danach legen Sie pro Straße Zeitfenster an.</div>
-          <button className="btn btn-primary" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:44px;margin-top:6px')}><Icon n="ph-upload-simple" />Kehrbuch importieren</button>
+          <div style={sx('font-size:18px;font-weight:500')}>Kundenliste importieren</div>
+          <div style={sx('font-size:13px;color:var(--color-neutral-400);text-wrap:pretty')}>Laden Sie Ihre Kunden als CSV-Datei hoch. Danach legen Sie pro Straße Zeitfenster an.</div>
+          <button className="btn btn-primary" onClick={openImport} style={sx('min-height:44px;margin-top:6px')}><Icon n="ph-upload-simple" />Kundenliste importieren</button>
         </div>}
-        {o.streets.length > 0 && <SectionLabel pad="22px 22px 8px">Straßen im Kehrbuch</SectionLabel>}
+        {o.streets.length > 0 && <SectionLabel pad="22px 22px 8px">Straßen in Ihrer Kundenliste</SectionLabel>}
         <div style={sx('display:flex;flex-direction:column;gap:8px;padding:0 16px 20px')}>
           {o.streets.map(s => {
             const k = s.campaign;
@@ -354,12 +365,13 @@ export default function SweepApp({ onLogout }) {
             return (
               <button key={s.street + s.plz} onClick={() => set({ screen: 'street', campaignId: k.id, toast: null, filter: 'all' })} style={sx(`text-align:left;padding:14px 16px;border-radius:var(--radius-lg);background:var(--color-surface);border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:8px${wide && ui.campaignId === k.id && scr !== 'streets' ? ';box-shadow:0 0 0 1px var(--color-accent)' : ''}`)}>
                 <div style={sx('display:flex;align-items:center;gap:8px')}><span style={sx('font-size:16px;font-weight:500;flex:1')}>{s.street}</span><span className="tag tag-accent">läuft</span><Icon n="ph-caret-right" style={sx('color:var(--color-neutral-500)')} /></div>
+                <div style={sx('font-size:12px;color:var(--color-accent-300);margin-top:-4px')}>{k.work}</div>
                 {bar(k.booked, k.open, k.cancelled, k.total)}
                 <div style={sx('font-size:12px;color:var(--color-neutral-400)')}>{k.booked} bestätigt · {k.open} offen · {k.cancelled} abgesagt · {k.windows.join(' · ')}</div>
               </button>
             );
           })}
-          {o.streets.length > 0 && <button className="btn btn-ghost" onClick={() => set({ sheet: 'kehrbuch', kb: null })} style={sx('min-height:44px;color:var(--color-neutral-400);align-self:flex-start;padding-inline:6px')}><Icon n="ph-upload-simple" />Kehrbuch aktualisieren</button>}
+          {o.streets.length > 0 && <button className="btn btn-ghost" onClick={openImport} style={sx('min-height:44px;color:var(--color-neutral-400);align-self:flex-start;padding-inline:6px')}><Icon n="ph-upload-simple" />Kundenliste aktualisieren</button>}
         </div>
         {o.closed?.length > 0 && <>
           <button onClick={() => set({ showClosed: !ui.showClosed })} aria-expanded={!!ui.showClosed} style={sx('display:flex;align-items:center;gap:8px;width:calc(100% - 32px);margin:0 16px;padding:12px 6px;background:none;border:0;border-top:1px solid var(--color-divider);color:var(--color-neutral-300);font:inherit;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer')}>
@@ -381,7 +393,7 @@ export default function SweepApp({ onLogout }) {
           </div>}
         </>}
   </>;
-  const nav = { title: o.name, sub: `Kehrbezirk ${o.bez} · ${o.kreis}`, tabs, side, bar: scr !== 'setup',
+  const nav = { title: o.name, sub: o.company !== o.name ? o.company : o.ort, tabs, side, bar: scr !== 'setup',
     footer: <button className="btn btn-secondary" onClick={() => set({ sheet: 'account' })} style={sx('min-height:44px')}><Icon n="ph-user-circle" />Konto</button> };
 
   return (
@@ -393,7 +405,7 @@ export default function SweepApp({ onLogout }) {
         {o.today.count > 0
           ? <NextCard kicker={o.today.isToday ? 'Heute' : 'Nächster Termin'} title={o.today.label} lines={[`Route ${o.today.streets.join(', ')}`, `${o.today.from} – ${o.today.to} Uhr · ${plural(o.today.count, 'Termin', 'Termine')}`]} tag={o.today.isToday ? 'Heute' : 'Geplant'} onClick={toRoute} />
           : !o.streets.length
-            ? <NextCard icon="ph-upload-simple" kicker="Erster Schritt" title="Kehrbuch importieren" lines={['Liegenschaften als CSV hochladen, danach Zeitfenster pro Straße anlegen.']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
+            ? <NextCard icon="ph-upload-simple" kicker="Erster Schritt" title="Kundenliste importieren" lines={['Kunden als CSV hochladen, danach Zeitfenster pro Straße anlegen.']} onClick={openImport} />
             : <NextCard kicker="Nächster Termin" title="Noch keine Termine" lines={['Legen Sie Zeitfenster für Ihre Straßen an.']} tag="Offen" tagCls="tag-neutral" onClick={go('streets')} />}
         {o.tenants.map(t => (
           <button key={t.id} className="glass" onClick={() => { act.setError(null); set({ tenantId: t.id }); }} style={sx('margin:12px 16px 0;width:calc(100% - 32px);text-align:left;display:flex;gap:12px;align-items:center;padding:14px 16px;border-radius:22px;border:0;color:inherit;font:inherit;cursor:pointer')}>
@@ -408,7 +420,7 @@ export default function SweepApp({ onLogout }) {
           { label: 'Straßen', icon: 'ph-map-trifold', onClick: go('streets'), badge: o.streets.filter(x => !x.campaign).length },
           { label: 'Nachrichten', icon: 'ph-chat-circle-text', onClick: go('chats'), badge: o.chatUnread }
         ]} />
-        <InfoCard title="Sicher. Sauber. Zukunft." sub={`Kehrbezirk ${o.bez} · ${plural(o.households, 'Liegenschaft', 'Liegenschaften')} im Kehrbuch`} onClick={go('streets')} />
+        <InfoCard title="Sicher. Sauber. Zukunft." sub={`${o.company} · ${plural(o.households, 'Haushalt', 'Haushalte')} in der Kundenliste`} onClick={go('streets')} />
         <div style={sx('height:20px')} />
       </>}
 
@@ -422,7 +434,7 @@ export default function SweepApp({ onLogout }) {
             const q = ui.q.trim().toLowerCase();
             const want = { all: () => true, booked: c => c.status === 'booked', open: c => ['open', 'cancelled', 'missed', 'none'].includes(c.status), done: c => c.status === 'done' }[ui.cf];
             const list = cust.data.customers.filter(c => want(c) && (!q || `${c.name} ${c.street} ${c.nr} ${c.ort}`.toLowerCase().includes(q)));
-            if (!list.length) return <div style={sx('padding:20px 6px;font-size:14px;color:var(--color-neutral-400)')}>{cust.data.customers.length ? 'Keine Treffer.' : 'Noch kein Kehrbuch importiert.'}</div>;
+            if (!list.length) return <div style={sx('padding:20px 6px;font-size:14px;color:var(--color-neutral-400)')}>{cust.data.customers.length ? 'Keine Treffer.' : 'Noch keine Kundenliste importiert.'}</div>;
             return list.map(c => { const t = CUST_TAG[c.status]; return (
               <ListCard key={c.id} title={c.name} lines={[`${c.street} ${c.nr}`, `${c.plz} ${c.ort}`]} tag={t[0]} tagCls={t[1]} onClick={() => set({ custId: c.id })} />
             ); });
@@ -433,18 +445,18 @@ export default function SweepApp({ onLogout }) {
       {scr === 'more' && <>
         <PageHead title="Mehr" />
         <div style={sx('display:flex;flex-direction:column;gap:10px;padding:10px 16px 20px')}>
-          <ListCard icon="ph-map-trifold" title="Straßen & Zeitfenster" lines={[plural(o.streets.length, 'Straße', 'Straßen') + ' im Kehrbuch']} onClick={go('streets')} />
+          <ListCard icon="ph-map-trifold" title="Straßen & Zeitfenster" lines={[plural(o.streets.length, 'Straße', 'Straßen') + ' in Ihrer Kundenliste']} onClick={go('streets')} />
           <ListCard icon="ph-chat-circle-text" title="Nachrichten" lines={['Chats mit Kunden, Rundnachricht an eine Straße']} onClick={go('chats')} />
-          <ListCard icon="ph-upload-simple" title="Kehrbuch importieren" lines={['CSV-Datei hochladen oder aktualisieren']} onClick={() => set({ sheet: 'kehrbuch', kb: null })} />
+          <ListCard icon="ph-upload-simple" title="Kundenliste importieren" lines={['CSV-Datei hochladen oder aktualisieren']} onClick={openImport} />
           <ListCard icon="ph-fingerprint" title="Anmeldung mit Passkey" lines={['Per Fingerabdruck oder Gesicht anmelden']} onClick={() => set({ sheet: 'passkeys' })} />
-          <ListCard icon="ph-user-circle" title="Konto" lines={[o.name, `Kehrbezirk ${o.bez} · ${o.kreis}`]} onClick={() => set({ sheet: 'account' })} />
+          <ListCard icon="ph-user-circle" title="Konto" lines={[o.company, o.company !== o.name ? `${o.name} · ${o.ort}` : o.ort]} onClick={() => set({ sheet: 'account' })} />
         </div>
       </>}
 
       {scr === 'streets' && (wide ? <EmptyPane icon="ph-map-trifold" text="Wählen Sie links eine Straße." /> : streetsView)}
 
       {scr === 'street' && (!c ? <div style={sx('padding:40px;color:var(--color-neutral-500);font-size:13px')}>Lädt …</div> : <>
-        <BackHeader onBack={go('streets')} title={c.street} sub={c.closedAt ? `${plural(c.houses.length, 'Haushalt', 'Haushalte')} · abgeschlossen am ${c.closedLabel}` : `${plural(c.houses.length, 'Haushalt', 'Haushalte')} · Frist ${c.deadlineLabel}`} />
+        <BackHeader onBack={go('streets')} title={c.street} sub={c.closedAt ? `${c.work} · ${plural(c.houses.length, 'Haushalt', 'Haushalte')} · abgeschlossen am ${c.closedLabel}` : `${c.work} · ${plural(c.houses.length, 'Haushalt', 'Haushalte')} · Frist ${c.deadlineLabel}`} />
         <Toast text={ui.toast} icon="ph-paper-plane-tilt" />
         {c.closedAt && <div style={sx('margin:12px 16px 0;padding:12px 14px;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-neutral-300)')}><Icon n="ph-archive" style={sx('font-size:18px')} /><span style={sx('text-wrap:pretty')}>Diese Runde ist abgeschlossen und nur noch zum Nachsehen da.</span></div>}
         {!c.closedAt && c.done && <div style={sx('margin:12px 16px 0;padding:14px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:0 0 0 1px var(--color-accent-700);display:flex;flex-direction:column;gap:8px')}>
@@ -485,7 +497,7 @@ export default function SweepApp({ onLogout }) {
           ))}
         </div>
         {!c.closedAt && <div style={sx('padding:16px 16px 20px;display:flex;flex-direction:column;gap:6px')}>
-          <button className="btn btn-primary" onClick={() => set({ screen: 'notify', msgCampaign: c.id, rcpt: 'open', text: `Kurze Erinnerung: Bitte wählen Sie bis ${c.deadlineLabel} in der App eine Zeit für die Feuerstättenschau. So stehe ich nicht vor verschlossener Tür.` })} style={sx('width:100%;min-height:46px')}><Icon n="ph-bell-ringing" />Offene erinnern</button>
+          <button className="btn btn-primary" onClick={() => set({ screen: 'notify', msgCampaign: c.id, rcpt: 'open', text: `Kurze Erinnerung: Bitte wählen Sie bis ${c.deadlineLabel} in der App eine Zeit für meinen Besuch (${c.work}). So stehe ich nicht vor verschlossener Tür.` })} style={sx('width:100%;min-height:46px')}><Icon n="ph-bell-ringing" />Offene erinnern</button>
           <button className="btn btn-ghost" disabled={!c.done} onClick={() => { act.setError(null); set({ sheet: 'close', closeId: c.id }); }} style={sx('min-height:44px;color:var(--color-neutral-300)')}><Icon n="ph-archive" />Straße abschließen</button>
           {!c.done && <div style={sx('font-size:12px;color:var(--color-neutral-500);text-align:center;text-wrap:pretty')}>Abschließen geht, sobald alle Häuser erledigt sind.</div>}
         </div>}
@@ -493,7 +505,21 @@ export default function SweepApp({ onLogout }) {
 
       {scr === 'setup' && d && <>
         <BackHeader onBack={() => { act.setError(null); set({ screen: ui.target.campaign ? 'street' : 'streets', draft: null }); }} title={ui.target.campaign ? 'Zeitfenster bearbeiten' : 'Zeitfenster anlegen'} sub={`${ui.target.street} · ${plural(nHouses, 'Haushalt', 'Haushalte')}`} />
-        <div style={sx('padding:12px 22px 0;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Schlagen Sie 2–3 Fenster vor. Die Kunden buchen darin feste Slots – jeder Slot nur einmal.</div>
+        <div style={sx('padding:14px 16px 0;display:flex;flex-direction:column;gap:8px')}>
+          <div className="field"><label>Was steht an?</label>
+            <div style={sx('display:flex;gap:6px;flex-wrap:wrap')}>
+              {WORK.map(k => { const ch = chip(!d.ownWork && d.work === k); return (
+                <button key={k} onClick={() => setUi(u => ({ ...u, draft: { ...u.draft, work: k, ownWork: false } }))} style={sx(`min-height:36px;padding:0 13px;border-radius:18px;border:1px solid ${ch.bd};background:${ch.bg};color:${ch.fg};font:inherit;font-size:13px;cursor:pointer`)}>{k}</button>
+              ); })}
+              {(() => { const ch = chip(d.ownWork); return <button onClick={() => setUi(u => ({ ...u, draft: { ...u.draft, work: u.draft.ownWork ? u.draft.work : '', ownWork: true } }))} style={sx(`min-height:36px;padding:0 13px;border-radius:18px;border:1px solid ${ch.bd};background:${ch.bg};color:${ch.fg};font:inherit;font-size:13px;cursor:pointer`)}>Eigener Text</button>; })()}
+            </div>
+          </div>
+          {d.ownWork && <input className="input" value={d.work} maxLength={40} autoFocus placeholder="z. B. Abgaswegeüberprüfung" onChange={e => { const v = e.target.value; setUi(u => ({ ...u, draft: { ...u.draft, work: v } })); }} style={sx('min-height:44px;font-size:15px')} />}
+          {OFFICIAL.test(d.work)
+            ? <ErrorLine text="Feuerstättenschau, Feuerstättenbescheid und Bauabnahme sind amtliche Aufgaben des Bezirkskaminfegers – sie laufen nicht über diese App." />
+            : <div style={sx('font-size:12px;color:var(--color-neutral-500);text-wrap:pretty')}>Das lesen Ihre Kunden in der Einladung und in der App. Die App ist für Kehren, Überprüfen und Messen gedacht – nicht für die Feuerstättenschau.</div>}
+        </div>
+        <div style={sx('padding:16px 22px 0;font-size:14px;color:var(--color-neutral-400);text-wrap:pretty')}>Schlagen Sie 2–3 Fenster vor. Die Kunden buchen darin feste Slots – jeder Slot nur einmal.</div>
         <div style={sx('display:flex;flex-direction:column;gap:10px;padding:14px 16px 0')}>
           {draftWins.map((w, i) => (
             <div key={w.id} style={sx('padding:12px 12px 14px 14px;border-radius:var(--radius-lg);background:var(--color-surface);display:flex;flex-direction:column;gap:12px')}>

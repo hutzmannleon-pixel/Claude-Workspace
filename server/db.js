@@ -10,6 +10,63 @@ export const dbFile = process.env.DB_FILE || path.join(config.dataDir, 'kaminfeg
 export const db = new DatabaseSync(dbFile);
 db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
 
+// Tabellen, die der Umbau „Betrieb statt Kehrbezirk“ neu aufbaut – Definition einmal, für Schema und Migration.
+// Haushalte (die Kundenliste), Runden und Routentage gehören dem Betrieb (sweep_id).
+const T = {
+  sweeps: `(
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  first TEXT NOT NULL,
+  last TEXT NOT NULL,
+  company TEXT,
+  phone TEXT,
+  bstreet TEXT NOT NULL,
+  bplz TEXT NOT NULL,
+  bort TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  reject_reason TEXT,
+  submitted_at TEXT,
+  decided_at TEXT,
+  own_data_at TEXT,
+  demo INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`,
+  households: `(
+  id INTEGER PRIMARY KEY,
+  sweep_id INTEGER NOT NULL REFERENCES sweeps(id),
+  street TEXT NOT NULL,
+  street_key TEXT NOT NULL,
+  nr TEXT NOT NULL,
+  plz TEXT NOT NULL,
+  ort TEXT NOT NULL,
+  owner_name TEXT NOT NULL,
+  customer_no TEXT,
+  email TEXT,
+  phone TEXT,
+  moved_at TEXT,
+  UNIQUE (sweep_id, street_key, plz, nr)
+)`,
+  campaigns: `(
+  id INTEGER PRIMARY KEY,
+  sweep_id INTEGER NOT NULL REFERENCES sweeps(id),
+  street TEXT NOT NULL,
+  street_key TEXT NOT NULL,
+  plz TEXT NOT NULL,
+  work TEXT NOT NULL DEFAULT 'Kehren und Überprüfen',
+  slot_len INTEGER NOT NULL,
+  deadline TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at TEXT,
+  closed_at TEXT
+)`,
+  route_days: `(
+  sweep_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  PRIMARY KEY (sweep_id, date)
+)`
+};
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY,
@@ -46,33 +103,7 @@ CREATE TABLE IF NOT EXISTS tokens (
   used_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
-CREATE TABLE IF NOT EXISTS districts (
-  id INTEGER PRIMARY KEY,
-  land TEXT NOT NULL,
-  kreis TEXT NOT NULL,
-  number TEXT NOT NULL,
-  holder_name TEXT NOT NULL,
-  official_email TEXT NOT NULL,
-  business_address TEXT,
-  appointed_until TEXT,
-  UNIQUE (kreis, number)
-);
-CREATE TABLE IF NOT EXISTS sweeps (
-  id INTEGER PRIMARY KEY,
-  user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  first TEXT NOT NULL,
-  last TEXT NOT NULL,
-  phone TEXT,
-  bstreet TEXT NOT NULL,
-  bplz TEXT NOT NULL,
-  bort TEXT NOT NULL,
-  district_id INTEGER REFERENCES districts(id),
-  status TEXT NOT NULL DEFAULT 'draft',
-  reject_reason TEXT,
-  submitted_at TEXT,
-  decided_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
+CREATE TABLE IF NOT EXISTS sweeps ${T.sweeps};
 CREATE TABLE IF NOT EXISTS documents (
   id INTEGER PRIMARY KEY,
   sweep_id INTEGER NOT NULL REFERENCES sweeps(id) ON DELETE CASCADE,
@@ -84,21 +115,7 @@ CREATE TABLE IF NOT EXISTS documents (
   uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (sweep_id, kind)
 );
-CREATE TABLE IF NOT EXISTS households (
-  id INTEGER PRIMARY KEY,
-  district_id INTEGER NOT NULL REFERENCES districts(id),
-  street TEXT NOT NULL,
-  street_key TEXT NOT NULL,
-  nr TEXT NOT NULL,
-  plz TEXT NOT NULL,
-  ort TEXT NOT NULL,
-  owner_name TEXT NOT NULL,
-  customer_no TEXT,
-  email TEXT,
-  phone TEXT,
-  moved_at TEXT,
-  UNIQUE (district_id, street_key, plz, nr)
-);
+CREATE TABLE IF NOT EXISTS households ${T.households};
 CREATE INDEX IF NOT EXISTS households_addr ON households(street_key, plz);
 CREATE TABLE IF NOT EXISTS residents (
   id INTEGER PRIMARY KEY,
@@ -122,18 +139,7 @@ CREATE TABLE IF NOT EXISTS residents (
   verified_at TEXT,
   moved_at TEXT
 );
-CREATE TABLE IF NOT EXISTS campaigns (
-  id INTEGER PRIMARY KEY,
-  district_id INTEGER NOT NULL REFERENCES districts(id),
-  street TEXT NOT NULL,
-  street_key TEXT NOT NULL,
-  plz TEXT NOT NULL,
-  slot_len INTEGER NOT NULL,
-  deadline TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  sent_at TEXT,
-  closed_at TEXT
-);
+CREATE TABLE IF NOT EXISTS campaigns ${T.campaigns};
 CREATE TABLE IF NOT EXISTS windows (
   id INTEGER PRIMARY KEY,
   campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
@@ -158,12 +164,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS bookings_slot ON bookings(window_id, time) WHERE status = 'booked';
 CREATE UNIQUE INDEX IF NOT EXISTS bookings_house ON bookings(campaign_id, household_id) WHERE status = 'booked';
-CREATE TABLE IF NOT EXISTS route_days (
-  district_id INTEGER NOT NULL,
-  date TEXT NOT NULL,
-  started_at TEXT NOT NULL,
-  PRIMARY KEY (district_id, date)
-);
+CREATE TABLE IF NOT EXISTS route_days ${T.route_days};
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY,
   sweep_id INTEGER NOT NULL REFERENCES sweeps(id),
@@ -213,7 +214,7 @@ CREATE TABLE IF NOT EXISTS admin_log (
   note TEXT,
   at TEXT NOT NULL DEFAULT (datetime('now'))
 );
--- Messenger: Unterhaltung je Haushalt mit dem Kaminfeger des Bezirks (nur Text, 12 Monate)
+-- Messenger: Unterhaltung je Haushalt mit seinem Kaminfeger (nur Text, 12 Monate)
 CREATE TABLE IF NOT EXISTS chat_messages (
   id INTEGER PRIMARY KEY,
   household_id INTEGER NOT NULL REFERENCES households(id),
@@ -235,6 +236,67 @@ CREATE TABLE IF NOT EXISTS outbox (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
+/**
+ * Umbau „Betrieb statt Kehrbezirk“: Früher hing alles an einem Kehrbezirk (districts) mit genau einem Kaminfeger.
+ * Jetzt gehören Kundenliste, Runden und Routentage dem Betrieb selbst. Bestehende Daten wandern zum Kaminfeger
+ * des bisherigen Bezirks; Bezirke ohne Kaminfeger werden samt Anhang entfernt. „Geprüft, aber noch nicht per Link
+ * freigeschaltet“ (approved) gibt es nicht mehr – solche Konten sind danach aktiv.
+ */
+export let rebuilt = false;
+function migrateToBetrieb() {
+  const cols = t => db.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name);
+  if (!cols('households').includes('district_id')) return;
+  const or = (t, c, alt = 'NULL') => (cols(t).includes(c) ? c : alt);
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    db.exec(`
+      CREATE TEMP TABLE _owner AS SELECT d.id AS district_id,
+        (SELECT s.id FROM sweeps s WHERE s.district_id = d.id ORDER BY (s.status = 'active') DESC, (s.status = 'approved') DESC, s.id LIMIT 1) AS sweep_id
+        FROM districts d;
+      CREATE TEMP TABLE _gone_h AS SELECT h.id FROM households h LEFT JOIN _owner o ON o.district_id = h.district_id WHERE o.sweep_id IS NULL;
+      CREATE TEMP TABLE _gone_c AS SELECT c.id FROM campaigns c LEFT JOIN _owner o ON o.district_id = c.district_id WHERE o.sweep_id IS NULL;
+      DELETE FROM bookings WHERE household_id IN (SELECT id FROM _gone_h) OR campaign_id IN (SELECT id FROM _gone_c);
+      DELETE FROM windows WHERE campaign_id IN (SELECT id FROM _gone_c);
+      UPDATE messages SET campaign_id = NULL WHERE campaign_id IN (SELECT id FROM _gone_c);
+      DELETE FROM message_recipients WHERE household_id IN (SELECT id FROM _gone_h);
+      UPDATE residents SET household_id = NULL, status = 'unverified' WHERE household_id IN (SELECT id FROM _gone_h);
+      DELETE FROM tokens WHERE kind = 'activate' OR (kind IN ('invite','member') AND ref_id IN (SELECT id FROM _gone_h));
+    `);
+    if (cols('chat_messages').length) db.exec('DELETE FROM chat_messages WHERE household_id IN (SELECT id FROM _gone_h)');
+    db.exec(`
+      CREATE TABLE sweeps_new ${T.sweeps};
+      INSERT INTO sweeps_new (id, user_id, first, last, phone, bstreet, bplz, bort, status, reject_reason, submitted_at, decided_at, demo, created_at)
+        SELECT s.id, s.user_id, s.first, s.last, s.phone, s.bstreet, s.bplz, s.bort, CASE s.status WHEN 'approved' THEN 'active' ELSE s.status END,
+          s.reject_reason, s.submitted_at, s.decided_at, (u.email LIKE '%@demo.invalid'), s.created_at FROM sweeps s JOIN users u ON u.id = s.user_id;
+      CREATE TABLE households_new ${T.households};
+      INSERT INTO households_new (id, sweep_id, street, street_key, nr, plz, ort, owner_name, customer_no, email, phone, moved_at)
+        SELECT h.id, o.sweep_id, h.street, h.street_key, h.nr, h.plz, h.ort, h.owner_name, h.customer_no, h.email, h.phone, h.moved_at
+        FROM households h JOIN _owner o ON o.district_id = h.district_id WHERE o.sweep_id IS NOT NULL;
+      CREATE TABLE campaigns_new ${T.campaigns};
+      INSERT INTO campaigns_new (id, sweep_id, street, street_key, plz, slot_len, deadline, created_at, sent_at, closed_at)
+        SELECT c.id, o.sweep_id, c.street, c.street_key, c.plz, c.slot_len, c.deadline, c.created_at, c.sent_at, ${or('campaigns', 'closed_at')}
+        FROM campaigns c JOIN _owner o ON o.district_id = c.district_id WHERE o.sweep_id IS NOT NULL;
+      CREATE TABLE route_days_new ${T.route_days};
+      INSERT OR IGNORE INTO route_days_new (sweep_id, date, started_at)
+        SELECT o.sweep_id, r.date, r.started_at FROM route_days r JOIN _owner o ON o.district_id = r.district_id WHERE o.sweep_id IS NOT NULL;
+      DROP TABLE sweeps; ALTER TABLE sweeps_new RENAME TO sweeps;
+      DROP TABLE households; ALTER TABLE households_new RENAME TO households;
+      DROP TABLE campaigns; ALTER TABLE campaigns_new RENAME TO campaigns;
+      DROP TABLE route_days; ALTER TABLE route_days_new RENAME TO route_days;
+      DROP TABLE districts;
+      DROP TABLE _owner; DROP TABLE _gone_h; DROP TABLE _gone_c;
+    `);
+    const broken = db.prepare('PRAGMA foreign_key_check').all();
+    if (broken.length) throw new Error(`Umbau der Datenbank abgebrochen: ${broken.length} verwaiste Verweise (z. B. Tabelle ${broken[0].table}).`);
+    db.exec('COMMIT');
+  } catch (e) { db.exec('ROLLBACK'); throw e; }
+  finally { db.exec('PRAGMA foreign_keys = ON'); }
+  rebuilt = true;
+  console.log('Datenbank umgebaut: Kundenlisten und Runden gehören jetzt dem Betrieb (Kehrbezirke entfernt).');
+}
+migrateToBetrieb();
+
 // Feedback war anfangs nur für angemeldete Nutzer (user_id NOT NULL) – Tabelle umbauen, Einträge behalten
 {
   const cols = db.prepare('PRAGMA table_info(feedback)').all();
@@ -246,13 +308,6 @@ CREATE TABLE IF NOT EXISTS outbox (
   }
 }
 db.exec(SCHEMA);
-// Straßen abschließen (neue Spalte in bestehenden Datenbanken)
-if (!db.prepare('PRAGMA table_info(campaigns)').all().some(c => c.name === 'closed_at')) db.exec('ALTER TABLE campaigns ADD COLUMN closed_at TEXT');
-// Selbst angegebener Bezirk (steht noch nicht im Verzeichnis) – wird bei der Freigabe ins Verzeichnis übernommen
-if (!db.prepare('PRAGMA table_info(sweeps)').all().some(c => c.name === 'req_bez'))
-  db.exec('ALTER TABLE sweeps ADD COLUMN req_land TEXT; ALTER TABLE sweeps ADD COLUMN req_kreis TEXT; ALTER TABLE sweeps ADD COLUMN req_bez TEXT;');
-// Demo-Bezirk für die Vorschau des Betreibers (siehe demo.js)
-if (!db.prepare('PRAGMA table_info(districts)').all().some(c => c.name === 'demo')) db.exec('ALTER TABLE districts ADD COLUMN demo INTEGER NOT NULL DEFAULT 0');
 
 const norm = params => params.map(v => (v === undefined ? null : typeof v === 'boolean' ? (v ? 1 : 0) : v));
 export const get = (sql, ...p) => db.prepare(sql).get(...norm(p));
@@ -271,7 +326,7 @@ export function tx(fn) {
 
 export function wipe() {
   const tables = ['message_reads', 'message_recipients', 'messages', 'route_days', 'bookings', 'windows', 'campaigns', 'residents', 'households',
-    'passkeys', 'feedback', 'documents', 'sweeps', 'districts', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox', 'chat_messages'];
+    'passkeys', 'feedback', 'documents', 'sweeps', 'tokens', 'codes', 'sessions', 'users', 'admin_log', 'outbox', 'chat_messages'];
   db.exec('PRAGMA foreign_keys = OFF');
   for (const t of tables) db.exec(`DELETE FROM ${t}`);
   db.exec('PRAGMA foreign_keys = ON');

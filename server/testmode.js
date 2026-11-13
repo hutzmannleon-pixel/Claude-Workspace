@@ -6,11 +6,10 @@ import { get } from './db.js';
 export function testStatus() {
   const has = sql => !!get(sql);
   return [
-    has('SELECT 1 x FROM districts LIMIT 1'),
-    has(`SELECT 1 x FROM sweeps WHERE status != 'draft' LIMIT 1`),
-    has(`SELECT 1 x FROM sweeps WHERE status IN ('approved','active') LIMIT 1`),
-    has(`SELECT 1 x FROM sweeps WHERE status = 'active' LIMIT 1`),
-    has('SELECT 1 x FROM households LIMIT 1'),
+    has(`SELECT 1 x FROM sweeps WHERE demo = 0 LIMIT 1`),
+    has(`SELECT 1 x FROM sweeps WHERE demo = 0 AND status != 'draft' LIMIT 1`),
+    has(`SELECT 1 x FROM sweeps WHERE demo = 0 AND status = 'active' LIMIT 1`),
+    has('SELECT 1 x FROM households h JOIN sweeps s ON s.id = h.sweep_id WHERE s.demo = 0 LIMIT 1'),
     has('SELECT 1 x FROM campaigns WHERE sent_at IS NOT NULL LIMIT 1'),
     has(`SELECT 1 x FROM residents WHERE status = 'verified' LIMIT 1`),
     has(`SELECT 1 x FROM bookings WHERE status = 'booked' OR visit IS NOT NULL LIMIT 1`),

@@ -1,7 +1,8 @@
-// Vorschau für den Betreiber: ein abgeschotteter Demo-Bezirk mit Beispieldaten.
-// Erkennbar an districts.demo = 1 und an E-Mail-Adressen auf @demo.invalid (dorthin wird nie gemailt).
-// Der Bezirk taucht nirgends für echte Nutzer auf (Verzeichnis, Adresssuche, Prüfliste).
+// Vorschau für den Betreiber: ein abgeschotteter Beispiel-Betrieb mit Beispieldaten.
+// Erkennbar an sweeps.demo = 1 und an E-Mail-Adressen auf @demo.invalid (dorthin wird nie gemailt).
+// Der Betrieb taucht nirgends für echte Nutzer auf (Adresssuche, Prüfliste).
 import { get, all, run, tx } from './db.js';
+import { deleteSweepData } from './domain.js';
 import { streetKey, nowIso, today, isoDate, parseDate, slotsOf } from './util.js';
 
 export const DEMO_DOMAIN = '@demo.invalid';
@@ -18,53 +19,35 @@ const STREETS = [
   { street: 'Am Mühlbach', owners: ['Fam. Wagner', 'Fam. Winter', 'Fam. Ziegler', 'Fam. Busch'] }
 ];
 
-export const demoDistrict = () => get('SELECT * FROM districts WHERE demo = 1 LIMIT 1');
+export const demoSweep = () => get('SELECT * FROM sweeps WHERE demo = 1 LIMIT 1');
 
-/** Löscht den Demo-Bezirk samt allem, was daran hängt. */
+/** Löscht den Beispiel-Betrieb samt allem, was daran hängt. */
 export function wipeDemo() {
-  const d = demoDistrict();
   const users = all(`SELECT id FROM users WHERE email LIKE ?`, '%' + DEMO_DOMAIN).map(u => u.id);
   tx(() => {
-    if (d) {
-      const camps = all('SELECT id FROM campaigns WHERE district_id = ?', d.id).map(c => c.id);
-      const hs = all('SELECT id FROM households WHERE district_id = ?', d.id).map(h => h.id);
-      const ids = a => a.length ? a.join(',') : '-1';
-      run(`DELETE FROM message_recipients WHERE household_id IN (${ids(hs)})`);
-      run(`DELETE FROM messages WHERE campaign_id IN (${ids(camps)}) OR sweep_id IN (SELECT id FROM sweeps WHERE district_id = ?)`, d.id);
-      run(`DELETE FROM bookings WHERE household_id IN (${ids(hs)})`);
-      run(`DELETE FROM chat_messages WHERE household_id IN (${ids(hs)})`);
-      run(`DELETE FROM campaigns WHERE district_id = ?`, d.id);
-      run(`DELETE FROM route_days WHERE district_id = ?`, d.id);
-      run(`DELETE FROM tokens WHERE kind IN ('invite','member') AND ref_id IN (${ids(hs)})`);
-    }
-    if (users.length) run(`DELETE FROM users WHERE id IN (${users.join(',')})`);
-    if (d) {
-      run('UPDATE residents SET household_id = NULL WHERE household_id IN (SELECT id FROM households WHERE district_id = ?)', d.id);
-      run('DELETE FROM households WHERE district_id = ?', d.id);
-      run('UPDATE sweeps SET district_id = NULL WHERE district_id = ?', d.id);
-      run('DELETE FROM districts WHERE id = ?', d.id);
-    }
+    for (const s of all('SELECT id FROM sweeps WHERE demo = 1')) deleteSweepData(s.id);
+    if (users.length) run(`DELETE FROM users WHERE id IN (${users.join(',')})`); // Betrieb, Bewohner, Sitzungen per CASCADE
   });
 }
 
 /**
- * Legt den Demo-Bezirk neu an: Kaminfeger „Max Muster“, drei Straßen, eine laufende Runde
+ * Legt den Beispiel-Betrieb neu an: Kaminfeger „Max Muster“, drei Straßen, eine laufende Runde
  * (heute und in einer Woche), ein Bewohner mit Termin heute – so ist auch die Live-Anzeige zu sehen.
  */
 export function seedDemo() {
   wipeDemo();
   return tx(() => {
-    const did = Number(run(`INSERT INTO districts (land, kreis, number, holder_name, official_email, business_address, demo) VALUES ('Vorschau', 'Musterstadt', '1', 'Max Muster', ?, 'Kaminweg 1, 00000 Musterstadt', 1)`, DEMO_SWEEP).lastInsertRowid);
     const suid = Number(run(`INSERT INTO users (email, role) VALUES (?, 'sweep')`, DEMO_SWEEP).lastInsertRowid);
-    const sid = Number(run(`INSERT INTO sweeps (user_id, first, last, phone, bstreet, bplz, bort, district_id, status, submitted_at, decided_at) VALUES (?, 'Max', 'Muster', '0000 123456', 'Kaminweg 1', '00000', 'Musterstadt', ?, 'active', ?, ?)`, suid, did, nowIso(), nowIso()).lastInsertRowid);
+    const sid = Number(run(`INSERT INTO sweeps (user_id, first, last, company, phone, bstreet, bplz, bort, status, demo, submitted_at, decided_at, own_data_at)
+      VALUES (?, 'Max', 'Muster', 'Kaminfeger Muster', '0000 123456', 'Kaminweg 1', '00000', 'Musterstadt', 'active', 1, ?, ?, ?)`, suid, nowIso(), nowIso(), nowIso()).lastInsertRowid);
     const hh = {};
     for (const s of STREETS) {
-      hh[s.street] = s.owners.map((o, i) => Number(run(`INSERT INTO households (district_id, street, street_key, nr, plz, ort, owner_name, customer_no, phone) VALUES (?,?,?,?,?,?,?,?,?)`,
-        did, s.street, streetKey(s.street), String(i + 1), '00000', 'Musterstadt', o, `DEMO-${s.street.slice(0, 2).toUpperCase()}${i + 1}`, `0000 ${String(100000 + i * 7919).slice(0, 6)}`).lastInsertRowid));
+      hh[s.street] = s.owners.map((o, i) => Number(run(`INSERT INTO households (sweep_id, street, street_key, nr, plz, ort, owner_name, customer_no, phone) VALUES (?,?,?,?,?,?,?,?,?)`,
+        sid, s.street, streetKey(s.street), String(i + 1), '00000', 'Musterstadt', o, `DEMO-${s.street.slice(0, 2).toUpperCase()}${i + 1}`, `0000 ${String(100000 + i * 7919).slice(0, 6)}`).lastInsertRowid));
     }
     // Laufende Runde im Lindenweg: heute 8–12 Uhr, in einer Woche 13–16 Uhr
     const d1 = today(), d2 = workday(7);
-    const cid = Number(run(`INSERT INTO campaigns (district_id, street, street_key, plz, slot_len, deadline, sent_at) VALUES (?, 'Lindenweg', ?, '00000', 30, ?, ?)`, did, streetKey('Lindenweg'), plusDays(-1), nowIso()).lastInsertRowid);
+    const cid = Number(run(`INSERT INTO campaigns (sweep_id, street, street_key, plz, work, slot_len, deadline, sent_at) VALUES (?, 'Lindenweg', ?, '00000', 'Kehren und Überprüfen', 30, ?, ?)`, sid, streetKey('Lindenweg'), plusDays(-1), nowIso()).lastInsertRowid);
     const w1 = Number(run(`INSERT INTO windows (campaign_id, date, start, end) VALUES (?,?,?,?)`, cid, d1, '08:00', '12:00').lastInsertRowid);
     const w2 = Number(run(`INSERT INTO windows (campaign_id, date, start, end) VALUES (?,?,?,?)`, cid, d2, '13:00', '16:00').lastInsertRowid);
     const s1 = slotsOf({ start: '08:00', end: '12:00' }, 30), s2 = slotsOf({ start: '13:00', end: '16:00' }, 30);
@@ -79,22 +62,22 @@ export function seedDemo() {
       VALUES (?, ?, 'Engel', 'Familie Engel', 'Lindenweg', '5', '00000', 'Musterstadt', 'verified', 'invite', ?, 1, 1, 1, datetime('now','-7 days'))`, ruid, L[4], nowIso());
     // Nachricht an die Straße
     const mid = Number(run(`INSERT INTO messages (sweep_id, campaign_id, text) VALUES (?,?,?)`, sid, cid,
-      'Guten Tag! Ich komme zur Feuerstättenschau in den Lindenweg. Bitte wählen Sie in der App eine Zeit, in der jemand zu Hause ist.').lastInsertRowid);
+      'Guten Tag! Im Lindenweg steht an: Kehren und Überprüfen. Bitte wählen Sie in der App eine Zeit, in der jemand zu Hause ist.').lastInsertRowid);
     for (const h of L) run('INSERT INTO message_recipients (message_id, household_id) VALUES (?,?)', mid, h);
     // Messenger: kurze Unterhaltung mit Familie Engel, die letzte Frage ist noch ungelesen
     const chat = (h, fromSweep, uid, text, ago, read) => run(`INSERT INTO chat_messages (household_id, from_sweep, user_id, text, created_at, read_at, mailed)
       VALUES (?,?,?,?, datetime('now', ?), ${read ? "datetime('now')" : 'NULL'}, 1)`, h, fromSweep ? 1 : 0, uid, text, ago);
     chat(L[4], false, ruid, 'Guten Tag! Falls wir nicht da sind: Der Schlüssel liegt bei Familie Graf in Nr. 6.', '-3 hours', true);
     chat(L[4], true, suid, 'Danke für den Hinweis, dann klingle ich dort.', '-2 hours', false);
-    chat(L[4], false, ruid, 'Wir haben seit Sommer einen neuen Kaminofen. Schauen Sie sich den bei der Gelegenheit mit an?', '-40 minutes', false);
-    return { districtId: did, sweepUserId: suid, residentUserId: ruid };
+    chat(L[4], false, ruid, 'Unser Kaminofen zieht seit ein paar Wochen schlecht. Können Sie sich das bei der Gelegenheit ansehen?', '-40 minutes', false);
+    return { sweepId: sid, sweepUserId: suid, residentUserId: ruid };
   });
 }
 
 /** Demo vorhanden und aktuell (heutiges Fenster)? Sonst neu anlegen. */
 export function ensureDemo(reset = false) {
-  const d = demoDistrict();
-  const fresh = d && get(`SELECT 1 x FROM windows w JOIN campaigns c ON c.id = w.campaign_id WHERE c.district_id = ? AND w.date >= ?`, d.id, today());
+  const d = demoSweep();
+  const fresh = d && get(`SELECT 1 x FROM windows w JOIN campaigns c ON c.id = w.campaign_id WHERE c.sweep_id = ? AND w.date >= ?`, d.id, today());
   const users = get(`SELECT (SELECT id FROM users WHERE email = ? AND role = 'sweep') s, (SELECT id FROM users WHERE email = ? AND role = 'customer') c`, DEMO_SWEEP, DEMO_RESIDENT);
   if (reset || !fresh || !users.s || !users.c) { const r = seedDemo(); return { sweepUserId: r.sweepUserId, residentUserId: r.residentUserId }; }
   return { sweepUserId: users.s, residentUserId: users.c };

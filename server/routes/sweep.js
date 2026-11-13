@@ -2,18 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { config } from '../config.js';
-import { isDemoEmail } from '../demo.js';
 import { get, all, run, tx } from '../db.js';
 import { live } from '../live.js';
 import { checkCode, requireUser, startSession, endSession } from '../auth.js';
 import { queueMail } from '../mail.js';
 import {
-  makeLink, sweepByUser, activeSweepForDistrict, sweepName, initials, windowsOf, houseRows, campaignsOfDistrict, validateWindows,
+  makeLink, sweepByUser, sweepName, companyName, initials, windowsOf, houseRows, campaignsOfSweep, validateWindows,
   routeFor, routeStarted, routeDates, defaultRouteDate, postMessage, householdEmails, householdName, adminLog, streetHouseholds,
-  closedCampaigns, campaignDone, LAENDER, findDistrict, sweepBez, CHAT_MAX, chatMessages, chatPost, chatRead, householdHasApp
+  closedCampaigns, campaignDone, cleanWork, WORK_DEFAULT, deleteSweepData, CHAT_MAX, chatMessages, chatPost, chatRead, householdHasApp
 } from '../domain.js';
 import {
-  limited, bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nameKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
+  limited, bad, forbidden, notFound, clean, randomToken, streetKey, nrKey, nowIso, today, dayLabel, slotsOf, parseCsv, pick, EMAIL_RE, normEmail, DATE_RE
 } from '../util.js';
 
 const MIME = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic' };
@@ -27,11 +26,11 @@ function mySweep(req) {
 }
 function activeSweep(req) {
   const s = mySweep(req);
-  if (s.status !== 'active') throw forbidden('Ihr Bezirk ist noch nicht freigeschaltet.');
+  if (s.status !== 'active') throw forbidden('Ihr Betrieb ist noch nicht freigeschaltet.');
   return s;
 }
 const ownCampaign = (s, id) => {
-  const c = get('SELECT * FROM campaigns WHERE id = ? AND district_id = ?', Number(id), s.district_id);
+  const c = get('SELECT * FROM campaigns WHERE id = ? AND sweep_id = ?', Number(id), s.id);
   if (!c) throw notFound('Straße nicht gefunden.');
   return c;
 };
@@ -44,15 +43,6 @@ const openCampaign = (s, id) => {
 const fmtDay = iso => dayLabel(iso.slice(0, 10));
 const plural = n => n + (n === 1 ? ' Haushalt' : ' Haushalte');
 
-/** Namensabgleich mit dem Bezirksverzeichnis: exakt, teilweise (z. B. Doppelname) oder gar nicht. */
-function nameMatch(first, last, holder) {
-  const a = nameKey(first + last), b = nameKey(holder);
-  if (a === b) return 'exact';
-  const parts = String(holder).toLowerCase().split(/[\s-]+/).map(nameKey);
-  if (parts.includes(nameKey(last)) && parts.includes(nameKey(first))) return 'partial';
-  return 'none';
-}
-
 export function deleteDocuments(sweepId) {
   for (const d of all('SELECT * FROM documents WHERE sweep_id = ?', sweepId)) fs.rmSync(path.join(uploadDir, d.stored), { force: true });
   run('DELETE FROM documents WHERE sweep_id = ?', sweepId);
@@ -63,12 +53,13 @@ export default async function sweepRoutes(app) {
   app.post('/api/sweep/register', async (req, reply) => {
     const b = req.body || {};
     const first = clean(b.first, 60), last = clean(b.last, 60), bstreet = clean(b.bstreet), bplz = clean(b.bplz, 5), bort = clean(b.bort), phone = clean(b.phone, 30);
+    const company = clean(b.company, 80);
     if (!first || !last || !bstreet || !/^\d{5}$/.test(bplz) || !bort) throw bad('Bitte alle Felder ausfüllen.');
     const email = checkCode(b.email, 'sweep', 'register', b.code);
     const uid = tx(() => {
       if (get('SELECT 1 x FROM users WHERE email = ? AND role = ?', email, 'sweep')) throw bad('Zu dieser E-Mail gibt es schon ein Konto.');
       const id = Number(run('INSERT INTO users (email, role) VALUES (?,?)', email, 'sweep').lastInsertRowid);
-      run('INSERT INTO sweeps (user_id, first, last, phone, bstreet, bplz, bort) VALUES (?,?,?,?,?,?,?)', id, first, last, phone || null, bstreet, bplz, bort);
+      run('INSERT INTO sweeps (user_id, first, last, company, phone, bstreet, bplz, bort) VALUES (?,?,?,?,?,?,?,?)', id, first, last, company || null, phone || null, bstreet, bplz, bort);
       return id;
     });
     startSession(reply, uid, 'sweep');
@@ -77,46 +68,19 @@ export default async function sweepRoutes(app) {
 
   app.get('/api/sweep/me', async req => {
     const s = mySweep(req);
-    const docs = Object.fromEntries(['urkunde', 'ausweis'].map(k => {
-      const d = get('SELECT filename, size FROM documents WHERE sweep_id = ? AND kind = ?', s.id, k);
-      return [k, d ? { name: d.filename, size: d.size } : null];
-    }));
-    const counts = s.district_id ? get(`SELECT COUNT(*) n, COUNT(DISTINCT street_key || plz) st FROM households WHERE district_id = ?`, s.district_id) : { n: 0, st: 0 };
+    const d = get(`SELECT filename, size FROM documents WHERE sweep_id = ? AND kind = 'ausweis'`, s.id);
+    const counts = get(`SELECT COUNT(*) n, COUNT(DISTINCT street_key || plz) st FROM households WHERE sweep_id = ?`, s.id);
     return {
-      email: s.email, demo: isDemoEmail(s.email), first: s.first, last: s.last, phone: s.phone, bstreet: s.bstreet, bplz: s.bplz, bort: s.bort,
-      status: s.status, rejectReason: s.reject_reason,
-      district: s.district_id ? { land: s.land, kreis: s.kreis, bez: s.bez, holder: s.holder_name, until: s.appointed_until, officialEmail: s.official_email, households: counts.n, streets: counts.st,
-        selfListed: s.official_email === s.email }
-        : s.req_bez ? { land: s.req_land, kreis: s.req_kreis, bez: s.req_bez, manual: true, households: 0, streets: 0 } : null,
-      docs
+      email: s.email, demo: !!s.demo, first: s.first, last: s.last, company: s.company || '', phone: s.phone, bstreet: s.bstreet, bplz: s.bplz, bort: s.bort,
+      status: s.status, rejectReason: s.reject_reason, households: counts.n, streets: counts.st,
+      docs: { ausweis: d ? { name: d.filename, size: d.size } : null }
     };
-  });
-
-  app.post('/api/sweep/district', async req => {
-    const s = mySweep(req);
-    if (!['draft', 'rejected'].includes(s.status)) throw bad('Der Bezirk kann jetzt nicht mehr geändert werden.');
-    const b = req.body || {};
-    const bez = clean(b.bez, 10).replace(/^0+(?=\d)/, ''), land = clean(b.land, 40), kreis = clean(b.kreis, 80);
-    if (!/^\d{1,4}$/.test(bez) || !land || kreis.length < 2) throw bad('Bitte Bundesland, Stadt/Landkreis und Bezirksnummer angeben.');
-    const d = findDistrict(land, kreis, bez);
-    if (!d) {
-      if (!b.manual) return { result: 'unknown' };
-      // Nicht im Verzeichnis: selbst angegeben, der Betreiber prüft im Schornsteinfegerregister und übernimmt ihn bei der Freigabe
-      if (!LAENDER.includes(land)) throw bad('Bitte ein Bundesland auswählen.');
-      run('UPDATE sweeps SET district_id = NULL, req_land = ?, req_kreis = ?, req_bez = ? WHERE id = ?', land, kreis, bez, s.id);
-      return { result: 'manual', info: { land, kreis, bez } };
-    }
-    const other = activeSweepForDistrict(d.id);
-    if (other && other.id !== s.id) return { result: 'taken' };
-    const m = nameMatch(s.first, s.last, d.holder_name);
-    if (m === 'none') { run('UPDATE sweeps SET district_id = NULL, req_land = NULL, req_kreis = NULL, req_bez = NULL WHERE id = ?', s.id); return { result: 'other' }; }
-    run('UPDATE sweeps SET district_id = ?, req_land = NULL, req_kreis = NULL, req_bez = NULL WHERE id = ?', d.id, s.id);
-    return { result: 'ok', exact: m === 'exact', info: { kreis: d.kreis, bez: d.number, holder: d.holder_name, until: d.appointed_until } };
   });
 
   app.post('/api/sweep/documents/:kind', async req => {
     const s = mySweep(req), kind = req.params.kind;
-    if (!['urkunde', 'ausweis'].includes(kind)) throw bad('Unbekanntes Dokument.');
+    // Ein Nachweis genügt: Handwerkskarte oder Schornsteinfeger-Ausweis (intern „ausweis“)
+    if (kind !== 'ausweis') throw bad('Unbekanntes Dokument.');
     if (!['draft', 'rejected'].includes(s.status)) throw bad('Unterlagen können jetzt nicht geändert werden.');
     const file = await req.file({ limits: { fileSize: config.uploadMaxBytes, files: 1 } });
     if (!file) throw bad('Keine Datei.');
@@ -146,39 +110,38 @@ export default async function sweepRoutes(app) {
     const s = mySweep(req);
     if (!['draft', 'rejected'].includes(s.status)) throw bad('Bereits eingereicht.');
     if (!req.body?.assure) throw bad('Bitte die Erklärung bestätigen.');
-    if (!s.district_id && !s.req_bez) throw bad('Bitte zuerst den Bezirk angeben.');
-    const sb = sweepBez(s);
-    const n = get('SELECT COUNT(*) n FROM documents WHERE sweep_id = ?', s.id).n;
-    if (n < 2) throw bad('Bitte Bestellungsurkunde und Ausweis hochladen.');
+    if (!get(`SELECT 1 x FROM documents WHERE sweep_id = ? AND kind = 'ausweis'`, s.id)) throw bad('Bitte Handwerkskarte oder Schornsteinfeger-Ausweis hochladen.');
     run(`UPDATE sweeps SET status = 'pending', reject_reason = NULL, submitted_at = ? WHERE id = ?`, nowIso(), s.id);
-    for (const a of config.adminEmails) queueMail({ to: a, subject: `Neue Prüfung: ${sweepName(s)} · Bezirk ${sb.bez}`,
-      text: `${sweepName(s)} hat Unterlagen für den Kehrbezirk ${sb.kreis} ${sb.bez} eingereicht.${sb.manual ? ' Der Bezirk steht noch nicht im Verzeichnis – bitte im Schornsteinfegerregister prüfen.' : ''}`, link: `${config.baseUrl}/betreiber`, linkLabel: 'Prüfung öffnen' });
+    for (const a of config.adminEmails) queueMail({ to: a, subject: `Neue Prüfung: ${companyName(s)} · ${s.bplz} ${s.bort}`,
+      text: `${sweepName(s)} hat den Betrieb „${companyName(s)}“ (${s.bstreet}, ${s.bplz} ${s.bort}) angemeldet. Bitte im Schornsteinfegerregister prüfen.`, link: `${config.baseUrl}/betreiber`, linkLabel: 'Prüfung öffnen' });
     live.bump();
     return { ok: true };
   });
 
   app.post('/api/sweep/logout', async (req, reply) => { endSession(req, reply, 'sweep'); return { ok: true }; });
 
-  // Konto löschen (DSGVO / Play Store). Kehrbuch und Zeitfenster bleiben beim Bezirk, bis ein Nachfolger sie übernimmt.
+  // Konto löschen (DSGVO / Play Store). Die Kundenliste gehört dem Betrieb – sie wird mit allen Runden, Terminen und Chats gelöscht.
   app.post('/api/sweep/delete', async (req, reply) => {
     const s = mySweep(req);
     if (req.body?.confirm !== 'LÖSCHEN') throw bad('Bitte zur Bestätigung LÖSCHEN eingeben.');
     tx(() => {
-      deleteDocuments(s.id);
-      run('DELETE FROM messages WHERE sweep_id = ?', s.id);
+      deleteSweepData(s.id);
       run('DELETE FROM sweeps WHERE id = ?', s.id);
       run('DELETE FROM users WHERE id = ?', s.user_id);
-      adminLog('System', `Kaminfeger-Konto gelöscht${s.bez ? ' · Bezirk ' + s.bez : ''}`, 'Auf Wunsch des Nutzers, inkl. Dokumente');
+      adminLog('System', `Kaminfeger-Konto gelöscht · ${companyName(s)}`, 'Auf Wunsch des Nutzers, inkl. Kundenliste, Terminen, Nachrichten und Dokumenten');
     });
     endSession(req, reply, 'sweep');
     live.bump();
     return { ok: true };
   });
 
-  // ---------- Kehrbuch importieren ----------
-  app.post('/api/sweep/kehrbuch', async req => {
+  // ---------- Kundenliste importieren ----------
+  // Nur eigene Kundendaten des Betriebs. Das Kehrbuch eines Kehrbezirks darf für freie Arbeiten nicht verwendet werden
+  // (§ 19 Abs. 5 SchfHwG) – der Betrieb bestätigt das bei jedem Import, die Bestätigung wird protokolliert.
+  app.post('/api/sweep/kunden', async req => {
     const s = activeSweep(req);
-    if (isDemoEmail(s.email)) throw bad('In der Vorschau kann kein Kehrbuch importiert werden.');
+    if (s.demo) throw bad('In der Vorschau kann keine Kundenliste importiert werden.');
+    if (req.query.eigene !== '1') throw bad('Bitte bestätigen Sie, dass es Ihre eigenen Kundendaten sind – nicht das Kehrbuch eines Kehrbezirks.', 'confirm');
     const file = await req.file({ limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
     if (!file) throw bad('Keine Datei.');
     const rows = parseCsv((await file.toBuffer()).toString('utf8'));
@@ -187,27 +150,29 @@ export default async function sweepRoutes(app) {
     tx(() => {
       rows.forEach((r, i) => {
         const street = pick(r, 'strasse', 'str', 'street'), nr = pick(r, 'hausnummer', 'nr', 'hausnr'), plz = pick(r, 'plz', 'postleitzahl'), ort = pick(r, 'ort', 'stadt', 'gemeinde');
-        const owner = pick(r, 'eigentuemer', 'name', 'eigentuemername', 'kunde'), kdnr = pick(r, 'kundennummer', 'kdnr', 'kundennr');
+        const owner = pick(r, 'eigentuemer', 'kunde', 'auftraggeber', 'name', 'eigentuemername'), kdnr = pick(r, 'kundennummer', 'kdnr', 'kundennr');
         const email = normEmail(pick(r, 'email', 'mail', 'emailadresse')), phone = pick(r, 'telefon', 'tel', 'phone');
         if (!street || !nr || !/^\d{5}$/.test(plz) || !owner) { errors.push(`Zeile ${i + 2}: Straße, Hausnummer, PLZ oder Name fehlt`); return; }
         const key = streetKey(street);
-        const ex = get('SELECT id FROM households WHERE district_id = ? AND street_key = ? AND plz = ? AND nr = ?', s.district_id, key, plz, nr);
+        const ex = get('SELECT id FROM households WHERE sweep_id = ? AND street_key = ? AND plz = ? AND nr = ?', s.id, key, plz, nr);
         if (ex) {
           run('UPDATE households SET street = ?, ort = ?, owner_name = ?, customer_no = ?, email = ?, phone = ? WHERE id = ?', street, ort, owner, kdnr || null, EMAIL_RE.test(email) ? email : null, phone || null, ex.id);
           updated++;
         } else {
-          run('INSERT INTO households (district_id, street, street_key, nr, plz, ort, owner_name, customer_no, email, phone) VALUES (?,?,?,?,?,?,?,?,?,?)',
-            s.district_id, street, key, nr, plz, ort, owner, kdnr || null, EMAIL_RE.test(email) ? email : null, phone || null);
+          run('INSERT INTO households (sweep_id, street, street_key, nr, plz, ort, owner_name, customer_no, email, phone) VALUES (?,?,?,?,?,?,?,?,?,?)',
+            s.id, street, key, nr, plz, ort, owner, kdnr || null, EMAIL_RE.test(email) ? email : null, phone || null);
           added++;
         }
       });
+      run('UPDATE sweeps SET own_data_at = ? WHERE id = ?', nowIso(), s.id);
+      adminLog('Kaminfeger', `${companyName(s)} · Kundenliste importiert (${added} neu, ${updated} aktualisiert)`, 'Bestätigt: eigene Kundendaten, nicht aus dem Kehrbuch');
     });
     // Bewohner, die sich vorher ohne teilnehmenden Kaminfeger registriert haben, jetzt zuordnen
-    for (const r of all(`SELECT r.*, u.email FROM residents r JOIN users u ON u.id = r.user_id WHERE r.status = 'unverified'`)) {
-      const h = all('SELECT * FROM households WHERE district_id = ? AND street_key = ? AND plz = ?', s.district_id, streetKey(r.street), r.plz).find(x => nrKey(x.nr) === nrKey(r.nr));
+    for (const r of all(`SELECT r.*, u.email FROM residents r JOIN users u ON u.id = r.user_id WHERE r.status = 'unverified' AND u.email NOT LIKE '%@demo.invalid'`)) {
+      const h = all('SELECT * FROM households WHERE sweep_id = ? AND street_key = ? AND plz = ?', s.id, streetKey(r.street), r.plz).find(x => nrKey(x.nr) === nrKey(r.nr));
       if (!h) continue;
       run(`UPDATE residents SET household_id = ?, status = 'needs_verify' WHERE id = ?`, h.id, r.id);
-      queueMail({ to: r.email, subject: 'Ihr Kaminfeger ist jetzt dabei', text: `${sweepName(s)} nutzt Kaminfeger Verwaltung jetzt auch für die ${h.street}. Bestätigen Sie in der App kurz Ihren Wohnsitz – dann können Sie Termine buchen.`,
+      queueMail({ to: r.email, subject: 'Ihr Kaminfeger ist jetzt dabei', text: `Ihr Kaminfeger nutzt Kaminfeger Verwaltung jetzt auch für die ${h.street}. Bestätigen Sie in der App kurz Ihren Wohnsitz – dann können Sie Termine buchen.`,
         link: `${config.baseUrl}/kunde`, linkLabel: 'Wohnsitz bestätigen' });
     }
     live.bump();
@@ -217,8 +182,8 @@ export default async function sweepRoutes(app) {
   // ---------- Übersicht ----------
   app.get('/api/sweep/overview', async req => {
     const s = activeSweep(req);
-    const groups = all(`SELECT street, street_key, plz, COUNT(*) n FROM households WHERE district_id = ? GROUP BY street_key, plz ORDER BY street`, s.district_id);
-    const camps = campaignsOfDistrict(s.district_id);
+    const groups = all(`SELECT street, street_key, plz, COUNT(*) n FROM households WHERE sweep_id = ? GROUP BY street_key, plz ORDER BY street`, s.id);
+    const camps = campaignsOfSweep(s.id);
     const streets = groups.map(g => {
       const c = camps.find(x => x.street_key === g.street_key && x.plz === g.plz);
       if (!c) return { street: g.street, plz: g.plz, households: g.n, campaign: null };
@@ -227,52 +192,52 @@ export default async function sweepRoutes(app) {
       const visited = rows.filter(r => r.booking && r.booking.visit === 'done').length, missed = rows.filter(r => r.booking && r.booking.visit === 'missed').length;
       const done = campaignDone(rows);
       return { street: g.street, plz: g.plz, households: g.n,
-        campaign: { id: c.id, booked, open: rows.length - booked - cancelled, cancelled, total: rows.length, visited, missed, done,
+        campaign: { id: c.id, work: c.work, booked, open: rows.length - booked - cancelled, cancelled, total: rows.length, visited, missed, done,
           windows: windowsOf(c.id).map(w => w.label.split(', ')[1]) } };
     });
-    const date = defaultRouteDate(s.district_id), route = routeFor(s.district_id, date);
+    const date = defaultRouteDate(s.id), route = routeFor(s.id, date);
     const tenants = all(`SELECT r.id, r.family_name, h.street, h.nr, h.owner_name FROM residents r JOIN households h ON h.id = r.household_id
-      WHERE h.district_id = ? AND r.status = 'asked' ORDER BY r.id`, s.district_id).map(t => ({ id: t.id, name: t.family_name, street: t.street, nr: t.nr, owner: t.owner_name }));
-    const hh = get('SELECT COUNT(*) n FROM households WHERE district_id = ?', s.district_id).n;
+      WHERE h.sweep_id = ? AND r.status = 'asked' ORDER BY r.id`, s.id).map(t => ({ id: t.id, name: t.family_name, street: t.street, nr: t.nr, owner: t.owner_name }));
+    const hh = get('SELECT COUNT(*) n FROM households WHERE sweep_id = ?', s.id).n;
     // Für die Glocke: Absagen der Bewohner der letzten 14 Tage (Bewohner-Anfragen kommen über tenants)
     const alerts = all(`SELECT b.id, b.updated_at, b.time, w.date, h.id hid, h.street, h.nr, h.owner_name, c.id cid FROM bookings b
       JOIN campaigns c ON c.id = b.campaign_id JOIN windows w ON w.id = b.window_id JOIN households h ON h.id = b.household_id
-      WHERE c.district_id = ? AND b.status = 'cancelled' AND b.updated_at > datetime('now','-14 days') ORDER BY b.updated_at DESC LIMIT 30`, s.district_id)
+      WHERE c.sweep_id = ? AND b.status = 'cancelled' AND b.updated_at > datetime('now','-14 days') ORDER BY b.updated_at DESC LIMIT 30`, s.id)
       .map(a => ({ id: 'c' + a.id, at: a.updated_at.replace(' ', 'T') + 'Z', campaignId: a.cid,
         text: `Familie ${householdName({ id: a.hid, owner_name: a.owner_name })}, ${a.street} ${a.nr} hat den Termin am ${dayLabel(a.date)}, ${a.time} Uhr abgesagt.` }));
     return {
-      name: sweepName(s), first: s.first, ini: initials(sweepName(s)), bez: s.bez, kreis: s.kreis, demo: isDemoEmail(s.email),
+      name: sweepName(s), first: s.first, ini: initials(sweepName(s)), company: companyName(s), ort: s.bort, demo: !!s.demo,
       today: { date, label: dayLabel(date), isToday: date === today(), count: route.length, from: route[0]?.t || null, to: route[route.length - 1]?.end || null,
         streets: [...new Set(route.map(r => r.street))] },
       streets, tenants, households: hh, alerts,
-      chatUnread: get(`SELECT COUNT(*) n FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.district_id = ? AND m.from_sweep = 0 AND m.read_at IS NULL`, s.district_id).n,
-      closed: closedCampaigns(s.district_id).slice(0, 100).map(c => ({ id: c.id, street: c.street, plz: c.plz, closedAt: c.closed_at, closedLabel: fmtDay(c.closed_at),
-        households: get('SELECT COUNT(*) n FROM households WHERE district_id = ? AND street_key = ? AND plz = ?', s.district_id, c.street_key, c.plz).n,
+      chatUnread: get(`SELECT COUNT(*) n FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.sweep_id = ? AND m.from_sweep = 0 AND m.read_at IS NULL`, s.id).n,
+      closed: closedCampaigns(s.id).slice(0, 100).map(c => ({ id: c.id, street: c.street, plz: c.plz, work: c.work, closedAt: c.closed_at, closedLabel: fmtDay(c.closed_at),
+        households: get('SELECT COUNT(*) n FROM households WHERE sweep_id = ? AND street_key = ? AND plz = ?', s.id, c.street_key, c.plz).n,
         visited: get(`SELECT COUNT(DISTINCT household_id) n FROM bookings WHERE campaign_id = ? AND visit = 'done'`, c.id).n }))
     };
   });
 
-  // Alle Haushalte des Bezirks mit Terminstatus (Kundenliste mit Suche)
+  // Alle Haushalte der Kundenliste mit Terminstatus (mit Suche)
   app.get('/api/sweep/customers', async req => {
     const s = activeSweep(req);
     const byStreet = new Map();
-    for (const c of campaignsOfDistrict(s.district_id)) {
+    for (const c of campaignsOfSweep(s.id)) {
       const k = c.street_key + '|' + c.plz;
       if (byStreet.has(k)) continue;
       const wins = new Map(windowsOf(c.id).map(w => [w.id, w]));
       byStreet.set(k, { c, rows: new Map(houseRows(c).map(r => [r.id, r])), wins });
     }
-    const hs = all('SELECT * FROM households WHERE district_id = ? ORDER BY street, CAST(nr AS INTEGER), nr', s.district_id);
+    const hs = all('SELECT * FROM households WHERE sweep_id = ? ORDER BY street, CAST(nr AS INTEGER), nr', s.id);
     // Zuletzt erledigt (aus abgeschlossenen Runden)
     const lastDone = new Map(all(`SELECT b.household_id h, MAX(w.date) d FROM bookings b JOIN windows w ON w.id = b.window_id JOIN campaigns c ON c.id = b.campaign_id
-      WHERE c.district_id = ? AND c.closed_at IS NOT NULL AND b.visit = 'done' GROUP BY b.household_id`, s.district_id).map(r => [r.h, r.d]));
+      WHERE c.sweep_id = ? AND c.closed_at IS NOT NULL AND b.visit = 'done' GROUP BY b.household_id`, s.id).map(r => [r.h, r.d]));
     return { customers: hs.map(h => {
       const g = byStreet.get(h.street_key + '|' + h.plz), r = g?.rows.get(h.id);
       let status = 'none', line = lastDone.has(h.id) ? `Zuletzt erledigt am ${dayLabel(lastDone.get(h.id))}` : 'Noch keine Zeitfenster';
       if (h.moved_at) { status = 'moved'; line = 'Ausgezogen'; }
       else if (r) {
         const w = r.booking && g.wins.get(r.booking.windowId);
-        if (r.booking?.visit === 'done') { status = 'done'; line = 'Feuerstättenschau erledigt'; }
+        if (r.booking?.visit === 'done') { status = 'done'; line = `${g.c.work} erledigt`; }
         else if (r.booking?.visit === 'missed') { status = 'missed'; line = 'Nicht angetroffen'; }
         else if (r.status === 'booked') { status = 'booked'; line = `${w ? w.label : ''} · ${r.booking.t} Uhr`; }
         else if (r.status === 'cancelled') { status = 'cancelled'; line = 'Hat abgesagt'; }
@@ -285,7 +250,7 @@ export default async function sweepRoutes(app) {
   app.get('/api/sweep/campaigns/:id', async req => {
     const s = activeSweep(req), c = ownCampaign(s, req.params.id);
     const rows = houseRows(c), wins = windowsOf(c.id);
-    return { id: c.id, street: c.street, plz: c.plz, slotLen: c.slot_len, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline),
+    return { id: c.id, street: c.street, plz: c.plz, work: c.work, slotLen: c.slot_len, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline),
       done: campaignDone(rows), closedAt: c.closed_at, closedLabel: c.closed_at ? fmtDay(c.closed_at) : null,
       windows: wins.map(w => { const total = slotsOf(w, c.slot_len).length, booked = rows.filter(r => r.booking && r.booking.windowId === w.id).length; return { ...w, total, booked }; }),
       houses: rows };
@@ -298,7 +263,9 @@ export default async function sweepRoutes(app) {
     validateWindows(b.windows, slotLen);
     if (!DATE_RE.test(deadline)) throw bad('Bitte eine Antwortfrist angeben.');
     let c = b.id ? openCampaign(s, b.id) : null;
-    if (!c && get('SELECT 1 x FROM campaigns WHERE district_id = ? AND street_key = ? AND plz = ? AND closed_at IS NULL', s.district_id, streetKey(clean(b.street)), clean(b.plz, 5)))
+    // Art der Arbeit: beim Anlegen Pflicht (Vorgabe „Kehren und Überprüfen“), beim Ändern optional
+    const work = c && b.work === undefined ? c.work : cleanWork(b.work ?? WORK_DEFAULT);
+    if (!c && get('SELECT 1 x FROM campaigns WHERE sweep_id = ? AND street_key = ? AND plz = ? AND closed_at IS NULL', s.id, streetKey(clean(b.street)), clean(b.plz, 5)))
       throw bad('Für diese Straße läuft schon eine Runde. Bitte dort die Zeitfenster bearbeiten.');
     // Neue oder verlegte Tage nicht in der Vergangenheit und nicht am Sonntag; bestehende (evtl. schon vorbei) bleiben erlaubt
     for (const w of b.windows) {
@@ -313,17 +280,17 @@ export default async function sweepRoutes(app) {
     if (dl >= firstDay) { const d = new Date(firstDay + 'T12:00:00'); d.setDate(d.getDate() - 1); dl = d.toISOString().slice(0, 10); }
     if (dl < today()) dl = today();
     const street = c ? c.street : clean(b.street), plz = c ? c.plz : clean(b.plz, 5);
-    const hs = streetHouseholds({ district_id: s.district_id, street_key: streetKey(street), plz });
-    if (!hs.length) throw bad('Diese Straße steht nicht in Ihrem Kehrbuch.');
+    const hs = streetHouseholds({ sweep_id: s.id, street_key: streetKey(street), plz });
+    if (!hs.length) throw bad('Diese Straße steht nicht in Ihrer Kundenliste.');
     const dropped = [];
     const result = tx(() => {
       if (!c) {
-        const id = Number(run('INSERT INTO campaigns (district_id, street, street_key, plz, slot_len, deadline, sent_at) VALUES (?,?,?,?,?,?,?)',
-          s.district_id, street, streetKey(street), plz, slotLen, dl, nowIso()).lastInsertRowid);
+        const id = Number(run('INSERT INTO campaigns (sweep_id, street, street_key, plz, work, slot_len, deadline, sent_at) VALUES (?,?,?,?,?,?,?,?)',
+          s.id, street, streetKey(street), plz, work, slotLen, dl, nowIso()).lastInsertRowid);
         for (const w of b.windows) run('INSERT INTO windows (campaign_id, date, start, end) VALUES (?,?,?,?)', id, w.date, w.start, w.end);
         return { id, created: true };
       }
-      run('UPDATE campaigns SET slot_len = ?, deadline = ?, sent_at = ? WHERE id = ?', slotLen, dl, nowIso(), c.id);
+      run('UPDATE campaigns SET work = ?, slot_len = ?, deadline = ?, sent_at = ? WHERE id = ?', work, slotLen, dl, nowIso(), c.id);
       const keep = new Set();
       for (const w of b.windows) {
         const ex = w.id && get('SELECT id FROM windows WHERE id = ? AND campaign_id = ?', Number(w.id), c.id);
@@ -345,8 +312,8 @@ export default async function sweepRoutes(app) {
     const wins = windowsOf(c.id);
     const winText = wins.map(w => `${w.label} ${w.start}–${w.end}`).join(', ');
     const text = result.created
-      ? `Guten Tag! Ich komme zur Feuerstättenschau in die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} eine Zeit, in der jemand zu Hause ist.`
-      : `Neue Zeitfenster für die ${street}: ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App.`;
+      ? `Guten Tag! In der ${street} steht an: ${work}. Mögliche Zeiten: ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} eine Zeit, in der jemand zu Hause ist.`
+      : `Neue Zeitfenster für die ${street} (${work}): ${winText}. Bitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App.`;
     postMessage(s.id, c.id, text, hs.map(h => h.id));
     if (dropped.length) postMessage(s.id, c.id, 'Ihr bisheriger Termin passt leider nicht mehr in die neuen Zeitfenster. Bitte wählen Sie in der App eine neue Zeit.', dropped);
     for (const h of hs) {
@@ -355,10 +322,10 @@ export default async function sweepRoutes(app) {
       if (mails.length) for (const to of mails) queueMail({ to, subject: again ? 'Bitte neue Zeit wählen' : `Zeitfenster für die ${street}`,
         text: again ? `${text}\n\nIhr bisheriger Termin passt leider nicht mehr. Bitte wählen Sie eine neue Zeit.` : text, link: `${config.baseUrl}/kunde`, linkLabel: 'Zeit wählen' });
       else if (h.email && !h.moved_at && !get(`SELECT 1 x FROM residents WHERE household_id = ? AND status NOT IN ('moved','rejected','dismissed')`, h.id)) {
-        // Einladung an die E-Mail aus dem Kehrbuch – bestätigt zugleich den Wohnsitz
+        // Einladung an die E-Mail aus der Kundenliste – bestätigt zugleich den Wohnsitz
         const l = makeLink('invite', h.id, null, 30 * 86400000, '/kunde?einladung=');
-        queueMail({ to: h.email, subject: 'Einladung: Termin für die Feuerstättenschau wählen',
-          text: `Guten Tag ${householdName(h) ? 'Familie ' + householdName(h) : ''}, ich komme zur Feuerstättenschau in die ${h.street} ${h.nr}: ${winText}.\n\nBitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App. Mit dem Link ist Ihre Adresse sofort bestätigt.\n\nIhr Kaminfeger ${sweepName(s)}`,
+        queueMail({ to: h.email, subject: 'Einladung: Termin mit Ihrem Kaminfeger wählen',
+          text: `Guten Tag ${householdName(h) ? 'Familie ' + householdName(h) : ''}, in der ${h.street} ${h.nr} steht an: ${work}. Mögliche Zeiten: ${winText}.\n\nBitte wählen Sie bis ${dayLabel(dl)} Ihre Zeit in der App. Mit dem Link ist Ihre Adresse sofort bestätigt.\n\nIhr Kaminfeger ${sweepName(s)}`,
           link: l.url, linkLabel: 'Einladung annehmen' });
       }
     }
@@ -384,7 +351,7 @@ export default async function sweepRoutes(app) {
   app.post('/api/sweep/bookings', async req => {
     const s = activeSweep(req), b = req.body || {};
     const c = openCampaign(s, b.campaignId);
-    const h = get('SELECT * FROM households WHERE id = ? AND district_id = ?', Number(b.householdId), s.district_id);
+    const h = get('SELECT * FROM households WHERE id = ? AND sweep_id = ?', Number(b.householdId), s.id);
     const w = get('SELECT * FROM windows WHERE id = ? AND campaign_id = ?', Number(b.windowId), c.id);
     if (!h || !w || !slotsOf(w, c.slot_len).includes(b.time)) throw bad('Ungültige Zeit.');
     try {
@@ -398,7 +365,7 @@ export default async function sweepRoutes(app) {
       throw e;
     }
     for (const to of householdEmails(h.id)) queueMail({ to, subject: `Termin eingetragen: ${dayLabel(w.date)}, ${b.time} Uhr`,
-      text: `Wie telefonisch vereinbart, komme ich am ${dayLabel(w.date)} um ${b.time} Uhr zur Feuerstättenschau in die ${h.street} ${h.nr}.\n\nIhr Kaminfeger ${sweepName(s)}` });
+      text: `Wie telefonisch vereinbart, komme ich am ${dayLabel(w.date)} um ${b.time} Uhr in die ${h.street} ${h.nr} (${c.work}).\n\nIhr Kaminfeger ${sweepName(s)}` });
     live.bump();
     return { ok: true };
   });
@@ -489,17 +456,17 @@ export default async function sweepRoutes(app) {
   // ---------- Tagesroute ----------
   app.get('/api/sweep/route', async req => {
     const s = activeSweep(req);
-    const date = DATE_RE.test(req.query.date || '') ? req.query.date : defaultRouteDate(s.district_id);
-    const stops = routeFor(s.district_id, date);
-    return { date, label: dayLabel(date), isToday: date === today(), started: routeStarted(s.district_id, date),
-      dates: routeDates(s.district_id).map(d => ({ date: d, label: dayLabel(d) })), stops, streets: [...new Set(stops.map(x => x.street))], canStartFuture: config.testMode || config.allowEarlyRoute };
+    const date = DATE_RE.test(req.query.date || '') ? req.query.date : defaultRouteDate(s.id);
+    const stops = routeFor(s.id, date);
+    return { date, label: dayLabel(date), isToday: date === today(), started: routeStarted(s.id, date),
+      dates: routeDates(s.id).map(d => ({ date: d, label: dayLabel(d) })), stops, streets: [...new Set(stops.map(x => x.street))], canStartFuture: config.testMode || config.allowEarlyRoute };
   });
 
   app.post('/api/sweep/route/start', async req => {
     const s = activeSweep(req), date = String(req.body?.date || '');
     if (!DATE_RE.test(date)) throw bad('Ungültiges Datum.');
     if (date > today() && !config.testMode && !config.allowEarlyRoute) throw bad('Die Route kann erst am Termintag gestartet werden.');
-    run('INSERT OR IGNORE INTO route_days (district_id, date, started_at) VALUES (?,?,?)', s.district_id, date, nowIso());
+    run('INSERT OR IGNORE INTO route_days (sweep_id, date, started_at) VALUES (?,?,?)', s.id, date, nowIso());
     live.bump();
     return { ok: true };
   });
@@ -508,9 +475,9 @@ export default async function sweepRoutes(app) {
     const s = activeSweep(req), { bookingId, result } = req.body || {};
     if (!['done', 'missed'].includes(result)) throw bad('Ungültig.');
     const b = get(`SELECT b.*, w.date, h.street, h.nr FROM bookings b JOIN campaigns c ON c.id = b.campaign_id JOIN windows w ON w.id = b.window_id JOIN households h ON h.id = b.household_id
-      WHERE b.id = ? AND c.district_id = ? AND b.status = 'booked'`, Number(bookingId), s.district_id);
+      WHERE b.id = ? AND c.sweep_id = ? AND b.status = 'booked'`, Number(bookingId), s.id);
     if (!b) throw notFound('Termin nicht gefunden.');
-    if (!routeStarted(s.district_id, b.date)) throw bad('Bitte zuerst die Route starten.');
+    if (!routeStarted(s.id, b.date)) throw bad('Bitte zuerst die Route starten.');
     run('UPDATE bookings SET visit = ?, updated_at = ? WHERE id = ?', result, nowIso(), b.id);
     if (result === 'missed') {
       const text = `Ich war um ${b.time} Uhr bei Ihnen, leider hat niemand geöffnet. Bitte wählen Sie in der App eine neue Zeit.`;
@@ -524,8 +491,8 @@ export default async function sweepRoutes(app) {
   // ---------- Nachrichten ----------
   function recipients(s, c) {
     const rows = houseRows(c);
-    const date = defaultRouteDate(s.district_id);
-    const route = routeFor(s.district_id, date).filter(r => r.campaignId === c.id && !r.visit).map(r => r.householdId);
+    const date = defaultRouteDate(s.id);
+    const route = routeFor(s.id, date).filter(r => r.campaignId === c.id && !r.visit).map(r => r.householdId);
     return {
       all: rows.filter(r => !r.moved).map(r => r.id),
       open: rows.filter(r => !r.moved && (r.status !== 'booked' || r.booking.visit === 'missed')).map(r => r.id),
@@ -534,7 +501,7 @@ export default async function sweepRoutes(app) {
   }
   app.get('/api/sweep/messages', async req => {
     const s = activeSweep(req);
-    const camps = campaignsOfDistrict(s.district_id).map(c => { const r = recipients(s, c); return { id: c.id, street: c.street, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline), n: { all: r.all.length, open: r.open.length, route: r.route.length } }; });
+    const camps = campaignsOfSweep(s.id).map(c => { const r = recipients(s, c); return { id: c.id, street: c.street, work: c.work, deadline: c.deadline, deadlineLabel: dayLabel(c.deadline), n: { all: r.all.length, open: r.open.length, route: r.route.length } }; });
     const sent = all(`SELECT m.*, c.street, (SELECT COUNT(*) FROM message_recipients r WHERE r.message_id = m.id) n FROM messages m LEFT JOIN campaigns c ON c.id = m.campaign_id WHERE m.sweep_id = ? ORDER BY m.id DESC LIMIT 50`, s.id)
       .map(m => ({ id: m.id, text: m.text, at: m.created_at, n: m.n, street: m.street }));
     return { campaigns: camps, sent };
@@ -555,14 +522,14 @@ export default async function sweepRoutes(app) {
 
   // ---------- Messenger: Unterhaltungen mit einzelnen Haushalten ----------
   const ownHousehold = (s, id) => {
-    const h = get('SELECT * FROM households WHERE id = ? AND district_id = ?', Number(id), s.district_id);
+    const h = get('SELECT * FROM households WHERE id = ? AND sweep_id = ?', Number(id), s.id);
     if (!h) throw notFound('Haushalt nicht gefunden.');
     return h;
   };
   app.get('/api/sweep/chats', async req => {
     const s = activeSweep(req);
     const rows = all(`SELECT m.household_id hid, MAX(m.id) last, SUM(CASE WHEN m.from_sweep = 0 AND m.read_at IS NULL THEN 1 ELSE 0 END) unread
-      FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.district_id = ? GROUP BY m.household_id ORDER BY last DESC LIMIT 200`, s.district_id);
+      FROM chat_messages m JOIN households h ON h.id = m.household_id WHERE h.sweep_id = ? GROUP BY m.household_id ORDER BY last DESC LIMIT 200`, s.id);
     return { chats: rows.map(x => {
       const h = get('SELECT * FROM households WHERE id = ?', x.hid), m = get('SELECT text, from_sweep, created_at FROM chat_messages WHERE id = ?', x.last);
       return { id: h.id, name: householdName(h), street: h.street, nr: h.nr, last: m.text, lastMine: !!m.from_sweep, at: m.created_at, unread: x.unread };
@@ -594,7 +561,7 @@ export default async function sweepRoutes(app) {
   app.post('/api/sweep/tenant/:id', async req => {
     const s = activeSweep(req), yes = req.body?.answer === 'yes';
     const r = get(`SELECT r.*, h.street, h.nr, h.email hemail, h.owner_name, u.email FROM residents r JOIN households h ON h.id = r.household_id JOIN users u ON u.id = r.user_id
-      WHERE r.id = ? AND h.district_id = ? AND r.status = 'asked'`, Number(req.params.id), s.district_id);
+      WHERE r.id = ? AND h.sweep_id = ? AND r.status = 'asked'`, Number(req.params.id), s.id);
     if (!r) throw notFound('Anfrage nicht gefunden oder schon erledigt.');
     let toast;
     if (yes) {
@@ -613,13 +580,13 @@ export default async function sweepRoutes(app) {
         adminLog('Kaminfeger', `${r.family_name} · Eigentümer per E-Mail gefragt`, 'Kaminfeger konnte nicht bestätigen');
       });
       queueMail({ to: r.hemail, subject: `Wohnt ${r.family_name} in der ${r.street} ${r.nr}?`,
-        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger Verwaltung die Feuerstättenschau für ${r.street} ${r.nr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
+        text: `Guten Tag ${r.owner_name},\n\n${r.family_name} möchte über Kaminfeger Verwaltung Termine mit dem Kaminfeger für ${r.street} ${r.nr} buchen. Bitte bestätigen Sie kurz, dass sie dort wohnen.`,
         link: l.url, linkLabel: 'Antworten' });
       toast = 'Danke – wir fragen den Eigentümer per E-Mail.';
     } else {
       tx(() => {
         run(`UPDATE residents SET status = 'review' WHERE id = ?`, r.id);
-        adminLog('Kaminfeger', `${r.family_name} · an Betreiber übergeben`, 'Keine E-Mail des Eigentümers im Kehrbuch');
+        adminLog('Kaminfeger', `${r.family_name} · an Betreiber übergeben`, 'Keine E-Mail des Eigentümers in der Kundenliste');
       });
       toast = 'Danke – der Betreiber prüft die Anfrage.';
     }

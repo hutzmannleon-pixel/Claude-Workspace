@@ -4,7 +4,7 @@ import { config } from './config.js';
 import { get, all, run } from './db.js';
 import { queueMail } from './mail.js';
 import { parseDate, dayLabel, toMin, fmtMin } from './util.js';
-import { activeSweepForDistrict, sweepName, householdName } from './domain.js';
+import { activeSweep, sweepName, householdName } from './domain.js';
 
 const slotDate = (date, time) => { const d = parseDate(date); d.setMinutes(toMin(time)); return d; };
 
@@ -44,7 +44,7 @@ export function sendChatMails() {
   for (const g of groups) {
     run('UPDATE chat_messages SET mailed = 1 WHERE household_id = ? AND from_sweep = ? AND mailed = 0 AND id <= ?', g.hid, g.from_sweep, g.last);
     const h = get('SELECT * FROM households WHERE id = ?', g.hid);
-    const s = h && activeSweepForDistrict(h.district_id);
+    const s = h && activeSweep(h.sweep_id);
     if (!h || !s) continue;
     const last = get('SELECT text FROM chat_messages WHERE id = ?', g.last).text;
     const more = g.n > 1 ? `\n\n(${g.n} neue Nachrichten)` : '';

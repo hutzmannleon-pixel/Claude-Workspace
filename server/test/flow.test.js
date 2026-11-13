@@ -41,7 +41,14 @@ function form(name, filename, type, content) {
   return { payload, headers: { 'content-type': `multipart/form-data; boundary=${b}` } };
 }
 const upload = (role, url, name, type, content) => { const f = form('file', name, type, content); return call(role, 'POST', url, undefined, f); };
-const iso = n => { const d = new Date(); d.setDate(d.getDate() + n); while (d.getDay() === 0) d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); };
+const fmtDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+// n Tage voraus, Sonntage werden übersprungen – so ergeben verschiedene n immer verschiedene Tage (negativ: einfach zurück)
+const iso = n => {
+  const d = new Date();
+  if (n < 0) d.setDate(d.getDate() + n);
+  for (let i = 0; i < n; i++) { d.setDate(d.getDate() + 1); if (d.getDay() === 0) d.setDate(d.getDate() + 1); }
+  return fmtDate(d);
+};
 async function login(role, email, jar = role) {
   await ok(jar, 'POST', '/api/auth/code', { email, role, purpose: 'login' });
   await ok(jar, 'POST', '/api/auth/login', { email, role, code: codeFor(email) });
@@ -51,23 +58,18 @@ async function registerCustomer(jar, email, addr) {
   return ok(jar, 'POST', '/api/customer/register', { email, code: codeFor(email), ...addr });
 }
 const D1 = iso(10), D2 = iso(11);
+const KUNDEN = '/api/sweep/kunden?eigene=1';
 
 // ---------- Tests ----------
-test('Betreiber: nur freigeschaltete Admins, Verzeichnis per CSV', async () => {
+test('Betreiber: nur freigeschaltete Admins · Kehrbezirke und Bezirksverzeichnis gibt es nicht mehr', async () => {
   await ok('x', 'POST', '/api/auth/code', { email: 'fremd@test.de', role: 'admin', purpose: 'login' });
   assert.equal(lastMail('fremd@test.de'), undefined, 'kein Code an Nicht-Admins');
   await fails(400, 'x', 'POST', '/api/auth/login', { email: 'fremd@test.de', role: 'admin', code: '123456' });
   await login('admin', 'admin@test.de');
   await fails(401, 'nobody', 'GET', '/api/admin/queue');
-  const csv = 'bundesland;kreis;bezirk;name;email;betriebsadresse;bestellt_bis\n' +
-    'Baden-Württemberg;Freiburg im Breisgau;14;Markus Brandt;amt-brandt@test.de;Talstraße 12, 79102 Freiburg;2031-12-31\n' +
-    'Baden-Württemberg;Freiburg im Breisgau;15;Erika Muster;amt-muster@test.de;Hauptstr. 1, 79100 Freiburg;2030-12-31\n' +
-    'Baden-Württemberg;;16;;;\n';
-  const r = await upload('admin', '/api/admin/directory', 'v.csv', 'text/csv', csv);
-  assert.equal(r.status, 200);
-  assert.deepEqual([r.json.added, r.json.errorCount], [2, 1]);
-  const opts = await ok('x', 'GET', '/api/directory/options');
-  assert.deepEqual(opts.kreise['Baden-Württemberg'], ['Freiburg im Breisgau']);
+  await fails(404, 'x', 'GET', '/api/directory/options');
+  await fails(404, 'admin', 'GET', '/api/admin/directory');
+  assert.equal(get(`SELECT COUNT(*) n FROM sqlite_master WHERE name = 'districts'`).n, 0);
 });
 
 test('Login-Codes: falsch, abgelaufen nach 5 Versuchen, nur einmal gültig', async () => {
@@ -76,7 +78,7 @@ test('Login-Codes: falsch, abgelaufen nach 5 Versuchen, nur einmal gültig', asy
   assert.match(code, /^\d{6}$/);
   const wrong = code === '000000' ? '111111' : '000000';
   await fails(400, 's', 'POST', '/api/sweep/register', { first: 'Markus', last: 'Brandt', bstreet: 'Talstraße 12', bplz: '79102', bort: 'Freiburg', email: 'mb@test.de', code: wrong });
-  await ok('s', 'POST', '/api/sweep/register', { first: 'Markus', last: 'Brandt', bstreet: 'Talstraße 12', bplz: '79102', bort: 'Freiburg', email: 'mb@test.de', code, phone: '0761 1234' });
+  await ok('s', 'POST', '/api/sweep/register', { first: 'Markus', last: 'Brandt', company: 'Kaminfeger Brandt', bstreet: 'Talstraße 12', bplz: '79102', bort: 'Freiburg', email: 'mb@test.de', code, phone: '0761 1234' });
   await fails(400, 's2', 'POST', '/api/sweep/register', { first: 'X', last: 'Y', bstreet: 'a', bplz: '79102', bort: 'b', email: 'mb@test.de', code });
   // Brute-Force: nach 5 Fehlversuchen ist der Code verbraucht
   await ok('k', 'POST', '/api/auth/code', { email: 'bf@test.de', role: 'customer', purpose: 'register' });
@@ -85,124 +87,146 @@ test('Login-Codes: falsch, abgelaufen nach 5 Versuchen, nur einmal gültig', asy
   await fails(400, 'k', 'POST', '/api/customer/register', { email: 'bf@test.de', code: good, street: 'Lindenstraße', nr: '1', plz: '79102', ort: 'Freiburg', name: 'X' });
 });
 
-test('Kaminfeger: Bezirksabgleich, Unterlagen, Einreichen', async () => {
-  assert.equal((await ok('s', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '15' })).result, 'other');
-  assert.equal((await ok('s', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '99' })).result, 'unknown');
-  assert.equal((await ok('s', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '014' })).result, 'ok');
+test('Kaminfeger: Betrieb anmelden – ein Nachweis genügt, kein Kehrbezirk nötig', async () => {
+  const me = await ok('s', 'GET', '/api/sweep/me');
+  assert.deepEqual([me.status, me.company, me.households], ['draft', 'Kaminfeger Brandt', 0]);
+  await fails(404, 's', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '14' });
   await fails(400, 's', 'POST', '/api/sweep/submit', { assure: true });
-  assert.equal((await upload('s', '/api/sweep/documents/urkunde', 'x.exe', 'application/x-msdownload', 'MZ')).status, 400);
-  assert.equal((await upload('s', '/api/sweep/documents/urkunde', 'urkunde.pdf', 'application/pdf', '%PDF-1.4 test')).status, 200);
-  assert.equal((await upload('s', '/api/sweep/documents/ausweis', 'ausweis.jpg', 'image/jpeg', 'jpgdata')).status, 200);
+  assert.equal((await upload('s', '/api/sweep/documents/urkunde', 'urkunde.pdf', 'application/pdf', '%PDF-1.4 test')).status, 400, 'Bestellungsurkunde wird nicht mehr verlangt');
+  assert.equal((await upload('s', '/api/sweep/documents/ausweis', 'x.exe', 'application/x-msdownload', 'MZ')).status, 400);
+  assert.equal((await upload('s', '/api/sweep/documents/ausweis', 'handwerkskarte.jpg', 'image/jpeg', 'jpgdata')).status, 200);
+  assert.equal((await ok('s', 'GET', '/api/sweep/me')).docs.ausweis.name, 'handwerkskarte.jpg');
   await fails(400, 's', 'POST', '/api/sweep/submit', { assure: false });
   await ok('s', 'POST', '/api/sweep/submit', { assure: true });
   assert.equal((await ok('s', 'GET', '/api/sweep/me')).status, 'pending');
   await fails(403, 's', 'GET', '/api/sweep/overview');
-  assert.ok(lastMail('admin@test.de').subject.includes('Neue Prüfung'));
+  const mail = lastMail('admin@test.de');
+  assert.ok(mail.subject.includes('Neue Prüfung') && mail.subject.includes('Kaminfeger Brandt'));
+  assert.ok(mail.text.includes('Schornsteinfegerregister'));
 });
 
-test('Betreiber: Dokumente ansehen, freigeben, Dokumente gelöscht, Freischaltlink an Verzeichnis-Adresse', async () => {
+test('Betreiber: Nachweis ansehen, im Register prüfen, freischalten – Betrieb ist sofort aktiv, Nachweis gelöscht', async () => {
   const q = await ok('admin', 'GET', '/api/admin/queue');
-  const item = q.sweeps.find(s => s.name === 'Markus Brandt');
-  assert.equal(item.status, 'pending');
+  const item = q.sweeps.find(s => s.name === 'Kaminfeger Brandt');
+  assert.deepEqual([item.status, item.person, item.where], ['pending', 'Markus Brandt', '79102 Freiburg']);
   const d = await ok('admin', 'GET', `/api/admin/sweeps/${item.id}`);
-  assert.equal(d.docs.length, 2);
+  assert.equal(d.docs.length, 1);
+  assert.deepEqual([d.register.company, d.register.name, d.register.plz], ['Kaminfeger Brandt', 'Markus Brandt', '79102']);
+  assert.ok(d.register.url.startsWith('https://'));
+  assert.ok(d.auto.some(a => a[1].includes('Schornsteinfegerregister')));
   const doc = await call('admin', 'GET', `/api/admin/documents/${d.docs[0].id}`);
   assert.equal(doc.status, 200);
   assert.equal(doc.res.headers['cache-control'], 'no-store, private');
   await fails(401, 's', 'GET', `/api/admin/documents/${d.docs[0].id}`);
-  await fails(400, 'admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['name', 'nr'] });
-  await ok('admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['name', 'nr', 'valid', 'id'] });
+  await fails(400, 'admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['bafa', 'id'] });
+  const res = await ok('admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['bafa', 'leiter', 'id'] });
+  assert.equal(res.sentTo, 'mb@test.de');
   assert.equal(get('SELECT COUNT(*) n FROM documents').n, 0);
   assert.equal(fs.readdirSync(path.join(dir, 'uploads')).length, 0, 'Dateien gelöscht');
-  const mail = lastMail('amt-brandt@test.de');
-  assert.ok(mail.link.includes('/aktivieren/'));
-  assert.equal((await ok('s', 'GET', '/api/sweep/me')).status, 'approved');
-  const token = mail.link.split('/aktivieren/')[1];
-  const r = await call('x', 'GET', `/aktivieren/${token}`);
-  assert.equal(r.res.headers.location, '/kaminfeger?aktiviert=1');
-  assert.equal((await ok('s', 'GET', '/api/sweep/me')).status, 'active');
-  assert.equal((await call('x', 'GET', `/aktivieren/${token}`)).res.headers.location, '/kaminfeger?link=ungueltig', 'Link nur einmal gültig');
+  assert.equal((await ok('s', 'GET', '/api/sweep/me')).status, 'active', 'ohne zusätzlichen Freischaltlink');
+  const mail = lastMail('mb@test.de');
+  assert.equal(mail.subject, 'Ihr Betrieb ist freigeschaltet');
+  assert.ok(mail.link.endsWith('/kaminfeger') && mail.text.includes('Feuerstättenschau laufen nicht über die App'));
+  assert.equal((await call('x', 'GET', '/aktivieren/alter-link')).res.headers.location, '/kaminfeger', 'alte Links führen nur noch zur App');
   const log = await ok('admin', 'GET', '/api/admin/log');
-  assert.ok(log.log[0].what.includes('freigegeben'));
+  assert.ok(log.log[0].what.includes('freigeschaltet'));
 });
 
 test('Betreiber: Ablehnen mit Grund, Kaminfeger reicht neu ein, Rückfrage', async () => {
   await ok('s2', 'POST', '/api/auth/code', { email: 'em@test.de', role: 'sweep', purpose: 'register' });
   await ok('s2', 'POST', '/api/sweep/register', { first: 'Erika', last: 'Muster', bstreet: 'Hauptstr. 1', bplz: '79100', bort: 'Freiburg', email: 'em@test.de', code: codeFor('em@test.de') });
-  assert.equal((await ok('s2', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '14' })).result, 'taken');
-  await ok('s2', 'POST', '/api/sweep/district', { land: 'Baden-Württemberg', kreis: 'Freiburg im Breisgau', bez: '15' });
-  await upload('s2', '/api/sweep/documents/urkunde', 'u.pdf', 'application/pdf', '%PDF');
   await upload('s2', '/api/sweep/documents/ausweis', 'a.png', 'image/png', 'png');
   await ok('s2', 'POST', '/api/sweep/submit', { assure: true });
   const id = (await ok('admin', 'GET', '/api/admin/queue')).sweeps.find(s => s.name === 'Erika Muster').id;
-  await ok('admin', 'POST', `/api/admin/sweeps/${id}/query`, { to: 'behoerde' });
+  await ok('admin', 'POST', `/api/admin/sweeps/${id}/query`, { to: 'kammer' });
   assert.equal((await ok('s2', 'GET', '/api/sweep/me')).status, 'query');
   await fails(400, 'admin', 'POST', `/api/admin/sweeps/${id}/reject`, { reason: 'Einfach so' });
-  await ok('admin', 'POST', `/api/admin/sweeps/${id}/reject`, { reason: 'Urkunde unleserlich – bitte neu hochladen' });
+  await ok('admin', 'POST', `/api/admin/sweeps/${id}/reject`, { reason: 'Nachweis unleserlich – bitte neu hochladen' });
   const me = await ok('s2', 'GET', '/api/sweep/me');
   assert.equal(me.status, 'rejected');
-  assert.equal(me.rejectReason, 'Urkunde unleserlich – bitte neu hochladen');
-  assert.equal(me.docs.urkunde, null);
-  await upload('s2', '/api/sweep/documents/urkunde', 'u2.pdf', 'application/pdf', '%PDF');
+  assert.equal(me.rejectReason, 'Nachweis unleserlich – bitte neu hochladen');
+  assert.equal(me.docs.ausweis, null);
   await upload('s2', '/api/sweep/documents/ausweis', 'a2.png', 'image/png', 'png');
   await ok('s2', 'POST', '/api/sweep/submit', { assure: true });
   assert.equal((await ok('admin', 'GET', `/api/admin/sweeps/${id}`)).status, 'pending');
 });
 
 let campaignId;
-test('Kaminfeger: Kehrbuch importieren und Zeitfenster senden (mit Einladung per E-Mail)', async () => {
-  const csv = 'Straße;Hausnummer;PLZ;Ort;Eigentümer;Kundennummer;E-Mail;Telefon\n' +
+test('Kaminfeger: eigene Kundenliste importieren (mit Bestätigung), Art der Arbeit wählen, Zeitfenster senden', async () => {
+  const csv = 'Straße;Hausnummer;PLZ;Ort;Kunde;Kundennummer;E-Mail;Telefon\n' +
     'Lindenstraße;1;79102;Freiburg;Berger;KF-14-0001;;0761 1\n' +
     'Lindenstraße;2;79102;Freiburg;Yilmaz;KF-14-0002;;0761 2\n' +
     'Lindenstraße;3;79102;Freiburg;Keller;KF-14-0003;keller@test.de;0761 3\n' +
     'Lindenstraße;4;79102;Freiburg;Fam. Lang;;;0761 4\n' +
     'Ahornweg;1;79102;Freiburg;Vogel;KF-14-1001;;\n' +
     ';;;;;\n';
-  const r = await upload('s', '/api/sweep/kehrbuch', 'kb.csv', 'text/csv', csv);
+  // Ohne die Bestätigung „eigene Kundendaten, nicht das Kehrbuch“ wird nichts importiert
+  const no = await upload('s', '/api/sweep/kunden', 'kunden.csv', 'text/csv', csv);
+  assert.deepEqual([no.status, no.json.code], [400, 'confirm']);
+  await fails(404, 's', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', csv));
+  assert.equal(get('SELECT COUNT(*) n FROM households').n, 0);
+  const r = await upload('s', KUNDEN, 'kunden.csv', 'text/csv', csv);
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.deepEqual([r.json.added, r.json.errorCount], [5, 0]);
-  const again = await upload('s', '/api/sweep/kehrbuch', 'kb.csv', 'text/csv', csv);
+  const again = await upload('s', KUNDEN, 'kunden.csv', 'text/csv', csv);
   assert.equal(again.json.updated, 5, 'Import ist wiederholbar');
+  assert.ok(get(`SELECT own_data_at FROM sweeps WHERE company = 'Kaminfeger Brandt'`).own_data_at, 'Bestätigung festgehalten');
+  assert.ok((await ok('admin', 'GET', '/api/admin/log')).log.some(l => l.what.includes('Kundenliste importiert') && l.note.includes('eigene Kundendaten')));
   const ov = await ok('s', 'GET', '/api/sweep/overview');
+  assert.deepEqual([ov.company, ov.ort], ['Kaminfeger Brandt', 'Freiburg']);
   assert.deepEqual(ov.streets.map(s => [s.street, s.households, s.campaign]), [['Ahornweg', 1, null], ['Lindenstraße', 4, null]]);
   await fails(400, 's', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', slotLen: 30, deadline: iso(5), windows: [{ date: D1, start: '08:00', end: '08:10' }] });
   await fails(400, 's', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', slotLen: 30, deadline: iso(5), windows: [{ date: D1, start: '08:00', end: '10:00' }, { date: D1, start: '13:00', end: '15:00' }] });
-  const c = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', slotLen: 30, deadline: iso(5),
-    windows: [{ date: D1, start: '08:00', end: '10:00' }, { date: D2, start: '13:00', end: '14:00' }] });
+  // Amtliche Aufgaben laufen nicht über die App
+  const two = [{ date: D1, start: '08:00', end: '10:00' }, { date: D2, start: '13:00', end: '14:00' }];
+  for (const work of ['Feuerstättenschau', 'feuerstaetten-schau 2026', 'Bauabnahme Kaminofen', '   '])
+    assert.equal((await fails(400, 's', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', work, slotLen: 30, deadline: iso(5), windows: two })).code, 'work');
+  const c = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', work: 'Kehren', slotLen: 30, deadline: iso(5), windows: two });
   campaignId = c.id;
   assert.equal(c.households, 4);
+  assert.equal((await ok('s', 'GET', `/api/sweep/campaigns/${campaignId}`)).work, 'Kehren');
   const inv = lastMail('keller@test.de');
-  assert.ok(inv.link.includes('/kunde?einladung='), 'Einladung an E-Mail aus dem Kehrbuch');
+  assert.ok(inv.link.includes('/kunde?einladung='), 'Einladung an die E-Mail aus der Kundenliste');
+  assert.ok(inv.text.includes('steht an: Kehren') && !/Feuerst/.test(inv.subject + inv.text));
 });
 
 test('Bewohner: Adresse finden, E-Mail-Code, Kundennummer prüfen, buchen', async () => {
-  assert.equal((await ok('k1', 'POST', '/api/customer/lookup', { street: 'Lindenstrasse', nr: '1', plz: '79102', ort: 'Freiburg' })).district.sweep, 'Markus Brandt');
-  assert.equal((await ok('k1', 'POST', '/api/customer/lookup', { street: 'Unter den Linden', nr: '1', plz: '10117', ort: 'Berlin' })).district, null);
+  // Vor der Anmeldung: nur ob ein Betrieb die Adresse führt – nicht welcher
+  const found = await call('k1', 'POST', '/api/customer/lookup', { street: 'Lindenstrasse', nr: '1', plz: '79102', ort: 'Freiburg' });
+  assert.deepEqual(found.json, { known: true, householdFound: true });
+  assert.ok(!found.res.body.includes('Brandt'));
+  assert.deepEqual(await ok('k1', 'POST', '/api/customer/lookup', { street: 'Lindenstraße', nr: '99', plz: '79102' }), { known: true, householdFound: false });
+  assert.deepEqual(await ok('k1', 'POST', '/api/customer/lookup', { street: 'Unter den Linden', nr: '1', plz: '10117', ort: 'Berlin' }), { known: false, householdFound: false });
   const reg = await registerCustomer('k1', 'berger@test.de', { street: 'Lindenstraße', nr: '1', plz: '79102', ort: 'Freiburg', name: 'Berger' });
   assert.equal(reg.next, 'verify');
+  const pre = await ok('k1', 'GET', '/api/customer/state');
+  assert.deepEqual([pre.listed, pre.hasSweep, pre.sweep, pre.campaign && pre.campaign.work], [true, true, null, 'Kehren'], 'Betriebsname erst nach bestätigtem Wohnsitz');
   await fails(403, 'k1', 'POST', '/api/customer/book', { windowId: 1, time: '08:00' });
   await fails(400, 'k1', 'POST', '/api/customer/verify-number', { kdnr: 'KF-14-9999' });
   await ok('k1', 'POST', '/api/customer/verify-number', { kdnr: 'kf 14 0001' });
   const st = await ok('k1', 'GET', '/api/customer/state');
   assert.equal(st.resident.status, 'verified');
+  assert.deepEqual([st.sweep.company, st.sweep.name, st.options], ['Kaminfeger Brandt', 'Markus Brandt', []]);
   assert.equal(st.campaign.windows.length, 2);
   assert.equal(st.messages.length, 1, 'Nachricht zu den Zeitfenstern');
+  assert.ok(st.messages[0].text.includes('steht an: Kehren'));
   const w1 = st.campaign.windows[0];
   assert.deepEqual(w1.slots.map(s => s.t), ['08:00', '08:30', '09:00', '09:30']);
   await fails(400, 'k1', 'POST', '/api/customer/book', { windowId: w1.id, time: '08:15' });
   await ok('k1', 'POST', '/api/customer/book', { windowId: w1.id, time: '08:00', key: 'Fam. Yilmaz, Nr. 2' });
   assert.ok(lastMail('berger@test.de').subject.startsWith('Termin bestätigt'));
+  assert.ok(lastMail('berger@test.de').text.includes('(Kehren)'));
   const st2 = await ok('k1', 'GET', '/api/customer/state');
   assert.equal(st2.booking.t, '08:00');
   assert.equal(st2.booking.key, 'Fam. Yilmaz, Nr. 2');
   const ics = await call('k1', 'GET', '/api/customer/calendar.ics');
-  assert.ok(ics.res.body.includes('BEGIN:VEVENT'));
+  assert.ok(ics.res.body.includes('BEGIN:VEVENT') && ics.res.body.includes('SUMMARY:Kehren – Kaminfeger Markus Brandt'));
 });
 
 test('Einladungslink: Wohnsitz sofort bestätigt · vergebene Slots gesperrt', async () => {
   const token = new URL(lastMail('keller@test.de').link).searchParams.get('einladung');
   const info = await ok('x', 'GET', `/api/customer/invite/${token}`);
-  assert.equal(info.family, 'Keller');
+  assert.deepEqual([info.family, info.sweep], ['Keller', 'Kaminfeger Brandt']);
   const reg = await registerCustomer('k3', 'keller@test.de', { invite: token });
   assert.equal(reg.status, 'verified');
   await fails(404, 'x', 'GET', `/api/customer/invite/${token}`);
@@ -259,7 +283,7 @@ test('Eigentümer bestätigt per E-Mail-Link', async () => {
 
 test('Kundennummer 3× falsch → Betreiber-Prüfung', async () => {
   run(`UPDATE households SET email = NULL WHERE nr = '2'`);
-  await ok('s', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer;kundennummer\nAhornweg;2;79102;Freiburg;Seitz;KF-14-1002\n'));
+  await ok('s', 'POST', KUNDEN, undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer;kundennummer\nAhornweg;2;79102;Freiburg;Seitz;KF-14-1002\n'));
   await registerCustomer('k5', 'seitz@test.de', { street: 'Ahornweg', nr: '2', plz: '79102', ort: 'Freiburg', name: 'Seitz' });
   for (let i = 0; i < 3; i++) await fails(400, 'k5', 'POST', '/api/customer/verify-number', { kdnr: 'falsch' + i });
   assert.equal((await ok('k5', 'GET', '/api/customer/state')).resident.status, 'review');
@@ -271,9 +295,9 @@ test('Kundennummer 3× falsch → Betreiber-Prüfung', async () => {
 
 test('Adresse ohne teilnehmenden Kaminfeger: Konto ja, Wohnsitz später', async () => {
   const reg = await registerCustomer('k6', 'berlin@test.de', { street: 'Unter den Linden', nr: '1', plz: '10117', ort: 'Berlin', name: 'Schmidt' });
-  assert.deepEqual([reg.next, reg.status, reg.inDistrict], ['done', 'unverified', false]);
+  assert.deepEqual([reg.next, reg.status, reg.known], ['done', 'unverified', false]);
   const st = await ok('k6', 'GET', '/api/customer/state');
-  assert.equal(st.campaign, null);
+  assert.deepEqual([st.campaign, st.listed, st.sweep], [null, false, null]);
 });
 
 test('Zeitfenster ändern: nicht mehr passende Buchungen werden freigegeben und benachrichtigt', async () => {
@@ -607,7 +631,7 @@ test('Schutz: ungültige Herkunft, Einladungen begrenzt, Anfragen pro Anschluss 
 });
 
 test('Straße abschließen: erst wenn alles erledigt, danach wieder ungeplant und unter „Abgeschlossen“', async () => {
-  await ok('s', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer\nBirkenweg;1;79102;Freiburg;Roth\nBirkenweg;2;79102;Freiburg;Lang\n'));
+  await ok('s', 'POST', KUNDEN, undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer\nBirkenweg;1;79102;Freiburg;Roth\nBirkenweg;2;79102;Freiburg;Lang\n'));
   const D = iso(8);
   const { id } = await ok('s', 'POST', '/api/sweep/campaigns', { street: 'Birkenweg', plz: '79102', slotLen: 30, deadline: iso(2), windows: [{ date: D, start: '08:00', end: '10:00' }] });
   await fails(400, 's', 'POST', '/api/sweep/campaigns', { street: 'Birkenweg', plz: '79102', slotLen: 30, deadline: iso(2), windows: [{ date: D, start: '08:00', end: '10:00' }] });
@@ -628,6 +652,7 @@ test('Straße abschließen: erst wenn alles erledigt, danach wieder ungeplant un
   assert.ok(ov.closed.some(x => x.id === id && x.visited === 2 && x.households === 2));
   const cu = (await ok('s', 'GET', '/api/sweep/customers')).customers.find(x => x.id === h1.id);
   assert.equal(cu.status, 'none'); assert.ok(cu.line.startsWith('Zuletzt erledigt'));
+  assert.equal(ov.closed.find(x => x.id === id).work, 'Kehren und Überprüfen', 'ohne Angabe gilt „Kehren und Überprüfen“');
   // Abgeschlossen = schreibgeschützt; neue Runde möglich
   await fails(400, 's', 'POST', '/api/sweep/campaigns', { id, slotLen: 30, deadline: iso(2), windows: [{ date: iso(30), start: '08:00', end: '10:00' }] });
   await fails(400, 's', 'POST', '/api/sweep/messages', { campaignId: id, rcpt: 'all', text: 'Hallo' });
@@ -636,74 +661,99 @@ test('Straße abschließen: erst wenn alles erledigt, danach wieder ungeplant un
   assert.equal((await ok('s', 'GET', `/api/sweep/campaigns/${next.id}`)).houses.every(h => h.status === 'open'), true);
 });
 
-test('Bezirk nicht im Verzeichnis: selbst angeben, Betreiber prüft im Register, Bezirk wird übernommen', async () => {
+test('Zwei Betriebe führen dieselbe Adresse: Bewohner wählt · Konto löschen nimmt Kundenliste, Termine und Chats mit', async () => {
   const email = 'neu-kf@test.de';
   await ok('n', 'POST', '/api/auth/code', { email, role: 'sweep', purpose: 'register' });
-  await ok('n', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', bstreet: 'Hauptstr. 3', bplz: '88416', bort: 'Ochsenhausen', email, code: codeFor(email) });
-  const where = { land: 'Baden-Württemberg', kreis: 'Biberach', bez: '07' };
-  assert.equal((await ok('n', 'POST', '/api/sweep/district', where)).result, 'unknown');
-  await fails(400, 'n', 'POST', '/api/sweep/district', { ...where, land: 'Atlantis', manual: true });
-  await fails(400, 'n', 'POST', '/api/sweep/district', { ...where, kreis: '', manual: true });
-  const r = await ok('n', 'POST', '/api/sweep/district', { ...where, manual: true });
-  assert.deepEqual([r.result, r.info.bez], ['manual', '7']);
-  const me = await ok('n', 'GET', '/api/sweep/me');
-  assert.deepEqual([me.district.manual, me.district.kreis, me.district.bez], [true, 'Biberach', '7']);
-  await upload('n', '/api/sweep/documents/urkunde', 'u.pdf', 'application/pdf', '%PDF-1.4 x');
+  await ok('n', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', company: 'Kessler Schornsteinfeger', bstreet: 'Hauptstr. 3', bplz: '88416', bort: 'Ochsenhausen', email, code: codeFor(email) });
   await upload('n', '/api/sweep/documents/ausweis', 'a.jpg', 'image/jpeg', 'jpg');
   await ok('n', 'POST', '/api/sweep/submit', { assure: true });
-  assert.ok(lastMail('admin@test.de').text.includes('Schornsteinfegerregister'));
-  // Betreiber: Hinweis + Register-Angaben, Freigabe nur mit Register-Haken
-  const q = await ok('admin', 'GET', '/api/admin/queue');
-  const item = q.sweeps.find(s => s.name === 'Nora Kessler');
-  assert.equal(item.manual, true);
-  const d = await ok('admin', 'GET', `/api/admin/sweeps/${item.id}`);
-  assert.ok(d.auto.some(a => a[1].includes('nicht im Verzeichnis')));
-  assert.deepEqual([d.register.name, d.register.bez, d.register.plz], ['Nora Kessler', '7', '88416']);
-  assert.ok(d.register.url.startsWith('https://'));
-  await fails(400, 'admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['name', 'nr', 'valid', 'id'] });
-  const res = await ok('admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['bafa', 'name', 'nr', 'valid', 'id'] });
-  assert.deepEqual([res.sentTo, res.fromList], [email, false]);
-  const dist = get(`SELECT * FROM districts WHERE kreis = 'Biberach' AND number = '7'`);
-  assert.ok(dist && dist.official_email === email && dist.holder_name === 'Nora Kessler');
-  // Freischalten per Link an die Registrierungs-Adresse
-  const token = lastMail(email).link.split('/aktivieren/')[1];
-  assert.equal((await call('x', 'GET', `/aktivieren/${token}`)).res.headers.location, '/kaminfeger?aktiviert=1');
-  const after = await ok('n', 'GET', '/api/sweep/me');
-  assert.deepEqual([after.status, after.district.bez, after.district.selfListed, after.district.manual], ['active', '7', true, undefined]);
-  // Ein weiterer Kaminfeger findet den Bezirk jetzt im Verzeichnis – vergeben
+  const item = (await ok('admin', 'GET', '/api/admin/queue')).sweeps.find(s => s.name === 'Kessler Schornsteinfeger');
+  await ok('admin', 'POST', `/api/admin/sweeps/${item.id}/approve`, { checks: ['bafa', 'leiter', 'id'] });
+  // Gleicher Name am selben Ort fällt dem Betreiber auf
   await ok('n2', 'POST', '/api/auth/code', { email: 'zweit@test.de', role: 'sweep', purpose: 'register' });
   await ok('n2', 'POST', '/api/sweep/register', { first: 'Nora', last: 'Kessler', bstreet: 'X 1', bplz: '88416', bort: 'Ochsenhausen', email: 'zweit@test.de', code: codeFor('zweit@test.de') });
-  assert.equal((await ok('n2', 'POST', '/api/sweep/district', { ...where, kreis: 'biberach' })).result, 'taken');
+  await upload('n2', '/api/sweep/documents/ausweis', 'a.jpg', 'image/jpeg', 'jpg');
+  await ok('n2', 'POST', '/api/sweep/submit', { assure: true });
+  const twin = (await ok('admin', 'GET', '/api/admin/queue')).sweeps.find(s => s.name === 'Nora Kessler');
+  assert.ok(twin.auto.some(a => a[0] === 'warn' && a[1].includes('Gleicher Name') && a[1].includes('Kessler Schornsteinfeger')));
+  await ok('n2', 'POST', '/api/sweep/delete', { confirm: 'LÖSCHEN' });
+
+  // Kessler führt die Lindenstraße 4 ebenfalls – dort wohnt Özdemir (k4), bisher bei Brandt
+  await ok('n', 'POST', KUNDEN, undefined, form('file', 'k.csv', 'text/csv',
+    'strasse;hausnummer;plz;ort;kunde;kundennummer;email\nLindenstraße;4;79102;Freiburg;Lang;KS-0004;\nTannenweg;1;88416;Ochsenhausen;Maier;KS-0001;maier@test.de\n'));
+  const nid = get(`SELECT id FROM sweeps WHERE company = 'Kessler Schornsteinfeger'`).id;
+  let st = await ok('k4', 'GET', '/api/customer/state');
+  assert.equal(st.sweep.company, 'Kaminfeger Brandt');
+  assert.deepEqual(st.options.map(o => o.company), ['Kessler Schornsteinfeger']);
+  await fails(400, 'k4', 'POST', '/api/customer/choose', { householdId: 999999 });
+  await fails(400, 'k4', 'POST', '/api/customer/choose', { householdId: get(`SELECT id FROM households WHERE street = 'Tannenweg'`).id });
+  await fails(403, 'k6', 'POST', '/api/customer/choose', { householdId: st.options[0].id });
+  await ok('k4', 'POST', '/api/customer/choose', { householdId: st.options[0].id });
+  st = await ok('k4', 'GET', '/api/customer/state');
+  assert.equal(st.sweep.company, 'Kessler Schornsteinfeger');
+  assert.deepEqual(st.options.map(o => o.company), ['Kaminfeger Brandt']);
+  // Neuer Bewohner an derselben Adresse: Die Kundennummer zeigt, zu welchem Betrieb er gehört
+  const reg = await registerCustomer('k7', 'zwei@test.de', { street: 'Lindenstraße', nr: '4', plz: '79102', ort: 'Freiburg', name: 'Zweit' });
+  assert.equal(reg.next, 'verify');
+  await ok('k7', 'POST', '/api/customer/verify-number', { kdnr: 'ks 0004' });
+  assert.equal((await ok('k7', 'GET', '/api/customer/state')).sweep.company, 'Kessler Schornsteinfeger');
+  // Jeder Betrieb sieht nur seine eigene Kundenliste
+  assert.ok((await ok('n', 'GET', '/api/sweep/customers')).customers.every(c => ['Lindenstraße', 'Tannenweg'].includes(c.street)));
+  assert.equal((await ok('n', 'GET', '/api/sweep/customers')).customers.length, 2);
+  assert.ok(!(await ok('s', 'GET', '/api/sweep/customers')).customers.some(c => c.street === 'Tannenweg'));
+  const r = await call('n', 'GET', `/api/sweep/campaigns/${campaignId}`);
+  assert.equal(r.status, 404, 'fremde Runde');
+  // Runde mit eigener Bezeichnung, Chat – dann löscht Kessler das Konto
+  const c = await ok('n', 'POST', '/api/sweep/campaigns', { street: 'Lindenstraße', plz: '79102', work: 'Abgaswegeüberprüfung', slotLen: 30, deadline: iso(3), windows: [{ date: iso(9), start: '08:00', end: '10:00' }] });
+  st = await ok('k7', 'GET', '/api/customer/state');
+  assert.equal(st.campaign.work, 'Abgaswegeüberprüfung');
+  await ok('k7', 'POST', '/api/customer/book', { windowId: st.campaign.windows[0].id, time: '08:00' });
+  await ok('k7', 'POST', '/api/customer/chat', { text: 'Bitte klingeln Sie bei Zweit.' });
+  const brandtHouseholds = get(`SELECT COUNT(*) n FROM households WHERE sweep_id != ?`, nid).n;
+  await ok('n', 'POST', '/api/sweep/delete', { confirm: 'LÖSCHEN' });
+  await fails(401, 'n', 'GET', '/api/sweep/me');
+  assert.deepEqual([get('SELECT COUNT(*) n FROM households WHERE sweep_id = ?', nid).n, get('SELECT COUNT(*) n FROM campaigns WHERE id = ?', c.id).n,
+    get('SELECT COUNT(*) n FROM bookings WHERE campaign_id = ?', c.id).n, get(`SELECT COUNT(*) n FROM chat_messages WHERE text = 'Bitte klingeln Sie bei Zweit.'`).n], [0, 0, 0, 0]);
+  assert.equal(get(`SELECT COUNT(*) n FROM households WHERE sweep_id != ?`, nid).n, brandtHouseholds, 'andere Kundenlisten bleiben unberührt');
+  st = await ok('k7', 'GET', '/api/customer/state');
+  assert.deepEqual([st.resident.status, st.listed, st.sweep, st.campaign], ['unverified', false, null, null], 'Bewohner-Konto bleibt, Zuordnung ist weg');
+  assert.ok((await ok('admin', 'GET', '/api/admin/log')).log.some(l => l.what.includes('Kaminfeger-Konto gelöscht') && l.what.includes('Kessler')));
+  assert.equal(get('PRAGMA foreign_key_check'), undefined);
 });
 
-test('Vorschau für den Betreiber: Demo-Bezirk abgeschottet, keine Mails, eigene Sitzungen', async () => {
+test('Vorschau für den Betreiber: Beispiel-Betrieb abgeschottet, keine Mails, eigene Sitzungen', async () => {
   const r = await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep' });
   assert.equal(r.url, '/kaminfeger');
   const me = await ok('admin', 'GET', '/api/sweep/me');
-  assert.deepEqual([me.demo, me.status, me.district.bez], [true, 'active', '1']);
+  assert.deepEqual([me.demo, me.status, me.company], [true, 'active', 'Kaminfeger Muster']);
   const ov = await ok('admin', 'GET', '/api/sweep/overview');
   assert.ok(ov.streets.length === 3 && ov.today.isToday && ov.today.count === 5);
-  await fails(400, 'admin', 'POST', '/api/sweep/kehrbuch', undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer;email\nX;1;11111;Y;Z;echt@test.de\n'));
+  assert.equal(ov.streets.find(x => x.campaign).campaign.work, 'Kehren und Überprüfen');
+  await fails(400, 'admin', 'POST', KUNDEN, undefined, form('file', 'kb.csv', 'text/csv', 'strasse;hausnummer;plz;ort;eigentuemer;email\nX;1;11111;Y;Z;echt@test.de\n'));
   // Bewohner-Sicht
   await ok('admin', 'POST', '/api/admin/demo', { as: 'customer' });
   const st = await ok('admin', 'GET', '/api/customer/state');
-  assert.deepEqual([st.demo, st.resident.family, !!st.booking], [true, 'Engel', true]);
+  assert.deepEqual([st.demo, st.resident.family, !!st.booking, st.sweep.company], [true, 'Engel', true, 'Kaminfeger Muster']);
+  assert.ok(!JSON.stringify(st).includes('Feuerst'));
   await fails(400, 'admin', 'POST', '/api/customer/members', { email: 'fremd@test.de' });
   // Für echte Nutzer unsichtbar
-  const opts = await ok('x', 'GET', '/api/directory/options');
-  assert.ok(!opts.lands.includes('Vorschau'));
-  assert.equal((await ok('x', 'POST', '/api/customer/lookup', { street: 'Lindenweg', nr: '5', plz: '00000' })).district, null);
+  assert.deepEqual(await ok('x', 'POST', '/api/customer/lookup', { street: 'Lindenweg', nr: '5', plz: '00000' }), { known: false, householdFound: false });
   const q = await ok('admin', 'GET', '/api/admin/queue');
-  assert.ok(!q.sweeps.some(s => s.name === 'Max Muster'));
-  assert.ok(!(await ok('admin', 'GET', '/api/admin/directory')).rows.some(d => d.land === 'Vorschau'));
+  assert.ok(!q.sweeps.some(s => s.name === 'Kaminfeger Muster' || s.person === 'Max Muster'));
   // Keine Mails an Demo-Adressen
   const before = get('SELECT COUNT(*) n FROM outbox').n;
-  const bid = get(`SELECT b.id FROM bookings b JOIN households h ON h.id = b.household_id JOIN districts d ON d.id = h.district_id WHERE d.demo = 1 AND b.status = 'booked' LIMIT 1`).id;
+  const bid = get(`SELECT b.id FROM bookings b JOIN households h ON h.id = b.household_id JOIN sweeps s ON s.id = h.sweep_id WHERE s.demo = 1 AND b.status = 'booked' LIMIT 1`).id;
   await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep' });
   await ok('admin', 'POST', `/api/sweep/bookings/${bid}/cancel`, {});
   assert.equal(get('SELECT COUNT(*) n FROM outbox').n, before);
   // Zurücksetzen legt alles frisch an, Nicht-Betreiber dürfen nicht
   await ok('admin', 'POST', '/api/admin/demo', { as: 'sweep', reset: true });
-  assert.equal(get(`SELECT COUNT(*) n FROM districts WHERE demo = 1`).n, 1);
+  assert.deepEqual([get(`SELECT COUNT(*) n FROM sweeps WHERE demo = 1`).n, get(`SELECT COUNT(*) n FROM households h JOIN sweeps s ON s.id = h.sweep_id WHERE s.demo = 1`).n], [1, 20]);
   await fails(401, 'k1', 'POST', '/api/admin/demo', { as: 'sweep' });
+});
+
+test('Nirgends mehr Feuerstättenschau oder Kehrbuch in E-Mails an Nutzer', async () => {
+  const bad = all('SELECT to_addr, subject, text FROM outbox').filter(m => /Feuerstättenschau|Kehrbuch|Kehrbezirk|Bezirksverzeichnis/.test(m.subject + m.text)
+    && !m.text.includes('Feuerstättenschau laufen nicht über die App'));
+  assert.deepEqual(bad.map(m => m.subject), []);
 });
