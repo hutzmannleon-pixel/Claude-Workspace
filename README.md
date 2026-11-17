@@ -2,13 +2,15 @@
 
 Der Kaminfeger gibt pro Straße Zeitfenster frei, die Bewohner wählen die halbe Stunde, in der sie zu Hause sind. So steht er seltener vor verschlossenen Türen.
 
+Die App ist für die **freien Arbeiten** gedacht: Kehren, Überprüfen und Messen. Amtliche Aufgaben des Bezirksschornsteinfegers – vor allem die **Feuerstättenschau** – laufen nicht über die App. Deshalb gibt es keine Kehrbezirke: Mitmachen kann jeder Betrieb aus dem Schornsteinfegerregister, und er lädt seine **eigene Kundenliste** hoch, nicht das Kehrbuch.
+
 Die App besteht aus drei Teilen, die über einen gemeinsamen Server live verbunden sind:
 
 | Adresse | Für wen | Was |
 |---|---|---|
 | `/kunde` | Bewohner | Registrieren (Adresse, E-Mail-Code, Wohnsitz-Nachweis), Zeit buchen, verschieben/absagen, live sehen, wie weit der Kaminfeger weg ist, Nachrichten, Profil |
-| `/kaminfeger` | Bezirks-Kaminfeger | Registrieren mit Bezirksabgleich und Nachweis, Kehrbuch importieren, Zeitfenster pro Straße, Tagesroute, Nachrichten, Mieter bestätigen |
-| `/betreiber` | Sie als Betreiber | Kaminfeger und Bewohner prüfen, Dokumente ansehen (danach gelöscht), Protokoll, Bezirksverzeichnis importieren, Feedback lesen |
+| `/kaminfeger` | Kaminfeger-Betriebe | Betrieb anmelden mit Nachweis, Kundenliste importieren, Zeitfenster pro Straße (mit Art der Arbeit), Tagesroute, Nachrichten, Mieter bestätigen |
+| `/betreiber` | Sie als Betreiber | Betriebe (Abgleich mit dem Schornsteinfegerregister) und Bewohner prüfen, Nachweis ansehen (danach gelöscht), Protokoll, Vorschau, Feedback lesen |
 | `/test` | nur im Testmodus | Alle drei Apps nebeneinander, Schritt-Anleitung, Test-Postfach für Codes und Links |
 
 **Feedback:** Auf allen Seiten gibt es einen Feedback-Knopf, auch ohne Anmeldung (dann mit freiwilliger E-Mail für Rückfragen) (Sprechblase unten rechts, am Desktop in der Seitenleiste). Er macht ein Bild der aktuellen Ansicht, der Nutzer zieht einen Rahmen um die betroffene Stelle und schreibt etwas dazu. Alles landet beim Betreiber unter **Feedback**.
@@ -24,7 +26,7 @@ server/          Node.js (Fastify) + SQLite (in Node eingebaut, node:sqlite)
   routes/        API: public (Login, Links), customer, sweep, admin
   test/          Integrationstest aller Abläufe (npm test)
 web/             React-App (Vite), Designsystem in web/src/ds/nocturne.css
-  public/vorlagen/  CSV-Vorlagen für Bezirksverzeichnis und Kehrbuch
+  public/vorlagen/  CSV-Vorlage für die Kundenliste
 project/, chats/ Design-Vorlage aus Claude Design (nur Referenz)
 ```
 
@@ -40,17 +42,17 @@ TEST_MODE=1 ADMIN_EMAILS=ich@example.de npm start
 
 Dann **http://localhost:3000/test** öffnen. Es gibt **keine Beispieldaten**, Sie legen alles selbst an:
 
-1. Betreiber: mit `ich@example.de` entsperren. Den Code finden Sie im Test-Postfach links. Unter **Verzeichnis** das Bezirksverzeichnis als CSV importieren.
-2. Kaminfeger: registrieren (Name wie im Verzeichnis), Bezirk wählen, Urkunde und Ausweis hochladen.
-3. Betreiber: prüfen und freigeben. Der Freischaltlink geht an die E-Mail **aus dem Verzeichnis**.
-4. Kaminfeger: Link aus dem Postfach öffnen, dann Kehrbuch (CSV) importieren und Zeitfenster senden.
-5. Bewohner: mit einer Adresse aus dem Kehrbuch registrieren, Kundennummer eingeben, Zeit buchen.
+1. Kaminfeger: Betrieb anmelden (zum Testen mit PLZ 99999) und als Nachweis ein beliebiges Foto hochladen.
+2. Betreiber: mit `ich@example.de` entsperren – den Code finden Sie im Test-Postfach links –, den Betrieb prüfen und freischalten. Er ist sofort aktiv.
+3. Kaminfeger: Kundenliste (CSV, Beispiel in `testdaten/`) importieren und dabei bestätigen, dass es eigene Kundendaten sind.
+4. Kaminfeger: Zeitfenster für eine Straße anlegen, Art der Arbeit wählen und senden.
+5. Bewohner: mit einer Adresse aus der Kundenliste registrieren, Kundennummer eingeben, Zeit buchen.
 6. Kaminfeger: Route starten und Häuser abhaken. Der Bewohner sieht live „2 Häuser entfernt“.
 
 „Alles löschen“ auf der Testseite setzt die Datenbank zurück.
 
 **Entwicklung mit Hot-Reload:** `npm run dev` (Web unter http://localhost:5173, API auf Port 3000).
-**Tests:** `npm test` spielt 27 Szenarien gegen eine temporäre Datenbank durch.
+**Tests:** `npm test` spielt 38 Szenarien gegen temporäre Datenbanken durch.
 
 ## Online bringen (eigener Server)
 
@@ -90,7 +92,7 @@ Davor gehört ein Reverse-Proxy mit HTTPS (Caddy, nginx). Für die Live-Anzeige 
 | `PORT` (3000), `DATA_DIR` (`data`) | Port und Datenordner |
 | `ADMIN_PASSKEY=required` | Betreiber nur noch per Passkey (kein E-Mail-Code mehr, sobald einer eingerichtet ist). Standard: E-Mail-Code immer möglich, Passkey freiwillig |
 | `BACKUP_DIR`, `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION` | Tägliche Sicherung (`deploy/backup.sh`), optional zusätzlich nach S3 |
-| `BAFA_REGISTER_URL` | Link für „Im BAFA-Register prüfen“ bei selbst angegebenen Bezirken (Standard: Websuche nach der Registerauskunft) |
+| `BAFA_REGISTER_URL` | Link für „Im BAFA-Register prüfen“ bei der Prüfung eines Betriebs (Standard: Websuche nach der Registerauskunft) |
 | `IP_CODES_PER_HOUR` (30), `IP_LOGINS_PER_HOUR` (60) | Obergrenzen pro Anschluss gegen Missbrauch |
 | `TEST_MODE=1` | Testseite `/test` und Test-Postfach; Route auch vor dem Termintag startbar. **Nie in Produktion** |
 
@@ -106,12 +108,9 @@ Siehe **[BETRIEB.md](BETRIEB.md)**: Start-Check (`npm run launch-check`), Starts
 
 Trennzeichen Semikolon oder Komma, UTF-8, erste Zeile = Spaltennamen. Vorlagen gibt es in der App bzw. unter `web/public/vorlagen/`.
 
-**Bezirksverzeichnis** (Betreiber → Verzeichnis):
-`bundesland; kreis; bezirk; name; email; betriebsadresse; bestellt_bis`
-Der Freischaltlink geht an `email`. Das muss die Adresse aus dem amtlichen Verzeichnis sein, nicht eine, die der Kaminfeger selbst angibt.
-
-**Kehrbuch** (Kaminfeger → Kehrbuch importieren):
-`strasse; hausnummer; plz; ort; eigentuemer; kundennummer; email; telefon`
+**Kundenliste** (Kaminfeger → Mehr → Kundenliste importieren):
+`strasse; hausnummer; plz; ort; kunde; kundennummer; email; telefon`
+- Nur eigene Kundendaten des Betriebs – nicht das Kehrbuch eines Kehrbezirks. Das bestätigt der Kaminfeger bei jedem Import.
 - `kundennummer`: damit bestätigen Bewohner ihren Wohnsitz sofort.
 - `email`: beim Senden der Zeitfenster bekommt dieser Haushalt eine Einladung, der Link bestätigt den Wohnsitz.
 - `telefon`: für „Anrufen“ bei offenen Haushalten.
@@ -121,8 +120,8 @@ Ein erneuter Import aktualisiert vorhandene Einträge.
 ## Wie die Prüfungen funktionieren
 
 - **E-Mail:** 6-stelliger Code, gespeichert nur als Hash, 10 Minuten gültig, höchstens 5 Versuche, höchstens 6 Codes pro Stunde. Kein Passwort.
-- **Kaminfeger:** Name und Bezirksnummer werden mit dem Bezirksverzeichnis abgeglichen. Der Betreiber sieht Urkunde und Ausweis (nur ansehen, mit Wasserzeichen) und hakt 4 Punkte ab. Nach der Entscheidung, spätestens nach 14 Tagen, werden die Dokumente gelöscht. Der Freischaltlink (48 h gültig) geht an die Verzeichnis-Adresse.
-- **Bewohner:** entweder über die Kundennummer aus dem Kehrbuch, über den Einladungslink des Kaminfegers oder über eine Bestätigung durch den Kaminfeger. Kann er nicht bestätigen, wird der Eigentümer per E-Mail gefragt, sonst entscheidet der Betreiber. Bei dreimal falscher Kundennummer landet der Fall beim Betreiber.
+- **Kaminfeger-Betriebe:** Der Betreiber vergleicht Betrieb, Anschrift und Inhaber/in mit dem Schornsteinfegerregister des BAFA, sieht den Nachweis (Handwerkskarte oder Ausweis; nur ansehen, mit Wasserzeichen) und hakt 3 Punkte ab. Mit der Freigabe ist der Betrieb sofort freigeschaltet. Nach der Entscheidung, spätestens nach 14 Tagen, wird der Nachweis gelöscht.
+- **Bewohner:** entweder über die Kundennummer aus der Kundenliste (sie steht auf der Rechnung des Kaminfegers), über den Einladungslink des Kaminfegers oder über eine Bestätigung durch den Kaminfeger. Kann er nicht bestätigen, wird der Eigentümer per E-Mail gefragt, sonst entscheidet der Betreiber. Bei dreimal falscher Kundennummer landet der Fall beim Betreiber.
 - **Passkeys:** Anmeldung per Fingerabdruck, Gesicht oder Geräte-PIN (WebAuthn). Für alle freiwillig (Profil, Konto bzw. Betreiber → Passkeys), der E-Mail-Code geht immer. Mit `ADMIN_PASSKEY=required` wird der Passkey für Betreiber wieder Pflicht. Notfall (Gerät verloren): auf dem Server `npm run reset-passkeys -- name@example.de admin`.
 - **Betreiber:** Login nur für `ADMIN_EMAILS`. Er wird nach 5 Minuten Inaktivität gesperrt. Das Protokoll hält fest, wer was entschieden hat, aber keine Dokumente.
 
@@ -130,5 +129,5 @@ Ein erneuter Import aktualisiert vorhandene Einträge.
 
 - **Push-Mitteilungen** aufs Handy. Erinnerungen und Nachrichten kommen per E-Mail und live in der App.
 - **Adresssuche:** Straßenvorschläge kommen vom öffentlichen OpenStreetMap-Dienst Photon (komoot). Für den Echtbetrieb eigenen Dienst oder Vertrag nutzen.
-- **Rechtliches:** `/impressum` und `/datenschutz` sind als Vorlage enthalten – Betreiberangaben über `OPERATOR_*` setzen und vor einem echten Betrieb rechtlich prüfen lassen. Verträge zur Auftragsverarbeitung mit den Kaminfegern (Kehrbuch-Daten) fehlen noch.
+- **Rechtliches:** `/impressum` und `/datenschutz` sind als Vorlage enthalten – Betreiberangaben über `OPERATOR_*` setzen und vor einem echten Betrieb rechtlich prüfen lassen. Verträge zur Auftragsverarbeitung mit den Kaminfeger-Betrieben (Kundenlisten) fehlen noch. Die Abgrenzung zu den amtlichen Aufgaben (Feuerstättenschau, Kehrbuch) beruht auf Recherche und sollte von Innung oder Anwalt bestätigt werden.
 - Screenshots von Dokumenten lassen sich im Browser technisch nicht verhindern. Die App zeigt nur einen Hinweis und ein Wasserzeichen.

@@ -9,7 +9,7 @@ Alles hier bezieht sich auf den Server `kaminfeger-verwaltung.com` (App in `/opt
 | Impressum | `OPERATOR_NAME` und `OPERATOR_ADDRESS` (ladungsfähige Anschrift) in `/etc/kaminfeger.env` | |
 | E-Mail an alle Adressen | Brevo einrichten (Abschnitt 5) – Amazon SES ist noch im Sandbox-Modus | |
 | Betreiber-Zugang | `/betreiber` per E-Mail-Code entsperren (Passkey freiwillig) | |
-| Echte Bezirke | `/betreiber` → Verzeichnis → CSV mit den echten Kehrbezirken hochladen | |
+| Register-Link | `BAFA_REGISTER_URL` in `/etc/kaminfeger.env` auf die Registerauskunft des BAFA setzen – dort prüfst du jeden Betrieb | |
 | Externe Sicherung | `BACKUP_S3_BUCKET` gesetzt (Abschnitt 3) | |
 | Überwachung | E-Mail von AWS SNS bestätigt (Abschnitt 4) | |
 
@@ -29,11 +29,11 @@ Das macht der Startschalter:
 
 1. Er entfernt die Test-Einstellungen aus `/etc/kaminfeger.env`: `ALLOWED_EMAILS`, `ALLOW_EARLY_ROUTE`, `TEST_MODE` und `ADMIN_PASSKEY`. Die alte Datei bleibt als `kaminfeger.env.vor-start-…` erhalten.
 2. Er sichert die Datenbank nach `data/vor-start-….sqlite`.
-3. Er entfernt den **Testbezirk** mit allem, was dazugehört. Als Testbezirk gilt das Bundesland „Testland“ oder die PLZ 99999. Entfernt werden:
-   - Haushalte
+3. Er entfernt die **Testdaten** mit allem, was dazugehört. Als Testdaten gelten alle Haushalte mit PLZ 99999 und alle Betriebe, die mit PLZ 99999 angemeldet sind. Entfernt werden:
+   - Haushalte (Kundenlisten der Test-Betriebe)
    - Straßen-Runden und Termine
-   - Nachrichten
-   - die Kaminfeger- und Bewohner-Konten dieses Bezirks
+   - Nachrichten und Chats
+   - die Kaminfeger- und Bewohner-Konten dazu
 4. Er startet die App neu und führt den Start-Check aus.
 
 Was genau entfernt würde, zeigt vorher (ohne etwas zu ändern):
@@ -43,7 +43,7 @@ Das bleibt erhalten:
 - der Betreiber-Zugang samt Passkey
 - das Feedback
 - das Protokoll
-- alle echten Bezirke
+- alle anderen Betriebe mit ihren Kundenlisten
 
 ## 3. Sicherung
 
